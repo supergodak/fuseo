@@ -19,3 +19,6 @@ build/
 # 内部開発指示（公開リポジトリには含めない）
 CLAUDE.md
 docs/appstore-kit.md
+# LP・caskドラフトはリポジトリ外（Tameoと同じ外部デプロイ運用）
+site/
+dist/
