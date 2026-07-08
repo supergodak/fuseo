@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "documentType": "zairyuCardFront",
+  "displayName": "在留カード（表）",
+  "enhance": false,
+  "classification": {
+    "keywords": [
+      { "text": "在留カード", "weight": 6 },
+      { "text": "在留ｶｰﾄﾞ", "weight": 6 },
+      { "text": "RESIDENCE CARD", "weight": 6 },
+      { "text": "在留資格", "weight": 4 },
+      { "text": "在留期間", "weight": 3 },
+      { "text": "PERIOD OF STAY", "weight": 2 }
+    ]
+  },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "zairyu.number",
+      "label": "在留カード番号",
+      "kind": "dynamic",
+      "detector": "zairyuNumber",
+      "fallbackRegion": { "x": 0.70, "yTop": 0.05, "w": 0.29, "h": 0.11 },
+      "defaultOn": true,
+      "basis": "在留カード番号は失効確認の照会等に用いられる識別子。提出先が不要とする場合は秘匿が安全（提出実務）"
+    },
+    {
+      "id": "zairyu.face",
+      "label": "顔写真",
+      "kind": "dynamic",
+      "detector": "face",
+      "defaultOn": false,
+      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す"
+    }
+  ]
+}

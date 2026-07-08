@@ -136,6 +136,23 @@ final class PipelineUnitTests: XCTestCase {
         XCTAssertTrue(excluded2.isEmpty)
     }
 
+    // MARK: - 在留カード番号（英2＋数8＋英2の厳格一致）
+
+    func test_zairyuNumber_matchesStrictFormatOnly() {
+        let ocr = [
+            item("AB12345678CD", x: 0.76, midY: 0.89, w: 0.22),      // 正規の書式
+            item("No. EF98765432GH", x: 0.7, midY: 0.80, w: 0.3),    // ラベル込みでも抽出
+            item("AB1234567CD", x: 0.1, midY: 0.5),                  // 数字7桁 → 不一致
+            item("XAB12345678CD", x: 0.1, midY: 0.4),                // 13文字トークン → 不一致
+            item("1234567890AB", x: 0.1, midY: 0.3),                 // 数10＋英2 → 不一致
+        ]
+        let fields = VisionFieldDetector.zairyuNumberFields(ocr: ocr)
+        XCTAssertEqual(fields.count, 2)
+        XCTAssertEqual(fields[0].maskedDescription, "AB********CD", "生番号を保持しない部分マスク表記")
+        XCTAssertEqual(fields[1].maskedDescription, "EF********GH")
+        XCTAssertTrue(fields.allSatisfy { $0.detector == .zairyuNumber })
+    }
+
     // MARK: - KeywordClassifier
 
     private func preset(_ type: DocumentType, keywords: [(String, Int)],

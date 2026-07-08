@@ -17,7 +17,7 @@ VERSION=$(grep -m1 'MARKETING_VERSION:' project.yml | sed -E 's/.*"([^"]+)".*/\1
 echo "Building Fuseo v$VERSION (build $BUILD_NUM)…"
 
 xcodegen generate
-chmod -R u+w build/release 2>/dev/null || true   # Sparkle read-only 対策
+rm -rf build/release/Build/Products 2>/dev/null || true   # 署名済みバンドル増分コピー拒否対策
 xcodebuild -scheme Fuseo -configuration Release -allowProvisioningUpdates \
   -destination 'platform=macOS' \
   CURRENT_PROJECT_VERSION="$BUILD_NUM" \

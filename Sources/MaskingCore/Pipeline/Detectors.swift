@@ -53,7 +53,37 @@ public struct VisionFieldDetector: FieldDetecting {
                                                excludeKeywords: ["保険者番号", "個人番号"],
                                                detector: .kigoBango,
                                                tuning: tuning)
+        case .zairyuNumber:
+            return Self.zairyuNumberFields(ocr: ocr)
         }
+    }
+
+    // MARK: - 在留カード番号（英2字＋数字8桁＋英2字）
+
+    /// 在留カード番号: 「AB12345678CD」形式の**厳格一致**。チェックデジットの公開規定が無いため、
+    /// 英数字の極大トークンが「ちょうど12文字・英2＋数8＋英2」の場合のみ候補化する（誤検出対策）。
+    /// SAMPLEの実測では番号は単一観測で読める（政府見本・2026-07-08）。
+    static func zairyuNumberFields(ocr: [OCRItem]) -> [DetectedField] {
+        var out: [DetectedField] = []
+        for item in ocr {
+            let text = item.text.replacingOccurrences(of: " ", with: "").uppercased()
+            var token = ""
+            func flush() {
+                defer { token = "" }
+                guard token.count == 12 else { return }
+                let head = token.prefix(2), body = token.dropFirst(2).prefix(8), tail = token.suffix(2)
+                guard head.allSatisfy({ $0.isLetter }), body.allSatisfy(\.isNumber),
+                      tail.allSatisfy({ $0.isLetter }) else { return }
+                out.append(DetectedField(
+                    detector: .zairyuNumber, box: item.box, confidence: item.confidence,
+                    maskedDescription: "\(head)********\(tail)"))
+            }
+            for ch in text {
+                if ch.isASCII && (ch.isLetter || ch.isNumber) { token.append(ch) } else { flush() }
+            }
+            flush()
+        }
+        return out
     }
 
     // MARK: - 番号系

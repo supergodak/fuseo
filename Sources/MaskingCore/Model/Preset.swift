@@ -5,6 +5,7 @@ import Foundation
 // v2 の「提出先テンプレート」は MaskRule.id を参照する選択セットとして同スキーマ上に載る（前方互換）。
 
 /// 動的検出子の識別子（core-design.md §2.3）。
+// 検出子ID。追加時は VisionFieldDetector.detect のディスパッチにも実装を足すこと。
 public enum DetectorID: String, Codable, CaseIterable, Sendable {
     case myNumber12         // マイナンバー12桁＋チェックデジット（総務省令式）
     case licenseNumber12    // 免許証番号12桁＋チェックデジット（モジュラス11・ウェイト2-7）
@@ -13,6 +14,7 @@ public enum DetectorID: String, Codable, CaseIterable, Sendable {
     case kigoBango          // 保険証の記号・番号（キーワード近傍の数字列）
     case face               // 顔写真（既定OFFトグル用）
     case qrBarcode          // QR・バーコード
+    case zairyuNumber       // 在留カード番号（英2字＋数字8桁＋英2字・書式厳格一致）
 }
 
 public struct WeightedKeyword: Codable, Sendable {

@@ -10,6 +10,7 @@ public enum DocumentType: String, Codable, CaseIterable, Sendable {
     case menkyoshoBack          // 運転免許証（裏）
     case myNumberCardFront      // マイナンバーカード表面
     case myNumberCardBack       // マイナンバーカード裏面（提出不可の場面が多い→presetのwarnings）
+    case zairyuCardFront        // 在留カード表面（日本在住外国人向け・2026-07-08追加）
     case generic                // 種別不明のフォールバック（固定領域なし・動的検出＋手動のみ）
 
     /// ID-1規格（85.60×53.98mm・長短比1.5858）で**寸法が確定している**カードか。
@@ -17,7 +18,7 @@ public enum DocumentType: String, Codable, CaseIterable, Sendable {
     /// 保険証・資格確認書はカード様式と紙様式が混在するため含めない（安全側）。
     public var isID1Card: Bool {
         switch self {
-        case .menkyoshoFront, .menkyoshoBack, .myNumberCardFront, .myNumberCardBack:
+        case .menkyoshoFront, .menkyoshoBack, .myNumberCardFront, .myNumberCardBack, .zairyuCardFront:
             return true
         default:
             return false
@@ -28,7 +29,7 @@ public enum DocumentType: String, Codable, CaseIterable, Sendable {
     public var isCard: Bool {
         switch self {
         case .hokensho, .shikakuKakuninsho, .menkyoshoFront, .menkyoshoBack,
-             .myNumberCardFront, .myNumberCardBack:
+             .myNumberCardFront, .myNumberCardBack, .zairyuCardFront:
             return true
         case .juminhyoMyNumber, .generic:
             return false
