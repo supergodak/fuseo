@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "documentType": "myNumberCardFront",
+  "displayName": "マイナンバーカード（表）",
+  "enhance": false,
+  "classification": {
+    "keywords": [
+      { "text": "電子証明書", "weight": 5 },
+      { "text": "性別", "weight": 3 },
+      { "text": "まで有効", "weight": 2 },
+      { "text": "個人番号カード", "weight": 2 }
+    ]
+  },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "mynumF.gender",
+      "label": "性別",
+      "kind": "fixed",
+      "region": { "x": 0.81, "yTop": 0.24, "w": 0.15, "h": 0.08 },
+      "defaultOn": true,
+      "basis": "オンライン本人確認の実務で、性別欄を覆った状態での提出を指示されることがある（携帯キャリア等の提出先の案内）"
+    },
+    {
+      "id": "mynumF.organDonation",
+      "label": "臓器提供意思欄",
+      "kind": "fixed",
+      "region": { "x": 0.35, "yTop": 0.81, "w": 0.62, "h": 0.17 },
+      "defaultOn": true,
+      "basis": "臓器提供意思は機微な情報とされ、オンライン本人確認の実務でも覆った状態での提出を指示されることがある（携帯キャリア等の提出先の案内）"
+    },
+    {
+      "id": "mynumF.face",
+      "label": "顔写真",
+      "kind": "dynamic",
+      "detector": "face",
+      "defaultOn": false,
+      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す"
+    }
+  ]
+}

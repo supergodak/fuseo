@@ -1,0 +1,153 @@
+# XcodeGen spec — generate the Xcode project with:  xcodegen generate
+# 宣言的スペックをバージョン管理し、.xcodeproj は生成物として扱う（Tameo流用）。
+# 既存の Package.swift（swift test / poc）はそのまま生かす。ここでは MaskingCore を
+# ローカルパッケージ（path: .）として参照するだけで、SPM 構成には手を入れない。
+name: Fuseo
+
+options:
+  bundleIdPrefix: jp.co.ati-mirai
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: "8NY87P5TYV"       # ATI K.K.（Developer ID 署名身元）
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES         # notarize 前提
+
+packages:
+  # 外部パッケージ依存ゼロ（Sparkle 等は WP-7）。コア本体をローカル参照。
+  MaskingCore:
+    path: .
+
+targets:
+  Fuseo:
+    type: application
+    platform: macOS
+    sources:
+      - path: Fuseo
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseo
+        PRODUCT_NAME: Fuseo
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Fuseo/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: MaskingCore
+        product: MaskingCore
+
+  # 層1: ロジック/統合テスト（@testable import Fuseo・隔離 UserDefaults・フェイクサービス）。
+  FuseoTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: FuseoTests
+    dependencies:
+      - target: Fuseo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseoTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Fuseo.app/Contents/MacOS/Fuseo"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  # 層2: 確認画面/設定のUI駆動テスト（XCUITest。--uitest 系フックで副作用を止める）。
+  FuseoUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: FuseoUITests
+    dependencies:
+      - target: Fuseo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseoUITests
+        GENERATE_INFOPLIST_FILE: YES
+
+  # ── WP-8: iOS 版（Services を Mac と共有・Views は iOS 固有） ─────────────
+  FuseoiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Fuseo/Services        # Mac と共有（AppKit 非依存を維持）
+      - path: FuseoiOS              # iOS 固有（App・Views・撮影/取込・共有）
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseo.ios
+        PRODUCT_NAME: Fuseo
+        PRODUCT_MODULE_NAME: FuseoiOS   # Swift モジュール名を固定（@testable import FuseoiOS 用）
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSCameraUsageDescription: "書類を撮影してその場でマスキングするために使用します"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Fuseo
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_HARDENED_RUNTIME: NO   # macOS 専用設定。iOS では無効化
+    dependencies:
+      - package: MaskingCore
+        product: MaskingCore
+
+  # 層1(iOS): ロジック/統合テスト（@testable import FuseoiOS・隔離 UserDefaults・フェイクサービス）。
+  FuseoiOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: FuseoiOSTests
+    dependencies:
+      - target: FuseoiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseoiOSTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Fuseo.app/Fuseo"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  # 層2(iOS): 起動→フィクスチャ自動ロード→Review→手動マスク→書き出しシートのスモーク。
+  FuseoiOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: FuseoiOSUITests
+    dependencies:
+      - target: FuseoiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseoiOSUITests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Fuseo:
+    build:
+      targets:
+        Fuseo: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FuseoTests
+        - FuseoUITests
+
+  FuseoiOS:
+    build:
+      targets:
+        FuseoiOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FuseoiOSTests
+        - FuseoiOSUITests

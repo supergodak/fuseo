@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "documentType": "juminhyoMyNumber",
+  "displayName": "住民票（マイナンバー記載）",
+  "enhance": true,
+  "classification": {
+    "keywords": [
+      { "text": "住民票", "weight": 5 },
+      { "text": "世帯主", "weight": 3 },
+      { "text": "続柄", "weight": 2 }
+    ]
+  },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "juminhyo.myNumber",
+      "label": "マイナンバー（12桁）",
+      "kind": "dynamic",
+      "detector": "myNumber12",
+      "defaultOn": true,
+      "basis": "金融機関等へ提出する住民票の個人番号はマスキングするようPPCが案内している。復元できない程度の黒塗りが求められる"
+    }
+  ]
+}

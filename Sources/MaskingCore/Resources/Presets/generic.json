@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "documentType": "generic",
+  "displayName": "その他の書類",
+  "enhance": true,
+  "classification": { "keywords": [] },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "generic.myNumber",
+      "label": "マイナンバー（12桁）",
+      "kind": "dynamic",
+      "detector": "myNumber12",
+      "defaultOn": true,
+      "basis": "番号法・PPCガイドライン: 個人番号は法令に定めのある場合以外の収集・保管が禁止。写しでは復元できない程度のマスキングが求められる（国税庁も控えのマスキングを要請）"
+    },
+    {
+      "id": "generic.creditCard",
+      "label": "クレジットカード番号",
+      "kind": "dynamic",
+      "detector": "creditCardLuhn",
+      "defaultOn": true,
+      "basis": "カード番号の写り込みは不正利用リスク（安全管理の一般実務）"
+    },
+    {
+      "id": "generic.qr",
+      "label": "QRコード・バーコード",
+      "kind": "dynamic",
+      "detector": "qrBarcode",
+      "defaultOn": false,
+      "basis": "QRコードに番号等が符号化されている場合がある（保険証系の提出実務指示に準拠）"
+    },
+    {
+      "id": "generic.face",
+      "label": "顔写真",
+      "kind": "dynamic",
+      "detector": "face",
+      "defaultOn": false,
+      "basis": "提出先により顔写真の要否が分かれる（不要なら隠すのが安全）"
+    }
+  ]
+}

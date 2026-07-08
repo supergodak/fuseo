@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "documentType": "hokensho",
+  "displayName": "健康保険証",
+  "enhance": false,
+  "classification": {
+    "keywords": [
+      { "text": "保険者番号", "weight": 5 },
+      { "text": "被保険者", "weight": 4 },
+      { "text": "記号", "weight": 2 }
+    ]
+  },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "hoken.insurer",
+      "label": "保険者番号",
+      "kind": "dynamic",
+      "detector": "insurerNumber",
+      "defaultOn": true,
+      "basis": "保険者番号等は告知要求制限の対象とされる（健康保険法）。総務省も写しには『復元できない程度に』マスキングするよう案内している"
+    },
+    {
+      "id": "hoken.kigoBango",
+      "label": "記号・番号",
+      "kind": "dynamic",
+      "detector": "kigoBango",
+      "defaultOn": true,
+      "basis": "保険者番号等は告知要求制限の対象とされる（健康保険法）。総務省も写しには『復元できない程度に』マスキングするよう案内している"
+    },
+    {
+      "id": "hoken.qr",
+      "label": "QRコード・バーコード",
+      "kind": "dynamic",
+      "detector": "qrBarcode",
+      "defaultOn": true,
+      "basis": "QRコードに記号・番号等が符号化されている場合があるため、番号と同様に秘匿する"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "documentType": "menkyoshoFront",
+  "displayName": "運転免許証（表）",
+  "enhance": false,
+  "classification": {
+    "keywords": [
+      { "text": "運転免許証", "weight": 6 },
+      { "text": "公安委員会", "weight": 5 },
+      { "text": "免許の条件", "weight": 4 },
+      { "text": "交付", "weight": 2 }
+    ]
+  },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "menkyo.number",
+      "label": "免許証番号",
+      "kind": "dynamic",
+      "detector": "licenseNumber12",
+      "defaultOn": true,
+      "basis": "免許証番号は個人識別性が高く、提出先が不要とする場合は秘匿が安全（自治体の入札実務等でマスキング指示例あり）"
+    },
+    {
+      "id": "menkyo.face",
+      "label": "顔写真",
+      "kind": "dynamic",
+      "detector": "face",
+      "defaultOn": false,
+      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す"
+    }
+  ]
+}

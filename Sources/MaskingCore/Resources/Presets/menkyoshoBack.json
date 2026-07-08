@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "documentType": "menkyoshoBack",
+  "displayName": "運転免許証（裏）",
+  "enhance": false,
+  "classification": {
+    "keywords": [
+      { "text": "備考", "weight": 5 },
+      { "text": "以下の部分", "weight": 3 },
+      { "text": "臓器提供", "weight": 2 },
+      { "text": "自筆署名", "weight": 2 }
+    ]
+  },
+  "warnings": [],
+  "rules": [
+    {
+      "id": "menkyoB.organDonation",
+      "label": "臓器提供意思表示欄",
+      "kind": "fixed",
+      "region": { "x": 0.02, "yTop": 0.46, "w": 0.96, "h": 0.48 },
+      "defaultOn": true,
+      "basis": "臓器提供意思は機微な情報とされ、オンライン本人確認の実務でも覆った状態での提出を指示されることがある（携帯キャリア等の提出先の案内）。備考欄は住所変更等の確認に必要なため隠さない"
+    }
+  ]
+}

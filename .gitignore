@@ -1,0 +1,20 @@
+# 実物の本人確認書類写真（絶対にコミットしない）
+fixtures-private/
+# iOSアプリ層は当面非公開（事業方針A案 2026-07-07: コアMIT公開・iOS本体無料＋将来Pro機能IAP）
+FuseoiOS/
+FuseoiOSTests/
+FuseoiOSUITests/
+# 内部文書（戦略・引き継ぎ・調査。技術文書 core-design / wp5 / user-manual は公開）
+docs/handoff.md
+docs/design.md
+docs/wp8-ios-design.md
+docs/research/
+docs/poc-results.md
+# ビルド成果物
+.build/
+build/
+*.xcodeproj
+.swiftpm/
+.DS_Store
+# 内部開発指示（公開リポジトリには含めない）
+CLAUDE.md

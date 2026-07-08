@@ -1,0 +1,109 @@
+import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
+import MaskingCore
+
+/// 書き出しシート（wp5 §3）。形式・検索可能PDF・品質を確認し、NSSavePanel 経由で保存する。
+/// 確認画面（Review）を経てここに来る。ここを飛ばして保存する経路は存在しない（絶対条件）。
+struct ExportSheet: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        @Bindable var appState = appState
+        let summary = appState.exportSummary
+        let zeroMask = appState.hasZeroMaskPage
+
+        VStack(alignment: .leading, spacing: 16) {
+            Text("書き出し").font(.title2).bold()
+
+            Picker("形式", selection: $appState.exportOptions.format) {
+                Text("PDF").tag(ExportOptions.Format.pdf)
+                Text("JPEG").tag(ExportOptions.Format.jpeg)
+                Text("PNG").tag(ExportOptions.Format.png)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("export.format")
+
+            Picker("カラー", selection: $appState.exportOptions.colorMode) {
+                Text("カラー").tag(ExportOptions.ColorMode.color)
+                Text("グレー").tag(ExportOptions.ColorMode.grayscale)
+                Text("白黒（文書）").tag(ExportOptions.ColorMode.blackWhite)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("export.colorMode")
+            .help("グレー/白黒は書類の見た目を整える出力フィルタです。黒塗りには影響しません")
+
+            if appState.exportOptions.format == .pdf {
+                Toggle("検索可能PDF（テキスト層を埋め込む）", isOn: $appState.exportOptions.searchableText)
+                    .accessibilityIdentifier("export.searchable")
+            }
+            if appState.exportOptions.format == .jpeg {
+                VStack(alignment: .leading) {
+                    Text("JPEG品質: \(Int(appState.exportOptions.jpegQuality * 100))%")
+                    Slider(value: $appState.exportOptions.jpegQuality, in: 0.1...1.0)
+                        .accessibilityIdentifier("export.quality")
+                }
+            }
+
+            Divider()
+
+            Text("マスク \(summary.total)箇所（自動 \(summary.auto)・手動 \(summary.manual)）／ \(summary.pageCount)ページ")
+                .font(.callout)
+
+            if !appState.allWarnings.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(appState.allWarnings, id: \.self) { w in
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                            Text(w).font(.caption)
+                        }
+                    }
+                }
+            }
+
+            if zeroMask {
+                Text("マスクが1つも適用されていないページがあります。このまま書き出すと元の情報が残ります。")
+                    .font(.callout)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("export.zeroMaskWarning")
+            }
+
+            HStack {
+                Spacer()
+                Button("キャンセル") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button(zeroMask ? "マスクなしで書き出す" : "保存…") { save() }
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("export.confirmButton")
+            }
+        }
+        .padding(20)
+        .frame(width: 420)
+    }
+
+    private func save() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = appState.defaultExportFileName
+        panel.allowedContentTypes = [contentType(for: appState.exportOptions.format)]
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try appState.export(to: url)
+            appState.lastExportedURL = url
+            appState.showingExportDone = true
+            dismiss()
+        } catch {
+            appState.errorMessage = "書き出しに失敗しました: \(error)"
+            appState.showingError = true
+        }
+    }
+
+    private func contentType(for format: ExportOptions.Format) -> UTType {
+        switch format {
+        case .pdf: return .pdf
+        case .jpeg: return .jpeg
+        case .png: return .png
+        }
+    }
+}

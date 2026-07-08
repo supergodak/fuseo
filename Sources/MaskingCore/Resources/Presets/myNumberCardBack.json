@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "documentType": "myNumberCardBack",
+  "displayName": "マイナンバーカード（裏）",
+  "enhance": false,
+  "classification": {
+    "keywords": [
+      { "text": "コールセンター", "weight": 5 },
+      { "text": "拾得", "weight": 4 },
+      { "text": "個人番号", "weight": 2 },
+      { "text": "禁止", "weight": 2 }
+    ]
+  },
+  "warnings": [
+    "マイナンバーカードの裏面は、法令で認められた者以外がコピー・保管することを禁止されています（番号法）。そもそも裏面の提出が求められているかを確認してください。"
+  ],
+  "rules": [
+    {
+      "id": "mynumB.number",
+      "label": "個人番号（マイナンバー）",
+      "kind": "dynamic",
+      "detector": "myNumber12",
+      "fallbackRegion": { "x": 0.32, "yTop": 0.08, "w": 0.62, "h": 0.28 },
+      "defaultOn": true,
+      "basis": "番号法・PPCガイドライン: 個人番号は復元できない程度にマスキングすることが求められる"
+    },
+    {
+      "id": "mynumB.qr",
+      "label": "QRコード",
+      "kind": "dynamic",
+      "detector": "qrBarcode",
+      "defaultOn": true,
+      "basis": "裏面のQRコードには個人番号が符号化されているため、番号と同様に秘匿する"
+    }
+  ]
+}
