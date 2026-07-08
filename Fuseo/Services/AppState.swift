@@ -468,11 +468,30 @@ final class AppState {
 
     // MARK: - セッション
 
+    /// 「新しい書類」の確認待ち（作業内容の誤破棄防止）。
+    var confirmingReset = false
+
+    /// 「新しい書類」ボタン: 書類を開いている間は必ず確認を挟む（書き出し済みかどうかに関わらず、
+    /// 解析結果と編集内容が失われるため）。何も開いていなければ即リセット。
+    func requestReset() {
+        if pages.isEmpty {
+            reset()
+        } else {
+            confirmingReset = true
+        }
+    }
+
+    func confirmReset() {
+        confirmingReset = false
+        reset()
+    }
+
     func reset() {
         pages = []
         currentPageIndex = 0
         tool = .select
         reviewLayout = .single
+        confirmingReset = false
         previewMode = false
         showingExportSheet = false
         pendingTypeChange = nil

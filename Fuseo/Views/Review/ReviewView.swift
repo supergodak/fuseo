@@ -42,6 +42,12 @@ struct ReviewView: View {
         } message: {
             Text("候補の編集内容（チェックの変更）は失われます。手動マスクは保持されます。")
         }
+        .alert("新しい書類を開きますか？", isPresented: confirmingResetBinding) {
+            Button("破棄して新規", role: .destructive) { appState.confirmReset() }
+            Button("キャンセル", role: .cancel) { appState.confirmingReset = false }
+        } message: {
+            Text("現在の書類・マスクの編集内容は破棄されます。書き出していない内容は元に戻せません。")
+        }
         .alert("回転しますか？", isPresented: pendingRotationBinding) {
             Button("回転する", role: .destructive) { appState.confirmPendingRotation() }
             Button("キャンセル", role: .cancel) { appState.cancelPendingRotation() }
@@ -59,6 +65,11 @@ struct ReviewView: View {
     private var pendingRotationBinding: Binding<Bool> {
         Binding(get: { appState.pendingRotationPageID != nil },
                 set: { if !$0 { appState.cancelPendingRotation() } })
+    }
+
+    private var confirmingResetBinding: Binding<Bool> {
+        Binding(get: { appState.confirmingReset },
+                set: { appState.confirmingReset = $0 })
     }
 
     // MARK: - ツールバー
@@ -111,7 +122,7 @@ struct ReviewView: View {
                 .accessibilityIdentifier("review.previewToggle")
             Button { appState.showingExportSheet = true } label: { Label("書き出す…", systemImage: "square.and.arrow.up") }
                 .accessibilityIdentifier("review.exportButton")
-            Button { appState.reset() } label: { Label("新しい書類", systemImage: "doc.badge.plus") }
+            Button { appState.requestReset() } label: { Label("新しい書類", systemImage: "doc.badge.plus") }
                 .accessibilityIdentifier("review.newDocButton")
         }
     }

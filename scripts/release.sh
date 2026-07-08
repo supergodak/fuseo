@@ -24,6 +24,7 @@ ID="Developer ID Application: ATI K.K. (8NY87P5TYV)"
 
 echo "==> Archiving Release v$VERSION (build $BUILD_NUM)…"
 xcodegen generate
+chmod -R u+w build 2>/dev/null || true   # Sparkle read-only 対策
 rm -rf "$ARCHIVE" "$EXPORT"
 xcodebuild archive -scheme Fuseo -configuration Release -allowProvisioningUpdates \
   -destination 'generic/platform=macOS' -archivePath "$ARCHIVE" \

@@ -17,6 +17,8 @@ run_spm() {
 run_xcode() {
   ONLY="$1"
   xcodegen generate >/dev/null
+  # Sparkle.framework が読み取り専用でコピーされ増分ビルドを壊す既知問題への対処
+  chmod -R u+w build/test 2>/dev/null || true
   xcodebuild test \
     -scheme Fuseo \
     -destination 'platform=macOS' \
