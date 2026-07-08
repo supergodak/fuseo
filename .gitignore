@@ -18,3 +18,4 @@ build/
 .DS_Store
 # 内部開発指示（公開リポジトリには含めない）
 CLAUDE.md
+docs/appstore-kit.md
