@@ -45,7 +45,7 @@ Fuseo は**「提出事故を減らす道具」**です。名称は「伏せる�
 ### インストール
 
 - **直接ダウンロード（公証済み DMG）:** [製品サイト](https://fuseo.ati-mirai.co.jp) または [GitHub Releases](https://github.com/supergodak/fuseo/releases/latest) から最新版を入手し、**Fuseo** を `/Applications` にドラッグします。
-- **Homebrew:** 準備中（`brew install --cask fuseo` を予定）。
+- **Homebrew:** `brew install --cask supergodak/tap/fuseo`
 
 **macOS 14（Sonoma）以降**（Apple Silicon／Intel）が必要です。Apple 純正フレームワーク（Vision・Core Image・PDFKit・SwiftUI）のみで動作し、外部依存はありません。
 
