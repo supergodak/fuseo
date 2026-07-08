@@ -242,6 +242,27 @@ final class PipelineUnitTests: XCTestCase {
         XCTAssertEqual(Double(gAspect), 2.0, accuracy: 0.01, "generic はアスペクトを変えないこと")
     }
 
+    func test_analyze_manualRotation_rotatesBaseAndRerunsOCR() throws {
+        let presets = [preset(.generic, keywords: [])]
+        let recognizer = CountingRecognizer(ocr: [])
+        let pipeline = try MaskingPipeline(
+            presets: presets,
+            rectifier: FakeRectifier(page: makePage(width: 200, height: 100)),
+            recognizer: recognizer,
+            classifier: KeywordClassifier(),
+            fieldDetector: FakeDetector(fields: []))
+        let url = URL(fileURLWithPath: "/dev/null")
+
+        let rotated = try pipeline.analyze(url: url, manualRotation: 1)
+        XCTAssertEqual(Int(rotated.page.pixelSize.width), 100, "90°回転で幅と高さが入れ替わる")
+        XCTAssertEqual(Int(rotated.page.pixelSize.height), 200)
+        XCTAssertEqual(recognizer.callCount, 2, "回転後に再OCRされる（初回＋再）")
+
+        let upsideDown = try pipeline.analyze(url: url, manualRotation: 2)
+        XCTAssertEqual(Int(upsideDown.page.pixelSize.width), 200, "180°は寸法不変")
+        XCTAssertEqual(Int(upsideDown.page.pixelSize.height), 100)
+    }
+
     func test_analyze_forcedTypeOverridesPresetButKeepsClassification() throws {
         let menkyoRule = MaskRule(id: "menkyo.fixed", label: "免許固定欄", kind: .fixed, detector: nil,
                                   region: MaskRule.Region(x: 0.1, yTop: 0.1, w: 0.2, h: 0.1),

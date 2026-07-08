@@ -49,8 +49,10 @@ public final class MaskingPipeline {
     ///     enhance の要否がプリセットごとに異なるため、種別変更は本メソッドで URL から再解析する。
     ///   - manualQuad: 確認UIの「切り抜きを調整」用。指定時は自動の書類検出をスキップし、
     ///     この四隅（元画像の正規化・左下原点）で台形補正する。標準実装（VisionRectifier）でのみ有効。
+    ///   - manualRotation: 確認UIの「回転」用。自動正立化の結果へ追加で適用する時計回りの
+    ///     90°回転数（0..3）。回転後は再OCRする（座標系が変わるため）。
     public func analyze(url: URL, forcedType: DocumentType? = nil,
-                        manualQuad: Quad? = nil) throws -> AnalyzedPage {
+                        manualQuad: Quad? = nil, manualRotation: Int = 0) throws -> AnalyzedPage {
         // 標準実装（VisionRectifier）は正立化の判定過程で OCR を得ているため再OCRしない高速経路を使う。
         var basePage: PageImage
         var ocr: [OCRItem]
@@ -58,6 +60,15 @@ public final class MaskingPipeline {
             (basePage, ocr) = try vision.rectifyKeepingOCR(imageAt: url, manualQuad: manualQuad)
         } else {
             basePage = try rectifier.rectify(imageAt: url)
+            ocr = try recognizer.recognize(basePage)
+        }
+
+        // 手動回転（時計回り90°×n）。自動正立化が外した場合のユーザー救済。
+        let turns = ((manualRotation % 4) + 4) % 4
+        if turns > 0, let rotated = Self.rotate(basePage.cgImage, quarterTurnsCW: turns) {
+            MaskingLog.pipeline.info("手動回転: 90°×\(turns, privacy: .public)（時計回り）で再OCR")
+            basePage = PageImage(cgImage: rotated, sourceURL: basePage.sourceURL,
+                                 rectified: basePage.rectified, quadConfidence: basePage.quadConfidence)
             ocr = try recognizer.recognize(basePage)
         }
 
@@ -96,6 +107,22 @@ public final class MaskingPipeline {
         let candidates = ruleEngine.candidates(for: preset, page: page, ocr: ocr)
         return AnalyzedPage(page: page, ocr: ocr, classification: classification,
                             preset: preset, candidates: candidates)
+    }
+
+    /// 時計回りに90°×n回転した新規CGImageを返す。
+    static func rotate(_ image: CGImage, quarterTurnsCW turns: Int) -> CGImage? {
+        let t = ((turns % 4) + 4) % 4
+        guard t > 0 else { return image }
+        let (w, h) = (image.width, image.height)
+        let (ow, oh) = (t % 2 == 0) ? (w, h) : (h, w)
+        guard let ctx = CGContext(data: nil, width: ow, height: oh, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.translateBy(x: CGFloat(ow) / 2, y: CGFloat(oh) / 2)
+        ctx.rotate(by: -CGFloat(t) * .pi / 2)      // CGContextは左下原点＝時計回りは負の角度
+        ctx.draw(image, in: CGRect(x: -CGFloat(w) / 2, y: -CGFloat(h) / 2,
+                                   width: CGFloat(w), height: CGFloat(h)))
+        return ctx.makeImage()
     }
 
     /// 横長画像を目標の縦横比へ再サンプルする（高さ維持・幅をスケール。高品質補間）。

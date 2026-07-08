@@ -4,7 +4,7 @@ import MaskingCore
 /// 解析サービスの抽象（テストでフェイクを差し込むため）。
 /// パイプラインの重い処理はメインアクター外・**直列**で実行する（UI凍結禁止・wp5 §5）。
 protocol Analyzing: AnyObject {
-    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?) async throws -> AnalyzedPage
+    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage
     /// 切り抜き調整シート用: 元画像＋自動検出の四隅（標準実装以外は nil）。
     func cropPreview(url: URL) async throws -> VisionRectifier.CropPreview?
     /// 種別ピッカーの表示名（`classification.ranking` の各 type を人間可読名にする）。
@@ -25,11 +25,11 @@ final class AnalysisService: Analyzing {
         self.displayNames = Dictionary(uniqueKeysWithValues: presets.map { ($0.documentType, $0.displayName) })
     }
 
-    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?) async throws -> AnalyzedPage {
+    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
-                    let page = try self.pipeline.analyze(url: url, forcedType: forcedType, manualQuad: manualQuad)
+                    let page = try self.pipeline.analyze(url: url, forcedType: forcedType, manualQuad: manualQuad, manualRotation: manualRotation)
                     continuation.resume(returning: page)
                 } catch {
                     continuation.resume(throwing: error)

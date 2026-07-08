@@ -16,7 +16,7 @@ struct DropView: View {
                 .foregroundStyle(.secondary)
             Text("本人確認書類の写真をここにドロップ")
                 .font(.title3)
-            Text("対応形式: JPEG / PNG / HEIC / TIFF")
+            Text("対応形式: JPEG / PNG / HEIC / TIFF（フォルダごとでもOK）")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Button("ファイルを選択…") { openPanel() }
@@ -44,20 +44,20 @@ struct DropView: View {
     }
 
     private func handleDropped(_ urls: [URL]) {
-        let accepted = urls.filter(FileIntake.isAccepted)
+        // フォルダは中の画像へ展開（一括処理 v1.2）
+        let accepted = FileIntake.expand(urls)
         guard !accepted.isEmpty else { showingUnsupported = true; return }
-        if accepted.count < urls.count { showingUnsupported = true }
         Task { await appState.processFiles(accepted) }
     }
 
     private func openPanel() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
+        panel.canChooseDirectories = true       // フォルダ選択で一括取込（v1.2）
         panel.canChooseFiles = true
         panel.allowedContentTypes = FileIntake.acceptedTypes
         if panel.runModal() == .OK {
-            let accepted = panel.urls.filter(FileIntake.isAccepted)
+            let accepted = FileIntake.expand(panel.urls)
             guard !accepted.isEmpty else { showingUnsupported = true; return }
             Task { await appState.processFiles(accepted) }
         }

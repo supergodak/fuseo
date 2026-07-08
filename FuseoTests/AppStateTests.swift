@@ -27,7 +27,7 @@ final class AppStateTests: XCTestCase {
 
     func test_processFiles_allFail_returnsToEmpty() async {
         final class FailAnalysis: Analyzing {
-            func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?) async throws -> AnalyzedPage {
+            func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage {
                 throw MaskingError.loadFailed("x")
             }
             func cropPreview(url: URL) async throws -> VisionRectifier.CropPreview? { nil }
@@ -128,6 +128,93 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(page.candidatesEdited)
         state.requestTypeChange(page: page, to: .hokensho)
         XCTAssertNotNil(state.pendingTypeChange)
+    }
+
+    // MARK: - 一括処理（v1.2）
+
+    func test_processFiles_fiveOrMore_startsInGridLayout() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(analysis: fake, settings: makeSettings())
+        await state.processFiles((1...5).map { URL(fileURLWithPath: "/tmp/p\($0).jpg") })
+        XCTAssertEqual(state.reviewLayout, .grid, "5枚以上は一覧レビューから始まる")
+
+        let state2 = makeState(analysis: fake, settings: makeSettings())
+        await state2.processFiles([URL(fileURLWithPath: "/tmp/a.jpg")])
+        XCTAssertEqual(state2.reviewLayout, .single)
+    }
+
+    func test_exportSeparately_writesOneFilePerDocumentWithSourceNames() async throws {
+        let cand = TestFixtures.candidate(ruleID: "x.num", source: .detector(.myNumber12), isOn: true)
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage(candidates: [cand]) }
+        let state = makeState(analysis: fake, settings: makeSettings())
+        await state.processFiles([URL(fileURLWithPath: "/tmp/hoken-a.jpg"),
+                                  URL(fileURLWithPath: "/tmp/menkyo-b.jpg")])
+        state.exportOptions = ExportOptions(format: .png)
+
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fuseo-batch-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let written = try state.exportSeparately(to: dir)
+        XCTAssertEqual(written.map(\.lastPathComponent), ["hoken-a-masked.png", "menkyo-b-masked.png"])
+        for url in written {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        }
+
+        // 同じフォルダへもう一度 → 重複回避の -2 が付く
+        let again = try state.exportSeparately(to: dir)
+        XCTAssertEqual(again.map(\.lastPathComponent), ["hoken-a-masked-2.png", "menkyo-b-masked-2.png"])
+    }
+
+    func test_fileIntake_expandsFoldersOneLevelDeep() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fuseo-intake-\(UUID().uuidString)")
+        let sub = root.appendingPathComponent("sub")
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for name in ["b.jpeg", "a.png", "skip.txt"] {
+            FileManager.default.createFile(atPath: root.appendingPathComponent(name).path, contents: Data())
+        }
+        FileManager.default.createFile(atPath: sub.appendingPathComponent("c.heic").path, contents: Data())
+
+        let expanded = FileIntake.expand([root])
+        XCTAssertEqual(expanded.map(\.lastPathComponent), ["a.png", "b.jpeg", "c.heic"],
+                       "名前順・非対応拡張子は除外・1階層下まで展開")
+        // ファイル直接指定はそのまま
+        let single = FileIntake.expand([root.appendingPathComponent("a.png")])
+        XCTAssertEqual(single.map(\.lastPathComponent), ["a.png"])
+    }
+
+    // MARK: - 手動回転
+
+    func test_rotate_incrementsAndCarriesThroughReanalysis() async {
+        let cand = TestFixtures.candidate(ruleID: "x.num", source: .detector(.myNumber12), isOn: true)
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage(candidates: [cand]) }
+        let state = makeState(analysis: fake, settings: makeSettings())
+        await state.processFiles([URL(fileURLWithPath: "/tmp/a.jpg")])
+        let page = state.pages[0]
+
+        // 未編集 → 即回転（確認なし）。90°×1 が渡り、状態も更新される。
+        state.requestRotate(page: page)
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(fake.lastManualRotation, 1)
+        XCTAssertEqual(page.manualRotation, 1)
+
+        // 編集あり → 確認待ちになり、確認で実行される（2回目=90°×2）。
+        page.toggleCandidate(page.analyzed.candidates[0].id)
+        state.requestRotate(page: page)
+        XCTAssertNotNil(state.pendingRotationPageID)
+        state.confirmPendingRotation()
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(page.manualRotation, 2)
+        XCTAssertFalse(page.candidatesEdited, "回転で候補編集は破棄")
+
+        // 種別変更・切り抜きにも回転が引き継がれる。
+        await state.performTypeChange(page: page, to: .menkyoshoFront)
+        XCTAssertEqual(fake.lastManualRotation, 2)
+        await state.applyCrop(page: page, quad: .fullImage)
+        XCTAssertEqual(fake.lastManualRotation, 2)
     }
 
     // MARK: - 切り抜きの手動調整（wp5 §9.5）

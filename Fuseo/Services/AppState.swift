@@ -20,6 +20,11 @@ enum ReviewTool: String, CaseIterable {
     case select, rect, brush
 }
 
+/// 確認画面のレイアウト（v1.2 一括処理）。grid=一覧レビュー（サムネイル格子）。
+enum ReviewLayout: String {
+    case single, grid
+}
+
 /// 1ページ分の編集状態（wp5 §5）。isOn・手動マスクはここで編集する。
 @MainActor
 @Observable
@@ -46,6 +51,8 @@ final class PageState: Identifiable {
     var manualQuad: Quad?
     /// ユーザーが種別を手動選択済みか（切り抜き再解析時に自動判定へ戻さないため）。
     var forcedType: DocumentType?
+    /// 手動回転（時計回り90°×n・0..3）。自動正立化が外れた場合の救済。再解析に必ず引き継ぐ。
+    var manualRotation: Int = 0
 
     init(sourceURL: URL, analyzed: AnalyzedPage) {
         self.sourceURL = sourceURL
@@ -198,6 +205,8 @@ final class AppState {
 
     // 確認画面の道具立て（toolbar は全ページ共通）
     var tool: ReviewTool = .select
+    /// 一覧（グリッド）⇄ 個別の切替（v1.2）。5枚以上の取込では一覧から始める。
+    var reviewLayout: ReviewLayout = .single
     /// ブラシ幅（正規化 0.01..0.10・既定 0.03＝画像短辺比・wp5 §2.1）。
     var brushWidth: Double = 0.03
     /// 仕上がりプレビュー（ON = 完全不透明の黒で描画・編集は選択ツールのみ）。
@@ -241,7 +250,7 @@ final class AppState {
         var failures = 0
         for (index, url) in urls.enumerated() {
             do {
-                var analyzed = try await analysis.analyze(url: url, forcedType: nil, manualQuad: nil)
+                var analyzed = try await analysis.analyze(url: url, forcedType: nil, manualQuad: nil, manualRotation: 0)
                 applyFaceDefault(to: &analyzed)
                 built.append(PageState(sourceURL: url, analyzed: analyzed))
             } catch {
@@ -257,6 +266,7 @@ final class AppState {
             pages = built
             currentPageIndex = 0
             exportOptions = settings.initialExportOptions
+            reviewLayout = built.count >= 5 ? .grid : .single   // 束は一覧から（v1.2）
             stage = .review
             if failures > 0 {
                 presentError("\(failures)枚は読み込めませんでした。読み込めた\(built.count)枚を表示しています。")
@@ -271,7 +281,7 @@ final class AppState {
         var added = 0
         for url in accepted {
             do {
-                var analyzed = try await analysis.analyze(url: url, forcedType: nil, manualQuad: nil)
+                var analyzed = try await analysis.analyze(url: url, forcedType: nil, manualQuad: nil, manualRotation: 0)
                 applyFaceDefault(to: &analyzed)
                 pages.append(PageState(sourceURL: url, analyzed: analyzed))
                 added += 1
@@ -317,7 +327,8 @@ final class AppState {
         do {
             let keepManual = page.analyzed.manual
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: type,
-                                                manualQuad: page.manualQuad)
+                                                manualQuad: page.manualQuad,
+                                                manualRotation: page.manualRotation)
             applyFaceDefault(to: &re)
             re.manual = keepManual
             page.analyzed = re
@@ -352,7 +363,8 @@ final class AppState {
     func applyCrop(page: PageState, quad: Quad) async {
         do {
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
-                                                manualQuad: quad)
+                                                manualQuad: quad,
+                                                manualRotation: page.manualRotation)
             applyFaceDefault(to: &re)
             page.analyzed = re
             page.manualQuad = quad
@@ -360,6 +372,47 @@ final class AppState {
             page.selectedCandidateID = nil
         } catch {
             presentError("切り抜きを変更した再解析に失敗しました。")
+        }
+    }
+
+    // MARK: - 手動回転（90°時計回り・自動正立化の救済）
+
+    /// 回転の確認待ち（編集がある場合のみ確認を挟む）。
+    var pendingRotationPageID: PageState.ID?
+
+    /// 回転ボタン: 編集済みなら確認、そうでなければ即実行。
+    func requestRotate(page: PageState) {
+        if page.hasUserEdits {
+            pendingRotationPageID = page.id
+        } else {
+            Task { await performRotate(page: page) }
+        }
+    }
+
+    func confirmPendingRotation() {
+        guard let id = pendingRotationPageID,
+              let page = pages.first(where: { $0.id == id }) else { return }
+        pendingRotationPageID = nil
+        Task { await performRotate(page: page) }
+    }
+
+    func cancelPendingRotation() { pendingRotationPageID = nil }
+
+    /// 時計回りに90°回して再解析する。座標系が変わるため候補編集・手動マスクは破棄。
+    func performRotate(page: PageState) async {
+        do {
+            let next = (page.manualRotation + 1) % 4
+            var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
+                                                manualQuad: page.manualQuad,
+                                                manualRotation: next)
+            applyFaceDefault(to: &re)
+            page.analyzed = re
+            page.manualRotation = next
+            page.candidatesEdited = false
+            page.selectedCandidateID = nil
+            page.selectedManualRectIndex = nil
+        } catch {
+            presentError("回転後の再解析に失敗しました。")
         }
     }
 
@@ -398,12 +451,28 @@ final class AppState {
         try exportService.export(pages: pages.map(\.analyzed), options: exportOptions, to: url)
     }
 
+    /// 一括書き出し（v1.2）: 1書類=1ファイルで指定フォルダへ。`<元名>-masked.<ext>`（重複は -2, -3…）。
+    /// 確認画面（一覧/個別）を経てから呼ばれる。書き出したURL群を返す。
+    @discardableResult
+    func exportSeparately(to directory: URL) throws -> [URL] {
+        var written: [URL] = []
+        for page in pages {
+            let name = ExportNaming.defaultFileName(
+                firstSourceName: page.sourceURL.lastPathComponent, format: exportOptions.format)
+            let url = ExportNaming.uniqueURL(in: directory, fileName: name)
+            try exportService.export(pages: [page.analyzed], options: exportOptions, to: url)
+            written.append(url)
+        }
+        return written
+    }
+
     // MARK: - セッション
 
     func reset() {
         pages = []
         currentPageIndex = 0
         tool = .select
+        reviewLayout = .single
         previewMode = false
         showingExportSheet = false
         pendingTypeChange = nil

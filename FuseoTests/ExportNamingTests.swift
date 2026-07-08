@@ -26,4 +26,14 @@ final class ExportNamingTests: XCTestCase {
         XCTAssertEqual(ExportNaming.imagePageURL(base: base, pageNumber: 2).lastPathComponent,
                        "scan-masked-2.jpeg")
     }
+
+    func test_uniqueURL_appendsCounterOnCollision() {
+        let dir = URL(fileURLWithPath: "/tmp/out")
+        var existing: Set<String> = ["/tmp/out/a-masked.png", "/tmp/out/a-masked-2.png"]
+        let url = ExportNaming.uniqueURL(in: dir, fileName: "a-masked.png") { existing.contains($0.path) }
+        XCTAssertEqual(url.lastPathComponent, "a-masked-3.png")
+        existing = []
+        let first = ExportNaming.uniqueURL(in: dir, fileName: "a-masked.png") { existing.contains($0.path) }
+        XCTAssertEqual(first.lastPathComponent, "a-masked.png")
+    }
 }

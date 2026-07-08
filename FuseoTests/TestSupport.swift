@@ -49,15 +49,17 @@ final class FakeAnalysis: Analyzing, @unchecked Sendable {
     private(set) var analyzeCallCount = 0
     private(set) var lastForcedType: DocumentType?
     private(set) var lastManualQuad: Quad?
+    private(set) var lastManualRotation: Int = 0
 
     init(pageFactory: @escaping (DocumentType?) -> AnalyzedPage) {
         self.pageFactory = pageFactory
     }
 
-    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?) async throws -> AnalyzedPage {
+    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage {
         analyzeCallCount += 1
         lastForcedType = forcedType
         lastManualQuad = manualQuad
+        lastManualRotation = manualRotation
         return pageFactory(forcedType)
     }
 

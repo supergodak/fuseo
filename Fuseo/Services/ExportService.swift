@@ -55,4 +55,19 @@ enum ExportNaming {
         let dir = base.deletingLastPathComponent()
         return dir.appendingPathComponent("\(stem)-\(pageNumber).\(ext)")
     }
+
+    /// 一括書き出し（v1.2）: ディレクトリ内で重複しないURLを返す（既存なら -2, -3 … を付ける）。
+    static func uniqueURL(in directory: URL, fileName: String,
+                          exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
+        let first = directory.appendingPathComponent(fileName)
+        guard exists(first) else { return first }
+        let stem = (fileName as NSString).deletingPathExtension
+        let ext = (fileName as NSString).pathExtension
+        var n = 2
+        while true {
+            let url = directory.appendingPathComponent("\(stem)-\(n).\(ext)")
+            if !exists(url) { return url }
+            n += 1
+        }
+    }
 }

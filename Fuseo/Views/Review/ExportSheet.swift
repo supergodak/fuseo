@@ -8,6 +8,8 @@ import MaskingCore
 struct ExportSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    /// 複数書類のとき: false=1ファイルにまとめる / true=書類ごとに個別ファイル（一括処理 v1.2）
+    @State private var separateFiles = false
 
     var body: some View {
         @Bindable var appState = appState
@@ -43,6 +45,20 @@ struct ExportSheet: View {
                     Text("JPEG品質: \(Int(appState.exportOptions.jpegQuality * 100))%")
                     Slider(value: $appState.exportOptions.jpegQuality, in: 0.1...1.0)
                         .accessibilityIdentifier("export.quality")
+                }
+            }
+
+            if appState.pages.count > 1 {
+                Picker("出力", selection: $separateFiles) {
+                    Text(appState.exportOptions.format == .pdf ? "1つのPDFにまとめる" : "ページ番号つき1セット").tag(false)
+                    Text("書類ごとに個別ファイル").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("export.separate")
+                if separateFiles {
+                    Text("保存先フォルダを選ぶと、各書類を「元のファイル名-masked」で書き出します。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -83,6 +99,10 @@ struct ExportSheet: View {
     }
 
     private func save() {
+        if separateFiles && appState.pages.count > 1 {
+            saveSeparately()
+            return
+        }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = appState.defaultExportFileName
         panel.allowedContentTypes = [contentType(for: appState.exportOptions.format)]
@@ -91,6 +111,26 @@ struct ExportSheet: View {
         do {
             try appState.export(to: url)
             appState.lastExportedURL = url
+            appState.showingExportDone = true
+            dismiss()
+        } catch {
+            appState.errorMessage = "書き出しに失敗しました: \(error)"
+            appState.showingError = true
+        }
+    }
+
+    /// 一括書き出し（v1.2）: 保存先フォルダを選び、1書類=1ファイルで書き出す。
+    private func saveSeparately() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "このフォルダに書き出す"
+        guard panel.runModal() == .OK, let dir = panel.url else { return }
+        do {
+            let written = try appState.exportSeparately(to: dir)
+            appState.lastExportedURL = written.first ?? dir
             appState.showingExportDone = true
             dismiss()
         } catch {

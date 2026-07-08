@@ -105,13 +105,14 @@ public struct VisionRectifier: DocumentRectifier {
         return out.transformed(by: .init(translationX: -out.extent.origin.x, y: -out.extent.origin.y))
     }
 
-    /// 正立化: 縦長なら90°CW/CCW、横長なら0/180°の2択を「正立スコア」で比較する。
+    /// 正立化: **4方向（0/90/180/270°）すべて**を「正立スコア」で比較する。
     /// Vision は 180°逆さの文字を完全に読めるため総認識量では判別できない（WP-0知見）。
     /// 各観測の upright（テキスト四隅の上下関係）だけを加点し、全ゼロ時は総量スコアへフォールバック。
+    /// 旧実装は「縦長＝横倒しのカード」と決め打ちして2択に絞っていたが、縦長の紙書類（住民票等）を
+    /// 強制横倒しにするバグがあった（2026-07-08 dogfood）。4方向比較なら縦書類は縦のまま勝つ。
     static func uprightOrientation(of image: CIImage,
                                    tuning: PipelineTuning = PipelineTuning()) throws -> (CGImage, [OCRItem]) {
-        let isPortrait = image.extent.height > image.extent.width
-        let candidates: [CGImagePropertyOrientation] = isPortrait ? [.right, .left] : [.up, .down]
+        let candidates: [CGImagePropertyOrientation] = [.up, .right, .down, .left]
 
         var best: (CGImage, [OCRItem], Double)? = nil
         var fallback: (CGImage, [OCRItem], Double)? = nil

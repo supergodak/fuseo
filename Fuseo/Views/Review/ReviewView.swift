@@ -7,16 +7,22 @@ struct ReviewView: View {
 
     var body: some View {
         @Bindable var appState = appState
-        HStack(spacing: 0) {
-            if appState.pages.count > 1 {
-                PageRailView()
-                Divider()
-            }
-            if let page = appState.currentPage {
-                CanvasView(page: page)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                Divider()
-                CandidateListView(page: page)
+        Group {
+            if appState.reviewLayout == .grid && appState.pages.count > 1 {
+                BatchGridView()
+            } else {
+                HStack(spacing: 0) {
+                    if appState.pages.count > 1 {
+                        PageRailView()
+                        Divider()
+                    }
+                    if let page = appState.currentPage {
+                        CanvasView(page: page)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        Divider()
+                        CandidateListView(page: page)
+                    }
+                }
             }
         }
         .toolbar { toolbarContent }
@@ -36,12 +42,23 @@ struct ReviewView: View {
         } message: {
             Text("候補の編集内容（チェックの変更）は失われます。手動マスクは保持されます。")
         }
+        .alert("回転しますか？", isPresented: pendingRotationBinding) {
+            Button("回転する", role: .destructive) { appState.confirmPendingRotation() }
+            Button("キャンセル", role: .cancel) { appState.cancelPendingRotation() }
+        } message: {
+            Text("回転すると座標が変わるため、このページの手動マスクと候補の編集内容は失われます。")
+        }
         .overlay(alignment: .bottom) { exportDoneToast }
     }
 
     private var pendingTypeChangeBinding: Binding<Bool> {
         Binding(get: { appState.pendingTypeChange != nil },
                 set: { if !$0 { appState.cancelPendingTypeChange() } })
+    }
+
+    private var pendingRotationBinding: Binding<Bool> {
+        Binding(get: { appState.pendingRotationPageID != nil },
+                set: { if !$0 { appState.cancelPendingRotation() } })
     }
 
     // MARK: - ツールバー
@@ -53,21 +70,40 @@ struct ReviewView: View {
                 .accessibilityIdentifier("review.addButton")
         }
         ToolbarItemGroup(placement: .principal) {
-            toolButton(.select, "選択", "cursorarrow")
-            toolButton(.rect, "矩形", "rectangle.dashed")
-            toolButton(.brush, "ブラシ", "paintbrush")
-
-            if appState.tool == .brush {
-                Slider(value: brushWidthBinding, in: 0.01...0.10) { Text("幅") }
-                    .frame(width: 90)
-                    .help("ブラシ幅")
+            if appState.pages.count > 1 {
+                Button {
+                    appState.reviewLayout = (appState.reviewLayout == .grid) ? .single : .grid
+                } label: {
+                    Label(appState.reviewLayout == .grid ? "個別表示" : "一覧表示",
+                          systemImage: appState.reviewLayout == .grid ? "rectangle" : "square.grid.2x2")
+                }
+                .help("一覧（サムネイル）と個別の確認画面を切り替えます")
+                .accessibilityIdentifier("review.layoutToggle")
             }
+            if appState.reviewLayout == .single {
+                toolButton(.select, "選択", "cursorarrow")
+                toolButton(.rect, "矩形", "rectangle.dashed")
+                toolButton(.brush, "ブラシ", "paintbrush")
 
-            Button("全体") { fit() }
-            Button("100%") { pixelAccurate() }
-            if let page = appState.currentPage {
-                Slider(value: zoomBinding(page), in: 1.0...4.0) { Text("ズーム") }
-                    .frame(width: 90)
+                if appState.tool == .brush {
+                    Slider(value: brushWidthBinding, in: 0.01...0.10) { Text("幅") }
+                        .frame(width: 90)
+                        .help("ブラシ幅")
+                }
+
+                Button("全体") { fit() }
+                Button("100%") { pixelAccurate() }
+                if let page = appState.currentPage {
+                    Button { appState.requestRotate(page: page) } label: {
+                        Label("回転", systemImage: "rotate.right")
+                    }
+                    .help("時計回りに90°回転して解析し直します（自動の向き判定が外れたとき用）")
+                    .accessibilityIdentifier("review.rotateButton")
+                }
+                if let page = appState.currentPage {
+                    Slider(value: zoomBinding(page), in: 1.0...4.0) { Text("ズーム") }
+                        .frame(width: 90)
+                }
             }
         }
         ToolbarItemGroup(placement: .primaryAction) {
