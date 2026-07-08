@@ -103,7 +103,7 @@ You can open other documents too; automatic candidates may not appear, but you c
 ### Install
 
 - **Direct download (notarized DMG):** grab the latest from the [project site](https://fuseo.ati-mirai.co.jp) or [GitHub Releases](https://github.com/supergodak/fuseo/releases/latest), then drag **Fuseo** into `/Applications`.
-- **Homebrew:** coming soon (`brew install --cask fuseo` planned).
+- **Homebrew:** `brew install --cask supergodak/tap/fuseo`
 
 Requires **macOS 14 (Sonoma) or later** (Apple Silicon or Intel). Built entirely on Apple's own frameworks (Vision, Core Image, PDFKit, SwiftUI) with no third-party dependencies.
 
