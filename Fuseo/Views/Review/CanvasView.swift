@@ -56,6 +56,20 @@ struct CanvasView: View {
                 .scrollDisabled(appState.tool != .select || appState.previewMode)
             }
         }
+        .overlay {
+            if appState.reanalyzing {
+                // 回転・種別変更・切り抜き適用の再解析中インジケータ（無反応に見せない・連打防止）
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("解析し直しています…").font(.callout)
+                }
+                .padding(24)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.08))
+                .transition(.opacity)
+            }
+        }
         .accessibilityIdentifier("review.canvas")
     }
 

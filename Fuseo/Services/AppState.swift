@@ -278,6 +278,7 @@ final class AppState {
     func appendFiles(_ urls: [URL]) async {
         let accepted = urls
         guard !accepted.isEmpty else { return }
+        await withReanalysis {
         var added = 0
         for url in accepted {
             do {
@@ -290,6 +291,7 @@ final class AppState {
             }
         }
         if added == 0 { presentError("追加した書類を読み込めませんでした。") }
+        }
     }
 
     /// 設定 `faceMaskDefaultOn` が ON なら、顔検出候補の isOn を true に上書きする（wp5 §4）。
@@ -298,6 +300,20 @@ final class AppState {
         for i in analyzed.candidates.indices where analyzed.candidates[i].source == .detector(.face) {
             analyzed.candidates[i].isOn = true
         }
+    }
+
+    // MARK: - 再解析の可視化と連打ガード
+
+    /// 再解析（回転・種別変更・切り抜き適用・追加取込）の実行中フラグ。
+    /// UIはこれを見て「解析し直しています…」のオーバーレイを出し、該当ボタンを無効化する。
+    var reanalyzing = false
+
+    /// 再解析を1つずつ実行する（実行中の再入は黙って無視＝連打ガード）。
+    private func withReanalysis(_ body: () async -> Void) async {
+        guard !reanalyzing else { return }
+        reanalyzing = true
+        defer { reanalyzing = false }
+        await body()
     }
 
     // MARK: - 種別変更（wp5 §2.1）
@@ -324,6 +340,7 @@ final class AppState {
     /// 種別を変えて再解析する。候補の isOn 編集は破棄・**手動マスクは保持**（wp5 §2.1）。
     /// 手動切り抜き（manualQuad）は必ず引き継ぐ（切り抜きが勝手に戻る事故の防止・wp5 §9.5）。
     func performTypeChange(page: PageState, to type: DocumentType) async {
+        await withReanalysis {
         do {
             let keepManual = page.analyzed.manual
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: type,
@@ -337,6 +354,7 @@ final class AppState {
             page.selectedCandidateID = nil
         } catch {
             presentError("種別を変更した再解析に失敗しました。")
+        }
         }
     }
 
@@ -361,6 +379,7 @@ final class AppState {
     /// 四隅を確定して再解析する。基準画像の座標系が変わるため**手動マスク・候補編集は破棄**。
     /// 種別はユーザーが選択済みならそれを維持し、未選択なら自動判定に任せる。
     func applyCrop(page: PageState, quad: Quad) async {
+        await withReanalysis {
         do {
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
                                                 manualQuad: quad,
@@ -372,6 +391,7 @@ final class AppState {
             page.selectedCandidateID = nil
         } catch {
             presentError("切り抜きを変更した再解析に失敗しました。")
+        }
         }
     }
 
@@ -400,6 +420,7 @@ final class AppState {
 
     /// 時計回りに90°回して再解析する。座標系が変わるため候補編集・手動マスクは破棄。
     func performRotate(page: PageState) async {
+        await withReanalysis {
         do {
             let next = (page.manualRotation + 1) % 4
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
@@ -413,6 +434,7 @@ final class AppState {
             page.selectedManualRectIndex = nil
         } catch {
             presentError("回転後の再解析に失敗しました。")
+        }
         }
     }
 

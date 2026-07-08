@@ -130,6 +130,31 @@ final class AppStateTests: XCTestCase {
         XCTAssertNotNil(state.pendingTypeChange)
     }
 
+    // MARK: - 再解析の連打ガード
+
+    func test_reanalysisGuard_ignoresReentrantCalls() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(analysis: fake, settings: makeSettings())
+        await state.processFiles([URL(fileURLWithPath: "/tmp/a.jpg")])
+        let page = state.pages[0]
+        let baseline = fake.analyzeCallCount
+
+        // 再解析中フラグが立っている間は、回転・種別変更・切り抜きとも黙って無視される
+        state.reanalyzing = true
+        await state.performRotate(page: page)
+        await state.performTypeChange(page: page, to: .menkyoshoFront)
+        await state.applyCrop(page: page, quad: .fullImage)
+        XCTAssertEqual(fake.analyzeCallCount, baseline, "実行中の再入は解析を走らせない")
+        XCTAssertEqual(page.manualRotation, 0, "状態も変えない")
+
+        // フラグが下りれば通常どおり動く（実行後は自動で false に戻る）
+        state.reanalyzing = false
+        await state.performRotate(page: page)
+        XCTAssertEqual(fake.analyzeCallCount, baseline + 1)
+        XCTAssertEqual(page.manualRotation, 1)
+        XCTAssertFalse(state.reanalyzing)
+    }
+
     // MARK: - 「新しい書類」の誤操作防止
 
     func test_requestReset_confirmsWhenDocumentsAreOpen() async {

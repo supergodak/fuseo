@@ -109,6 +109,7 @@ struct ReviewView: View {
                         Label("回転", systemImage: "rotate.right")
                     }
                     .help("時計回りに90°回転して解析し直します（自動の向き判定が外れたとき用）")
+                    .disabled(appState.reanalyzing)
                     .accessibilityIdentifier("review.rotateButton")
                 }
                 if let page = appState.currentPage {

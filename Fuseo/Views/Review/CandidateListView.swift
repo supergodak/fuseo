@@ -39,6 +39,7 @@ struct CandidateListView: View {
                 }
             }
             .labelsHidden()
+            .disabled(appState.reanalyzing)
             .accessibilityIdentifier("review.typePicker")
 
             Button {
@@ -46,6 +47,7 @@ struct CandidateListView: View {
             } label: {
                 Label("切り抜きを調整…", systemImage: "crop")
             }
+            .disabled(appState.reanalyzing)
             .accessibilityIdentifier("review.cropButton")
             .help("自動の切り抜きがおかしいとき、四隅を手動で指定し直します")
         }
