@@ -66,4 +66,20 @@ else
   echo "    xcrun notarytool submit \"$DMG\" --keychain-profile fuseo-notary --wait"
   echo "    xcrun stapler staple \"$DMG\""
 fi
+
+# WP-7: Sparkle appcast 生成（EdDSA 秘密鍵はログインKeychain＝Tameoと共通の鍵）。
+# 生成物 site/appcast.xml を LP と一緒に fuseo.ati-mirai.co.jp へデプロイすると配信される。
+APPCAST_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -path "*/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast" 2>/dev/null | head -1)
+if [ -n "$APPCAST_TOOL" ]; then
+  echo "==> Generating appcast…"
+  WORK="build/appcast-work"
+  mkdir -p "$WORK" site
+  cp -f "$DMG" "$WORK/"
+  "$APPCAST_TOOL" \
+    --download-url-prefix "https://github.com/supergodak/fuseo/releases/download/v$VERSION/" \
+    -o site/appcast.xml "$WORK"
+  echo "    appcast: site/appcast.xml（LPデプロイで公開される）"
+else
+  echo "    NOTE: generate_appcast が見つからないため appcast は未生成（Sparkle初回ビルド後に再実行）" >&2
+fi
 echo "==> Done. v$VERSION (build $BUILD_NUM)"

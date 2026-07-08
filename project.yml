@@ -13,7 +13,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.1.1"
+    MARKETING_VERSION: "0.1.2"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: "8NY87P5TYV"       # ATI K.K.（Developer ID 署名身元）
@@ -21,9 +21,12 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES         # notarize 前提
 
 packages:
-  # 外部パッケージ依存ゼロ（Sparkle 等は WP-7）。コア本体をローカル参照。
+  # コア本体をローカル参照。Sparkle は Mac 版の自動更新のみ（iOSターゲットには絶対に足さない）。
   MaskingCore:
     path: .
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.9.3"                  # Tameoと同じ（EdDSA署名＋appcast）
 
 targets:
   Fuseo:
@@ -43,6 +46,7 @@ targets:
     dependencies:
       - package: MaskingCore
         product: MaskingCore
+      - package: Sparkle           # 自動更新（appcast: fuseo.ati-mirai.co.jp/appcast.xml）
 
   # 層1: ロジック/統合テスト（@testable import Fuseo・隔離 UserDefaults・フェイクサービス）。
   FuseoTests:

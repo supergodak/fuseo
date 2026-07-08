@@ -17,6 +17,8 @@ struct FuseoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var appState: AppState
     @State private var settings: SettingsStore
+    /// Sparkle 自動更新（UIテスト時は開始しない）。nil = テスト起動。
+    @State private var updater: UpdaterController?
 
     /// テストホストとして起動されたか（副作用の抑制判定に使う）。
     static var isRunningTests: Bool {
@@ -54,6 +56,8 @@ struct FuseoApp: App {
 
         _settings = State(initialValue: settings)
         _appState = State(initialValue: state)
+        // 自動更新はテスト時に副作用を止める（Tameo型・--uitest / XCTest 検出）
+        _updater = State(initialValue: Self.isRunningTests ? nil : UpdaterController())
     }
 
     var body: some Scene {
@@ -65,6 +69,12 @@ struct FuseoApp: App {
                 .task { await bootstrapFixtureIfNeeded() }
         }
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("アップデートを確認…") { updater?.checkForUpdates() }
+                    .disabled(updater == nil)
+            }
+        }
 
         Settings {
             SettingsView()
@@ -78,7 +88,9 @@ struct FuseoApp: App {
         guard appState.stage == .empty else { return }
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--uitest-fixture"), i + 1 < args.count else { return }
-        await appState.processFiles([URL(fileURLWithPath: args[i + 1])])
+        // フォルダも受ける（一括処理の検証・スクリーンショット用）
+        let urls = FileIntake.expand([URL(fileURLWithPath: args[i + 1])])
+        await appState.processFiles(urls)
     }
 }
 
@@ -98,9 +110,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if let content = Self.mainContent {
             present(content, title: "Fuseo", size: NSSize(width: 1000, height: 680))
-            // フィクスチャの自動ロード（AppDelegate 提示ウィンドウ経路）。
+            // フィクスチャの自動ロード（AppDelegate 提示ウィンドウ経路。フォルダも展開）。
             if let url = Self.fixtureURL, let state = Self.appState {
-                Task { await state.processFiles([url]) }
+                Task { await state.processFiles(FileIntake.expand([url])) }
             }
         }
     }

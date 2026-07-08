@@ -24,5 +24,9 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 ATI Inc.</string>
+	<key>SUFeedURL</key>
+	<string>https://fuseo.ati-mirai.co.jp/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>wHNpmFXpZuKHpMXxbvxqkcWXCaFAX1l63IbWC75Ki3s=</string>
 </dict>
 </plist>
