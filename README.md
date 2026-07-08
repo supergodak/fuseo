@@ -7,7 +7,7 @@ Fuseo は**「提出事故を減らす道具」**です。名称は「伏せる�
 
 🌐 Website: https://fuseo.ati-mirai.co.jp  ·  📜 [プライバシーポリシー](PRIVACY.md)  ·  ⚖️ [MIT License](LICENSE)  ·  🍎 macOS 14+
 
-> **状態: 開発中（v0.1.0）。** Developer ID 署名＋Apple 公証の DMG で配布予定です。使い方の詳細は [docs/user-manual.md](docs/user-manual.md) を参照してください。
+> **v0.1.0 公開中。** Developer ID 署名＋Apple 公証済みの DMG を [Releases](https://github.com/supergodak/fuseo/releases/latest) から配布しています。使い方の詳細は [docs/user-manual.md](docs/user-manual.md) を参照してください。
 
 ---
 
