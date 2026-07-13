@@ -16,6 +16,8 @@ protocol Analyzing: AnyObject {
 final class AnalysisService: Analyzing {
     private let pipeline: MaskingPipeline
     private let displayNames: [DocumentType: String]
+    /// 種別表示名の英訳（WP-9）。UI言語が英語のときだけ使い、欠落時は ja へフォールバック。
+    private let displayNamesEn: [DocumentType: String]
     /// 直列実行キュー（複数ファイルを1枚ずつ analyze する）。
     private let queue = DispatchQueue(label: "jp.co.ati-mirai.fuseo.analysis")
 
@@ -23,6 +25,8 @@ final class AnalysisService: Analyzing {
         let presets = try PresetStore.loadAll()
         self.pipeline = try MaskingPipeline(presets: presets, tuning: tuning)
         self.displayNames = Dictionary(uniqueKeysWithValues: presets.map { ($0.documentType, $0.displayName) })
+        self.displayNamesEn = Dictionary(uniqueKeysWithValues:
+            presets.compactMap { p in p.displayNameEn.map { (p.documentType, $0) } })
     }
 
     func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage {
@@ -50,7 +54,12 @@ final class AnalysisService: Analyzing {
         }
     }
 
+    /// 種別ピッカーの表示名。UI言語が英語なら英訳（欠落時は ja）を返す。
+    /// 判定は `Bundle.main.preferredLocalizations`（UILang と同じ基準）。Mac版は en ローカリゼーション
+    /// を持たないため常に ja が選ばれ、挙動は従来と1バイトも変わらない。
     func displayName(for type: DocumentType) -> String {
-        displayNames[type] ?? type.rawValue
+        let isEnglish = Bundle.main.preferredLocalizations.first?.hasPrefix("en") == true
+        if isEnglish, let en = displayNamesEn[type] { return en }
+        return displayNames[type] ?? type.rawValue
     }
 }

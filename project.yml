@@ -6,6 +6,8 @@ name: Fuseo
 
 options:
   bundleIdPrefix: jp.co.ati-mirai
+  # 開発言語=日本語（UI原文）。enはString Catalogで提供 → ストアの言語欄が「日本語、英語」になる（WP-9）
+  developmentLanguage: ja
   deploymentTarget:
     macOS: "14.0"
     iOS: "17.0"
@@ -89,7 +91,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseo.ios
         PRODUCT_NAME: Fuseo
         PRODUCT_MODULE_NAME: FuseoiOS   # Swift モジュール名を固定（@testable import FuseoiOS 用）
-        MARKETING_VERSION: "1.0"        # App Store 初公開版。iOSはMac(0.1.x)と独立に採番する
+        MARKETING_VERSION: "1.1"        # v1.1=英語UI対応(WP-9)。iOSはMac(0.1.x)と独立に採番する
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSCameraUsageDescription: "書類を撮影してその場でマスキングするために使用します"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -98,6 +100,8 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_CFBundleDisplayName: Fuseo
+        # 輸出コンプライアンス: 暗号化非該当（通信コードなし）。ASCのビルド毎の質問をスキップ
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_HARDENED_RUNTIME: NO   # macOS 専用設定。iOS では無効化

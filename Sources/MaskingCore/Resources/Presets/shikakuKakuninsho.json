@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "documentType": "shikakuKakuninsho",
   "displayName": "資格確認書",
+  "displayNameEn": "Health insurance eligibility certificate (Shikaku Kakunin-sho)",
   "enhance": false,
   "classification": {
     "keywords": [
@@ -15,26 +16,32 @@
     {
       "id": "shikaku.insurer",
       "label": "保険者番号",
+      "labelEn": "Insurer number",
       "kind": "dynamic",
       "detector": "insurerNumber",
       "defaultOn": true,
-      "basis": "保険者番号等は告知要求制限の対象とされる（健康保険法）。総務省も写しには『復元できない程度に』マスキングするよう案内している"
+      "basis": "保険者番号等は告知要求制限の対象とされる（健康保険法）。総務省も写しには『復元できない程度に』マスキングするよう案内している",
+      "basisEn": "The insurer number and related items are subject to the restriction on requesting disclosure under the Health Insurance Act. The Ministry of Internal Affairs and Communications also advises masking copies so that it cannot be restored."
     },
     {
       "id": "shikaku.kigoBango",
       "label": "記号・番号",
+      "labelEn": "Symbol & number",
       "kind": "dynamic",
       "detector": "kigoBango",
       "defaultOn": true,
-      "basis": "保険者番号等は告知要求制限の対象とされる（健康保険法）。総務省も写しには『復元できない程度に』マスキングするよう案内している"
+      "basis": "保険者番号等は告知要求制限の対象とされる（健康保険法）。総務省も写しには『復元できない程度に』マスキングするよう案内している",
+      "basisEn": "The insurer number and related items are subject to the restriction on requesting disclosure under the Health Insurance Act. The Ministry of Internal Affairs and Communications also advises masking copies so that it cannot be restored."
     },
     {
       "id": "shikaku.qr",
       "label": "QRコード・バーコード",
+      "labelEn": "QR code / barcode",
       "kind": "dynamic",
       "detector": "qrBarcode",
       "defaultOn": true,
-      "basis": "QRコードに記号・番号等が符号化されている場合があるため、番号と同様に秘匿する"
+      "basis": "QRコードに記号・番号等が符号化されている場合があるため、番号と同様に秘匿する",
+      "basisEn": "A QR code may encode the symbol, number, and similar data, so it is concealed in the same way as the number."
     }
   ]
 }

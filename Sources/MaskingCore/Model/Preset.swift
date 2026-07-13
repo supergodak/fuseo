@@ -46,11 +46,15 @@ public struct MaskRule: Codable, Identifiable, Sendable {
 
     public let id: String           // "<種別略称>.<欄名>" で一意（v2テンプレートが参照する）
     public let label: String        // 確認UIの表示名
+    /// 確認UIの表示名（英語）。iOSの英語UIで使用。nil はja(label)へフォールバック（WP-9）。
+    public var labelEn: String? = nil
     public let kind: Kind
     public let detector: DetectorID?    // kind == .dynamic で必須
     public let region: Region?          // kind == .fixed で必須
     public let defaultOn: Bool
     public let basis: String        // 根拠（法令/実務）。全ルール必須・UI表示する
+    /// 根拠の英訳（WP-9）。nil はja(basis)へフォールバック。
+    public var basisEn: String? = nil
     public let padding: Double?     // マスク外周余白（正規化）。nil は既定値
     /// dynamic ルール専用: 検出子が1件も見つけられなかったときに使う固定領域（yTop表記）。
     /// 書式が規格で固定されている欄（マイナ裏の個人番号等）の「読めなくても位置で塗る」保険。
@@ -71,6 +75,9 @@ public struct MaskRule: Codable, Identifiable, Sendable {
             guard detector != nil else { throw MaskingError.presetInvalid("\(id): dynamic rule requires detector") }
         }
         guard !basis.isEmpty else { throw MaskingError.presetInvalid("\(id): basis is required") }
+        // 英語フィールドは任意（nil可）だが、宣言するなら非空であること（部分翻訳での空文字出荷を防ぐ）。
+        if let labelEn { guard !labelEn.isEmpty else { throw MaskingError.presetInvalid("\(id): labelEn must be non-empty when present") } }
+        if let basisEn { guard !basisEn.isEmpty else { throw MaskingError.presetInvalid("\(id): basisEn must be non-empty when present") } }
     }
 }
 
@@ -78,10 +85,14 @@ public struct DocumentPreset: Codable, Identifiable, Sendable {
     public let schemaVersion: Int
     public let documentType: DocumentType
     public let displayName: String
+    /// 種別表示名の英訳（WP-9）。nil はja(displayName)へフォールバック。
+    public var displayNameEn: String? = nil
     /// 基準画像に CIDocumentEnhancer を掛けるか（カード類=false / 紙書類=true。core-design.md §2.2）
     public let enhance: Bool
     public let classification: ClassificationSpec
     public let warnings: [String]
+    /// 警告文の英訳（WP-9）。nil はja(warnings)へフォールバック。件数はwarningsと一致させる。
+    public var warningsEn: [String]? = nil
     public let rules: [MaskRule]
 
     public var id: DocumentType { documentType }

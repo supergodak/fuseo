@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "documentType": "zairyuCardFront",
   "displayName": "在留カード（表）",
+  "displayNameEn": "Residence card (Zairyu Card) (front)",
   "enhance": false,
   "classification": {
     "keywords": [
@@ -18,19 +19,23 @@
     {
       "id": "zairyu.number",
       "label": "在留カード番号",
+      "labelEn": "Residence card number",
       "kind": "dynamic",
       "detector": "zairyuNumber",
       "fallbackRegion": { "x": 0.70, "yTop": 0.05, "w": 0.29, "h": 0.11 },
       "defaultOn": true,
-      "basis": "在留カード番号は失効確認の照会等に用いられる識別子。提出先が不要とする場合は秘匿が安全（提出実務）"
+      "basis": "在留カード番号は失効確認の照会等に用いられる識別子。提出先が不要とする場合は秘匿が安全（提出実務）",
+      "basisEn": "The residence card number is an identifier used for validity-check inquiries and the like. Concealing it is safer when the recipient does not require it (submission practice)."
     },
     {
       "id": "zairyu.face",
       "label": "顔写真",
+      "labelEn": "Photo",
       "kind": "dynamic",
       "detector": "face",
       "defaultOn": false,
-      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す"
+      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す",
+      "basisEn": "A photo is often required for identity verification. Hide it only when the recipient instructs so."
     }
   ]
 }

@@ -11,6 +11,8 @@ public struct MaskCandidate: Identifiable, Sendable {
     public let id: UUID
     public let ruleID: String
     public let label: String
+    /// 表示名の英訳（WP-9）。nil はja(label)へフォールバック。iOS英語UIで使用。
+    public let labelEn: String?
     /// 基準画像正規化・左下原点。**rule.effectivePadding 適用済み**の最終マスク矩形。
     /// 確認UIでユーザーが移動・リサイズできる（自動検出が完璧でない前提・設計書§1.5）。
     public var box: NormRect
@@ -19,17 +21,22 @@ public struct MaskCandidate: Identifiable, Sendable {
     /// 初期値 = rule.defaultOn。確認UIでユーザーが編集する。
     public var isOn: Bool
     public let basis: String
+    /// 根拠の英訳（WP-9）。nil はja(basis)へフォールバック。iOS英語UIで使用。
+    public let basisEn: String?
 
     public init(ruleID: String, label: String, box: NormRect, source: Source,
-                confidence: Float?, isOn: Bool, basis: String) {
+                confidence: Float?, isOn: Bool, basis: String,
+                labelEn: String? = nil, basisEn: String? = nil) {
         self.id = UUID()
         self.ruleID = ruleID
         self.label = label
+        self.labelEn = labelEn
         self.box = box
         self.source = source
         self.confidence = confidence
         self.isOn = isOn
         self.basis = basis
+        self.basisEn = basisEn
     }
 }
 

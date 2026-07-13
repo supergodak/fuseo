@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "documentType": "menkyoshoFront",
   "displayName": "運転免許証（表）",
+  "displayNameEn": "Driver's license (front)",
   "enhance": false,
   "classification": {
     "keywords": [
@@ -16,18 +17,22 @@
     {
       "id": "menkyo.number",
       "label": "免許証番号",
+      "labelEn": "License number",
       "kind": "dynamic",
       "detector": "licenseNumber12",
       "defaultOn": true,
-      "basis": "免許証番号は個人識別性が高く、提出先が不要とする場合は秘匿が安全（自治体の入札実務等でマスキング指示例あり）"
+      "basis": "免許証番号は個人識別性が高く、提出先が不要とする場合は秘匿が安全（自治体の入札実務等でマスキング指示例あり）",
+      "basisEn": "The license number is highly identifying, so concealing it is safer when the recipient does not require it (there are examples of masking instructions in municipal bidding practice and the like)."
     },
     {
       "id": "menkyo.face",
       "label": "顔写真",
+      "labelEn": "Photo",
       "kind": "dynamic",
       "detector": "face",
       "defaultOn": false,
-      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す"
+      "basis": "本人確認目的では顔写真が必要なことが多い。提出先の指示がある場合のみ隠す",
+      "basisEn": "A photo is often required for identity verification. Hide it only when the recipient instructs so."
     }
   ]
 }

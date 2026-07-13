@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "documentType": "juminhyoMyNumber",
   "displayName": "住民票（マイナンバー記載）",
+  "displayNameEn": "Certificate of residence (with My Number)",
   "enhance": true,
   "classification": {
     "keywords": [
@@ -15,10 +16,12 @@
     {
       "id": "juminhyo.myNumber",
       "label": "マイナンバー（12桁）",
+      "labelEn": "My Number (12 digits)",
       "kind": "dynamic",
       "detector": "myNumber12",
       "defaultOn": true,
-      "basis": "金融機関等へ提出する住民票の個人番号はマスキングするようPPCが案内している。復元できない程度の黒塗りが求められる"
+      "basis": "金融機関等へ提出する住民票の個人番号はマスキングするようPPCが案内している。復元できない程度の黒塗りが求められる",
+      "basisEn": "The PPC advises masking the Individual Number on a certificate of residence submitted to financial institutions and the like. It must be redacted so that it cannot be restored."
     }
   ]
 }

@@ -8,6 +8,7 @@ FuseoiOSUITests/
 docs/handoff.md
 docs/design.md
 docs/wp8-ios-design.md
+docs/wp9-i18n-design.md
 docs/research/
 docs/poc-results.md
 # ビルド成果物
@@ -22,3 +23,6 @@ docs/appstore-kit.md
 # LP・caskドラフトはリポジトリ外（Tameoと同じ外部デプロイ運用）
 site/
 dist/
+
+# Zenn記事ドラフト（マーケ素材・非公開）
+docs/zenn/

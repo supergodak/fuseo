@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "documentType": "generic",
   "displayName": "その他の書類",
+  "displayNameEn": "Other document",
   "enhance": true,
   "classification": { "keywords": [] },
   "warnings": [],
@@ -9,34 +10,42 @@
     {
       "id": "generic.myNumber",
       "label": "マイナンバー（12桁）",
+      "labelEn": "My Number (12 digits)",
       "kind": "dynamic",
       "detector": "myNumber12",
       "defaultOn": true,
-      "basis": "番号法・PPCガイドライン: 個人番号は法令に定めのある場合以外の収集・保管が禁止。写しでは復元できない程度のマスキングが求められる（国税庁も控えのマスキングを要請）"
+      "basis": "番号法・PPCガイドライン: 個人番号は法令に定めのある場合以外の収集・保管が禁止。写しでは復元できない程度のマスキングが求められる（国税庁も控えのマスキングを要請）",
+      "basisEn": "The My Number Act and PPC guidelines: collecting or storing an Individual Number is prohibited except where the law provides for it. Copies must be masked so that it cannot be restored (the National Tax Agency also requests masking on retained copies)."
     },
     {
       "id": "generic.creditCard",
       "label": "クレジットカード番号",
+      "labelEn": "Credit card number",
       "kind": "dynamic",
       "detector": "creditCardLuhn",
       "defaultOn": true,
-      "basis": "カード番号の写り込みは不正利用リスク（安全管理の一般実務）"
+      "basis": "カード番号の写り込みは不正利用リスク（安全管理の一般実務）",
+      "basisEn": "A visible card number carries a risk of fraudulent use (general security-management practice)."
     },
     {
       "id": "generic.qr",
       "label": "QRコード・バーコード",
+      "labelEn": "QR code / barcode",
       "kind": "dynamic",
       "detector": "qrBarcode",
       "defaultOn": false,
-      "basis": "QRコードに番号等が符号化されている場合がある（保険証系の提出実務指示に準拠）"
+      "basis": "QRコードに番号等が符号化されている場合がある（保険証系の提出実務指示に準拠）",
+      "basisEn": "A QR code may encode numbers and other data (following submission-practice guidance for health insurance cards)."
     },
     {
       "id": "generic.face",
       "label": "顔写真",
+      "labelEn": "Photo",
       "kind": "dynamic",
       "detector": "face",
       "defaultOn": false,
-      "basis": "提出先により顔写真の要否が分かれる（不要なら隠すのが安全）"
+      "basis": "提出先により顔写真の要否が分かれる（不要なら隠すのが安全）",
+      "basisEn": "Whether a photo is required depends on the recipient (if it is not needed, hiding it is safer)."
     }
   ]
 }

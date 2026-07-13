@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "documentType": "myNumberCardBack",
   "displayName": "マイナンバーカード（裏）",
+  "displayNameEn": "My Number Card (back)",
   "enhance": false,
   "classification": {
     "keywords": [
@@ -14,23 +15,30 @@
   "warnings": [
     "マイナンバーカードの裏面は、法令で認められた者以外がコピー・保管することを禁止されています（番号法）。そもそも裏面の提出が求められているかを確認してください。"
   ],
+  "warningsEn": [
+    "Copying or storing the back of a My Number Card is prohibited for anyone other than those permitted by law (the My Number Act). Check whether the back is actually required to be submitted at all."
+  ],
   "rules": [
     {
       "id": "mynumB.number",
       "label": "個人番号（マイナンバー）",
+      "labelEn": "Individual Number (My Number)",
       "kind": "dynamic",
       "detector": "myNumber12",
       "fallbackRegion": { "x": 0.32, "yTop": 0.08, "w": 0.62, "h": 0.28 },
       "defaultOn": true,
-      "basis": "番号法・PPCガイドライン: 個人番号は復元できない程度にマスキングすることが求められる"
+      "basis": "番号法・PPCガイドライン: 個人番号は復元できない程度にマスキングすることが求められる",
+      "basisEn": "The My Number Act and PPC guidelines: an Individual Number must be masked so that it cannot be restored."
     },
     {
       "id": "mynumB.qr",
       "label": "QRコード",
+      "labelEn": "QR code",
       "kind": "dynamic",
       "detector": "qrBarcode",
       "defaultOn": true,
-      "basis": "裏面のQRコードには個人番号が符号化されているため、番号と同様に秘匿する"
+      "basis": "裏面のQRコードには個人番号が符号化されているため、番号と同様に秘匿する",
+      "basisEn": "The QR code on the back encodes the Individual Number, so it is concealed in the same way as the number."
     }
   ]
 }

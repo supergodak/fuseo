@@ -261,7 +261,7 @@ final class AppState {
 
         if built.isEmpty {
             stage = .empty
-            presentError("読み込めませんでした。対応する画像ファイル（JPEG / PNG / HEIC / TIFF）を選んでください。")
+            presentError(String(localized: "読み込めませんでした。対応する画像ファイル（JPEG / PNG / HEIC / TIFF）を選んでください。"))
         } else {
             pages = built
             currentPageIndex = 0
@@ -269,7 +269,7 @@ final class AppState {
             reviewLayout = built.count >= 5 ? .grid : .single   // 束は一覧から（v1.2）
             stage = .review
             if failures > 0 {
-                presentError("\(failures)枚は読み込めませんでした。読み込めた\(built.count)枚を表示しています。")
+                presentError(String(localized: "\(failures)枚は読み込めませんでした。読み込めた\(built.count)枚を表示しています。"))
             }
         }
     }
@@ -290,7 +290,7 @@ final class AppState {
                 // 個別失敗はスキップ
             }
         }
-        if added == 0 { presentError("追加した書類を読み込めませんでした。") }
+        if added == 0 { presentError(String(localized: "追加した書類を読み込めませんでした。")) }
         }
     }
 
@@ -353,7 +353,7 @@ final class AppState {
             page.candidatesEdited = false
             page.selectedCandidateID = nil
         } catch {
-            presentError("種別を変更した再解析に失敗しました。")
+            presentError(String(localized: "種別を変更した再解析に失敗しました。"))
         }
         }
     }
@@ -390,7 +390,7 @@ final class AppState {
             page.candidatesEdited = false
             page.selectedCandidateID = nil
         } catch {
-            presentError("切り抜きを変更した再解析に失敗しました。")
+            presentError(String(localized: "切り抜きを変更した再解析に失敗しました。"))
         }
         }
     }
@@ -433,7 +433,7 @@ final class AppState {
             page.selectedCandidateID = nil
             page.selectedManualRectIndex = nil
         } catch {
-            presentError("回転後の再解析に失敗しました。")
+            presentError(String(localized: "回転後の再解析に失敗しました。"))
         }
         }
     }
