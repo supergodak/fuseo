@@ -86,6 +86,32 @@ targets:
     sources:
       - path: Fuseo/Services        # Mac と共有（AppKit 非依存を維持）
       - path: FuseoiOS              # iOS 固有（App・Views・撮影/取込・共有）
+        excludes:
+          - Info.plist              # 下の info: が生成する（ソースには含めない）
+    # WP-11a: 受け取り口。GENERATE_INFOPLIST_FILE と併用し、ビルド設定側の
+    # INFOPLIST_KEY_* はこのファイルへマージされる（構造を持つキーだけここに置く）。
+    info:
+      path: FuseoiOS/Info.plist
+      properties:
+        # XcodeGen の既定は "1.0"/"1" 固定なので、必ずビルド設定を参照させる
+        # （MARKETING_VERSION=1.1 が 1.0 に化けるのを防ぐ）。
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # 「ファイル」/メール添付/他アプリの共有シートに「Fuseoにコピー」を出す。
+        # LSHandlerRank=Alternate: 画像/PDFの既定アプリは奪わない（あくまで選択肢の1つ）。
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Image
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.image
+          - CFBundleTypeName: PDF
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.adobe.pdf
+        # NO = 原本を直接開かず**コピーして受け取る**（元ファイルを書き換えない・§3.2）。
+        LSSupportsOpeningDocumentsInPlace: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseo.ios
