@@ -6,11 +6,16 @@ import os
 /// UI層のロガー（コアの MaskingLog と同じ subsystem）。
 enum UILog {
     static let review = Logger(subsystem: "jp.co.ati-mirai.fuseo", category: "ui.review")
+    /// 取り込み（PDFのページ展開など）。**パスワードは絶対に記録しない**。ファイル名は `.private`。
+    static let intake = Logger(subsystem: "jp.co.ati-mirai.fuseo", category: "ui.intake")
 }
 
-/// 画面フローの状態（wp5 §1）。単一ウィンドウ・3状態。
+/// 画面フローの状態（wp5 §1）。単一ウィンドウ・3状態＋取り込み中（WP-10）。
 enum Stage: Equatable {
     case empty
+    /// 取り込み中（PDFのページ画像化など）。件数を数えられないので**不確定表示**にする。
+    /// ラスタライズ中に無反応に見えるのを防ぐため、取り込み開始と同時にこの状態へ移す。
+    case importing
     case processing(done: Int, total: Int)
     case review
 }
@@ -53,10 +58,22 @@ final class PageState: Identifiable {
     var forcedType: DocumentType?
     /// 手動回転（時計回り90°×n・0..3）。自動正立化が外れた場合の救済。再解析に必ず引き継ぐ。
     var manualRotation: Int = 0
+    /// PDF 由来のページか（WP-10 §2.3）。PDF ページは既に平面・全面なので、書類検出を走らせると
+    /// 内枠や表罫線に誤クロップし得る。**種別変更・回転などの再解析でも `Quad.fullImage` を維持する。**
+    let isFlatSource: Bool
 
-    init(sourceURL: URL, analyzed: AnalyzedPage) {
+    init(sourceURL: URL, analyzed: AnalyzedPage, isFlatSource: Bool = false) {
         self.sourceURL = sourceURL
         self.analyzed = analyzed
+        self.isFlatSource = isFlatSource
+    }
+
+    /// 再解析（種別変更・回転・追加解析）に渡す切り抜き四隅。
+    /// **ユーザーが「切り抜きを調整」で指定した quad が最優先**。指定が無ければ PDF 由来は全面固定、
+    /// それ以外は nil（=自動の書類検出に任せる）。
+    var reanalysisQuad: Quad? {
+        if let manualQuad { return manualQuad }
+        return isFlatSource ? .fullImage : nil
     }
 
     /// ユーザー編集（候補チェック変更・手動マスク）があるか。切り抜き変更の確認アラート条件。
@@ -242,26 +259,35 @@ final class AppState {
 
     // MARK: - 取り込み・解析（wp5 §1 Processing）
 
-    /// 複数ファイルを直列に解析して Review へ進む。1枚でも成功すれば Review、全滅なら Empty へ戻す。
+    /// 画像ファイル群を取り込む（PDF を経由しない従来経路）。
     func processFiles(_ urls: [URL]) async {
-        guard !urls.isEmpty else { return }
-        stage = .processing(done: 0, total: urls.count)
+        await processFiles(urls.map { IntakeFile(url: $0) })
+    }
+
+    /// 複数ファイルを直列に解析して Review へ進む。1枚でも成功すれば Review、全滅なら Empty へ戻す。
+    /// PDF 由来のページ（`isFlatPage`）は書類検出をバイパスして全面固定で解析する（WP-10 §2.3）。
+    func processFiles(_ files: [IntakeFile]) async {
+        guard !files.isEmpty else { return }
+        stage = .processing(done: 0, total: files.count)
         var built: [PageState] = []
         var failures = 0
-        for (index, url) in urls.enumerated() {
+        for (index, file) in files.enumerated() {
             do {
-                var analyzed = try await analysis.analyze(url: url, forcedType: nil, manualQuad: nil, manualRotation: 0)
+                var analyzed = try await analysis.analyze(
+                    url: file.url, forcedType: nil,
+                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0)
                 applyFaceDefault(to: &analyzed)
-                built.append(PageState(sourceURL: url, analyzed: analyzed))
+                built.append(PageState(sourceURL: file.url, analyzed: analyzed,
+                                       isFlatSource: file.isFlatPage))
             } catch {
                 failures += 1
             }
-            stage = .processing(done: index + 1, total: urls.count)
+            stage = .processing(done: index + 1, total: files.count)
         }
 
         if built.isEmpty {
             stage = .empty
-            presentError(String(localized: "読み込めませんでした。対応する画像ファイル（JPEG / PNG / HEIC / TIFF）を選んでください。"))
+            presentError(String(localized: "読み込めませんでした。対応するファイル（JPEG / PNG / HEIC / TIFF / PDF）を選んでください。"))
         } else {
             pages = built
             currentPageIndex = 0
@@ -274,23 +300,162 @@ final class AppState {
         }
     }
 
-    /// Review 中に書類を追加する（+Add）。解析して既存ページ末尾へ追加。全滅ならエラーのみ。
+    /// Review 中に書類を追加する（+Add）。画像のみの従来経路。
     func appendFiles(_ urls: [URL]) async {
-        let accepted = urls
-        guard !accepted.isEmpty else { return }
+        await appendFiles(urls.map { IntakeFile(url: $0) })
+    }
+
+    /// Review 中に書類を追加する（+Add）。解析して既存ページ末尾へ追加。全滅ならエラーのみ。
+    func appendFiles(_ files: [IntakeFile]) async {
+        guard !files.isEmpty else { return }
         await withReanalysis {
         var added = 0
-        for url in accepted {
+        for file in files {
             do {
-                var analyzed = try await analysis.analyze(url: url, forcedType: nil, manualQuad: nil, manualRotation: 0)
+                var analyzed = try await analysis.analyze(
+                    url: file.url, forcedType: nil,
+                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0)
                 applyFaceDefault(to: &analyzed)
-                pages.append(PageState(sourceURL: url, analyzed: analyzed))
+                pages.append(PageState(sourceURL: file.url, analyzed: analyzed,
+                                       isFlatSource: file.isFlatPage))
                 added += 1
             } catch {
                 // 個別失敗はスキップ
             }
         }
         if added == 0 { presentError(String(localized: "追加した書類を読み込めませんでした。")) }
+        }
+    }
+
+    // MARK: - PDF 取り込み（WP-10 §2.4）
+
+    /// PDF パスワード入力の要求（`sheet(item:)` 用）。入力値はメモリ内のみで扱い、保存もログもしない。
+    struct PDFPasswordRequest: Identifiable, Equatable {
+        let id = UUID()
+        let fileName: String
+        /// 直前の入力が誤りだった（再入力の文言を出す）。
+        let retry: Bool
+    }
+
+    /// 表示中のパスワード入力要求（nil = 出さない）。
+    var pdfPasswordRequest: PDFPasswordRequest?
+    private var pdfPasswordContinuation: CheckedContinuation<String?, Never>?
+
+    /// 「PDFは画像として処理する」注意文を閉じたか。PDF を取り込むたびに再表示する。
+    var pdfNoticeDismissed = false
+    /// PDF 由来のページを含むか（注意文の表示条件）。
+    var hasPDFPages: Bool { pages.contains(where: \.isFlatSource) }
+
+    /// パスワード入力シートを出して入力を待つ。`nil` = キャンセル。
+    func requestPDFPassword(fileName: String, retry: Bool) async -> String? {
+        await withCheckedContinuation { continuation in
+            pdfPasswordContinuation = continuation
+            pdfPasswordRequest = PDFPasswordRequest(fileName: fileName, retry: retry)
+        }
+    }
+
+    func submitPDFPassword(_ password: String) { finishPDFPassword(password) }
+    func cancelPDFPassword() { finishPDFPassword(nil) }
+
+    private func finishPDFPassword(_ value: String?) {
+        pdfPasswordRequest = nil
+        let continuation = pdfPasswordContinuation
+        pdfPasswordContinuation = nil
+        continuation?.resume(returning: value)
+    }
+
+    // MARK: - ページ画像の一時ディレクトリ（Mac 経路の寿命管理）
+
+    /// 取り込み済みページ画像の一時ディレクトリ（Mac）。**セッション中は消さない**
+    /// （再解析で `sourceURL` を読み直すため）。取り込みの置き換え・「新しい書類」・アプリ終了で削除する。
+    private(set) var pageImageDirectories: [URL] = []
+    /// 今回の取り込みで作ったが、まだ確定していないディレクトリ。
+    private var stagedPageDirectories: [URL] = []
+
+    /// Mac 用のページ画像 writer を作る。作った一時ディレクトリは AppState が寿命管理する
+    /// （本人確認書類の像を temp に残さないための唯一の入口。View から直接 `PDFIntake` を呼ばない）。
+    func makeTempPageWriter() -> PDFIntake.PageWriter {
+        let store = PDFIntake.makeTempPageStore()
+        stagedPageDirectories.append(store.directory)
+        return store.writer
+    }
+
+    /// 取り込みが成立したときに寿命を更新する。`replacing` はページ集合の置き換え（=追加取込でない）。
+    private func commitPageDirectories(replacing: Bool) {
+        let staged = stagedPageDirectories
+        stagedPageDirectories = []
+        if replacing {
+            removeDirectories(pageImageDirectories)
+            pageImageDirectories = []
+        }
+        pageImageDirectories += staged
+    }
+
+    /// 取り込みが成立しなかったとき（キャンセル・失敗）は、今回作った分だけ即削除する。
+    private func discardStagedPageDirectories() {
+        removeDirectories(stagedPageDirectories)
+        stagedPageDirectories = []
+    }
+
+    /// ページ画像の一時ディレクトリを全部削除する（「新しい書類」・アプリ終了時）。
+    func purgePageImageDirectories() {
+        removeDirectories(pageImageDirectories + stagedPageDirectories)
+        pageImageDirectories = []
+        stagedPageDirectories = []
+    }
+
+    private func removeDirectories(_ urls: [URL]) {
+        for url in urls { try? FileManager.default.removeItem(at: url) }
+    }
+
+    /// 取り込みの唯一の入口。PDF はページ画像へ展開してから解析へ渡す。
+    ///
+    /// - Parameters:
+    ///   - writer: ページ画像の一時ファイル化（iOS=`SessionFiles.importCGImage` / Mac=`makeTempPageWriter()`）。
+    ///   - append: true なら Review 中の追加取込。
+    func importFiles(_ urls: [URL],
+                     writer: @escaping PDFIntake.PageWriter,
+                     limit: Int? = PDFIntake.combinedLimit,
+                     rasterizer: PDFRasterizer = PDFRasterizer(),
+                     append: Bool = false) async {
+        guard !urls.isEmpty else { return }
+
+        // ラスタライズは時間がかかるので、取り込み開始と同時に不確定の処理中表示へ移す
+        // （ページ進捗が出るまでの無反応区間をなくす）。
+        let stageBeforeImport = stage
+        if !append { stage = .importing }
+
+        let outcome = await PDFIntake.run(
+            urls: urls, limit: limit, rasterizer: rasterizer,
+            passwordProvider: { [weak self] fileName, retry in
+                guard let self else { return nil }
+                return await self.requestPDFPassword(fileName: fileName, retry: retry)
+            },
+            writer: writer)
+
+        switch outcome {
+        case .cancelled:
+            UILog.intake.info("PDFのパスワード入力がキャンセルされたため取り込みを中止")
+            discardStagedPageDirectories()
+            if !append { stage = stageBeforeImport }
+        case .failed(let message):
+            discardStagedPageDirectories()
+            if !append { stage = stageBeforeImport }
+            presentError(message)
+        case .files(let files):
+            guard !files.isEmpty else {
+                discardStagedPageDirectories()
+                if !append { stage = stageBeforeImport }
+                return
+            }
+            if files.contains(where: \.isFlatPage) { pdfNoticeDismissed = false }
+            if append {
+                await appendFiles(files)
+            } else {
+                await processFiles(files)
+            }
+            // 解析の成否によらず、生成済みページ画像はページの sourceURL として参照されている。
+            commitPageDirectories(replacing: !append)
         }
     }
 
@@ -339,12 +504,13 @@ final class AppState {
 
     /// 種別を変えて再解析する。候補の isOn 編集は破棄・**手動マスクは保持**（wp5 §2.1）。
     /// 手動切り抜き（manualQuad）は必ず引き継ぐ（切り抜きが勝手に戻る事故の防止・wp5 §9.5）。
+    /// PDF 由来ページは手動指定が無ければ全面固定を維持する（WP-10 §2.3・`reanalysisQuad`）。
     func performTypeChange(page: PageState, to type: DocumentType) async {
         await withReanalysis {
         do {
             let keepManual = page.analyzed.manual
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: type,
-                                                manualQuad: page.manualQuad,
+                                                manualQuad: page.reanalysisQuad,
                                                 manualRotation: page.manualRotation)
             applyFaceDefault(to: &re)
             re.manual = keepManual
@@ -424,7 +590,7 @@ final class AppState {
         do {
             let next = (page.manualRotation + 1) % 4
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
-                                                manualQuad: page.manualQuad,
+                                                manualQuad: page.reanalysisQuad,
                                                 manualRotation: next)
             applyFaceDefault(to: &re)
             page.analyzed = re
@@ -509,6 +675,8 @@ final class AppState {
     }
 
     func reset() {
+        // 本人確認書類の像を temp に残さない（PDFページ画像の一時ディレクトリを消す）。
+        purgePageImageDirectories()
         pages = []
         currentPageIndex = 0
         tool = .select

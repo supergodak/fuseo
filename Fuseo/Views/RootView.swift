@@ -1,9 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// 受理する画像タイプ（wp5 §1・jpeg / png / heic / tiff）。PDF等は受理しない。
+/// 受理するタイプ（wp5 §1・jpeg / png / heic / tiff ＋ WP-10 で pdf を追加）。
+/// PDF は `PDFIntake` が各ページを画像へ展開してからパイプラインへ渡す。
 enum FileIntake {
-    static let acceptedTypes: [UTType] = [.jpeg, .png, .heic, .tiff]
+    static let acceptedTypes: [UTType] = [.jpeg, .png, .heic, .tiff, .pdf]
 
     static func isAccepted(_ url: URL) -> Bool {
         guard let type = UTType(filenameExtension: url.pathExtension.lowercased()) else { return false }
@@ -51,6 +52,8 @@ struct RootView: View {
             switch appState.stage {
             case .empty:
                 DropView()
+            case .importing:
+                ProcessingView()          // 取り込み中（PDFのページ画像化・不確定表示）
             case .processing(let done, let total):
                 ProcessingView(done: done, total: total)
             case .review:
@@ -61,6 +64,11 @@ struct RootView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(appState.errorMessage ?? "")
+        }
+        // 暗号化 PDF のパスワード入力（WP-10 §2.4）。どの状態からの取り込みでも出せるようここに置く。
+        .sheet(item: $appState.pdfPasswordRequest) { request in
+            PDFPasswordSheet(request: request)
+                .environment(appState)
         }
     }
 }

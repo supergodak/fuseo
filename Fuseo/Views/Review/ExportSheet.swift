@@ -67,6 +67,14 @@ struct ExportSheet: View {
             Text("マスク \(summary.total)箇所（自動 \(summary.auto)・手動 \(summary.manual)）／ \(summary.pageCount)ページ")
                 .font(.callout)
 
+            if appState.hasPDFPages {
+                Text("PDFは各ページを画像として処理します。書き出したPDFのテキストは選択・検索できません（OCRテキスト層をオンにすると検索は可能。マスク箇所の文字は含まれません）。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("export.pdfNotice")
+            }
+
             if !appState.allWarnings.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(appState.allWarnings, id: \.self) { w in

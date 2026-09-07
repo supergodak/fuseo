@@ -36,6 +36,8 @@ struct FuseoApp: App {
             fatalError("解析サービスの初期化に失敗: \(error)")
         }
         let state = AppState(analysis: analysis, settings: settings)
+        // 終了時の一時ファイル掃除（applicationWillTerminate）のため、通常起動でも参照を渡す。
+        AppDelegate.appState = state
 
         // UIテスト時のみ、AppDelegate が提示するビュー（環境注入済み）を準備する。
         if Self.isRunningTests {
@@ -88,9 +90,9 @@ struct FuseoApp: App {
         guard appState.stage == .empty else { return }
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--uitest-fixture"), i + 1 < args.count else { return }
-        // フォルダも受ける（一括処理の検証・スクリーンショット用）
+        // フォルダも受ける（一括処理の検証・スクリーンショット用）。PDF も同経路で展開する。
         let urls = FileIntake.expand([URL(fileURLWithPath: args[i + 1])])
-        await appState.processFiles(urls)
+        await appState.importFiles(urls, writer: appState.makeTempPageWriter())
     }
 }
 
@@ -100,7 +102,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static var settingsContent: AnyView?
     static var mainContent: AnyView?
     static var fixtureURL: URL?
-    static var appState: AppState?   // UIテスト専用の強参照（フィクスチャ自動ロード用）
+    /// AppState への強参照（UIテストのフィクスチャ自動ロードと、終了時の一時ファイル掃除に使う）。
+    static var appState: AppState?
     private var uiTestWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -112,9 +115,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             present(content, title: "Fuseo", size: NSSize(width: 1000, height: 680))
             // フィクスチャの自動ロード（AppDelegate 提示ウィンドウ経路。フォルダも展開）。
             if let url = Self.fixtureURL, let state = Self.appState {
-                Task { await state.processFiles(FileIntake.expand([url])) }
+                Task { @MainActor in
+                    await state.importFiles(FileIntake.expand([url]), writer: state.makeTempPageWriter())
+                }
             }
         }
+    }
+
+    /// 終了時に PDF ページ画像の一時ディレクトリを消す（本人確認書類の像を temp に残さない・WP-10）。
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { Self.appState?.purgePageImageDirectories() }
     }
 
     private func present(_ content: AnyView, title: String, size: NSSize) {

@@ -7,20 +7,24 @@ struct ReviewView: View {
 
     var body: some View {
         @Bindable var appState = appState
-        Group {
-            if appState.reviewLayout == .grid && appState.pages.count > 1 {
-                BatchGridView()
-            } else {
-                HStack(spacing: 0) {
-                    if appState.pages.count > 1 {
-                        PageRailView()
-                        Divider()
-                    }
-                    if let page = appState.currentPage {
-                        CanvasView(page: page)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        Divider()
-                        CandidateListView(page: page)
+        VStack(spacing: 0) {
+            // PDF を取り込んだ直後に必ず目に入る位置（WP-10 §2.1「安全側の仕様」の説明）
+            PDFNoticeBanner()
+            Group {
+                if appState.reviewLayout == .grid && appState.pages.count > 1 {
+                    BatchGridView()
+                } else {
+                    HStack(spacing: 0) {
+                        if appState.pages.count > 1 {
+                            PageRailView()
+                            Divider()
+                        }
+                        if let page = appState.currentPage {
+                            CanvasView(page: page)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            Divider()
+                            CandidateListView(page: page)
+                        }
                     }
                 }
             }
@@ -169,7 +173,9 @@ struct ReviewView: View {
         panel.allowedContentTypes = FileIntake.acceptedTypes
         if panel.runModal() == .OK {
             let accepted = panel.urls.filter(FileIntake.isAccepted)
-            Task { await appState.appendFiles(accepted) }
+            Task {
+                await appState.importFiles(accepted, writer: appState.makeTempPageWriter(), append: true)
+            }
         }
     }
 
