@@ -1,0 +1,286 @@
+import CoreGraphics
+import CoreText
+import Foundation
+import ImageIO
+import PDFKit
+import UniformTypeIdentifiers
+import XCTest
+@testable import MaskingCore
+
+/// WP-10 §2.5 層1: PDF 入力（ラスタライズ）。
+///
+/// フィクスチャは**テスト内で合成**する（fixtures-private の実物書類は使わない）。
+final class PDFRasterizerTests: XCTestCase {
+
+    // MARK: - フィクスチャ生成
+
+    /// A4 相当（595×842pt）の PDF を合成する。
+    /// - Parameters:
+    ///   - pages: 各ページに描く文字列。
+    ///   - rotation: 全ページに設定する `/Rotate`（0/90/180/270）。CGPDFContext には /Rotate を
+    ///     書くキーが無いため、生成後に PDFKit でページ回転を設定して書き戻す。
+    ///   - userPassword: 指定すると暗号化 PDF になる。
+    private func makePDF(pages: [String], size: CGSize = CGSize(width: 595, height: 842),
+                         rotation: Int = 0, userPassword: String? = nil) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pdfrast-\(UUID().uuidString).pdf")
+        var mediaBox = CGRect(origin: .zero, size: size)
+
+        var auxiliary: [String: Any] = [:]
+        if let userPassword {
+            auxiliary[kCGPDFContextUserPassword as String] = userPassword
+            // オーナーパスワード未指定だと解錠可否が環境依存になるため明示する。
+            auxiliary[kCGPDFContextOwnerPassword as String] = userPassword
+        }
+
+        guard let ctx = CGContext(url as CFURL, mediaBox: &mediaBox,
+                                  auxiliary.isEmpty ? nil : auxiliary as CFDictionary) else {
+            throw XCTSkip("PDF コンテキストを作成できない環境")
+        }
+
+        for text in pages {
+            ctx.beginPDFPage(nil)
+
+            // 白地に黒文字。OCR が読める程度の大きさで描く。
+            ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+            ctx.fill(mediaBox)
+            draw(text: text, in: ctx, at: CGPoint(x: 60, y: size.height - 140), fontSize: 36)
+
+            ctx.endPDFPage()
+        }
+        ctx.closePDF()
+
+        if rotation != 0 {
+            // /Rotate を持つ PDF に書き換える（暗号化と回転の同時指定はテストで使わない）。
+            guard let doc = PDFDocument(url: url) else { throw XCTSkip("PDFKit で再読込できない") }
+            for i in 0..<doc.pageCount { doc.page(at: i)?.rotation = rotation }
+            guard doc.write(to: url) else { throw XCTSkip("PDFKit で書き戻せない") }
+        }
+        return url
+    }
+
+    private func draw(text: String, in ctx: CGContext, at origin: CGPoint, fontSize: CGFloat) {
+        let font = CTFontCreateWithName("Helvetica" as CFString, fontSize, nil)
+        let attributed = NSAttributedString(string: text, attributes: [
+            .font: font,
+            .foregroundColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1),
+        ])
+        let line = CTLineCreateWithAttributedString(attributed)
+        ctx.textPosition = origin
+        CTLineDraw(line, ctx)
+    }
+
+    private func removeFile(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    // MARK: - 1. ページ数と寸法
+
+    func test_rasterize_pageCountAndPixelSize() throws {
+        let url = try makePDF(pages: ["Page one", "Page two"])
+        defer { removeFile(url) }
+
+        let rasterizer = PDFRasterizer(dpi: 300)
+        var pages: [PDFRasterizer.Page] = []
+        try rasterizer.rasterize(url: url) { pages.append($0) }
+
+        XCTAssertEqual(pages.count, 2)
+        XCTAssertEqual(pages.map(\.index), [0, 1])
+
+        // 595×842pt @300dpi = 2479×3508px（四捨五入で ±1 の誤差を許容）
+        let expectedW = Int((595.0 / 72.0 * 300.0).rounded())
+        let expectedH = Int((842.0 / 72.0 * 300.0).rounded())
+        XCTAssertEqual(pages[0].cgImage.width, expectedW, accuracy: 1)
+        XCTAssertEqual(pages[0].cgImage.height, expectedH, accuracy: 1)
+        XCTAssertEqual(pages[0].pointSize.width, 595, accuracy: 0.5)
+        XCTAssertEqual(pages[0].pointSize.height, 842, accuracy: 0.5)
+    }
+
+    // MARK: - 2. /Rotate 90 で縦横比が入れ替わる
+
+    func test_rasterize_appliesPageRotation() throws {
+        let portrait = try makePDF(pages: ["Upright"], rotation: 0)
+        let rotated = try makePDF(pages: ["Rotated"], rotation: 90)
+        defer { removeFile(portrait); removeFile(rotated) }
+
+        let rasterizer = PDFRasterizer(dpi: 72)  // 等倍で十分
+
+        var portraitPage: PDFRasterizer.Page?
+        try rasterizer.rasterize(url: portrait) { portraitPage = $0 }
+        var rotatedPage: PDFRasterizer.Page?
+        try rasterizer.rasterize(url: rotated) { rotatedPage = $0 }
+
+        let p = try XCTUnwrap(portraitPage)
+        let r = try XCTUnwrap(rotatedPage)
+
+        // 元が縦長（595×842）なら、/Rotate 90 の結果は横長になる。
+        XCTAssertLessThan(p.cgImage.width, p.cgImage.height, "回転なしは縦長のはず")
+        XCTAssertGreaterThan(r.cgImage.width, r.cgImage.height, "/Rotate 90 は横長になるはず")
+
+        // pointSize も入れ替わっている。
+        XCTAssertEqual(r.pointSize.width, 842, accuracy: 0.5)
+        XCTAssertEqual(r.pointSize.height, 595, accuracy: 0.5)
+    }
+
+    // MARK: - 3. パスワード
+
+    func test_lockedPDF_requiresCorrectPassword() throws {
+        let url = try makePDF(pages: ["Secret"], userPassword: "correct-horse")
+        defer { removeFile(url) }
+
+        XCTAssertTrue(PDFRasterizer.isLocked(url: url), "暗号化 PDF は isLocked=true")
+
+        let rasterizer = PDFRasterizer(dpi: 72)
+
+        // パスワードなし → .locked
+        XCTAssertThrowsError(try rasterizer.rasterize(url: url) { _ in }) { error in
+            XCTAssertEqual(error as? PDFRasterizer.Failure, .locked)
+        }
+
+        // 誤パスワード → .wrongPassword
+        XCTAssertThrowsError(try rasterizer.rasterize(url: url, password: "nope") { _ in }) { error in
+            XCTAssertEqual(error as? PDFRasterizer.Failure, .wrongPassword)
+        }
+
+        // 正パスワード → 解錠して 1 ページ得られる
+        var count = 0
+        try rasterizer.rasterize(url: url, password: "correct-horse") { _ in count += 1 }
+        XCTAssertEqual(count, 1)
+    }
+
+    func test_isLocked_falseForPlainPDF() throws {
+        let url = try makePDF(pages: ["Plain"])
+        defer { removeFile(url) }
+        XCTAssertFalse(PDFRasterizer.isLocked(url: url))
+    }
+
+    // MARK: - 4. end-to-end（PDF → 解析 → マスク → 検索テキスト層から除外）
+
+    func test_endToEnd_myNumberInPDFIsMaskedAndExcludedFromTextLayer() throws {
+        // チェックディジットが成立する 12 桁を生成する（誤検出除去の実装に合わせる）。
+        let myNumber = try XCTUnwrap(Self.validMyNumber(), "検査用数字が成立する12桁を生成できなかった")
+        let spaced = Self.grouped(myNumber)
+
+        let pdf = try makePDF(pages: ["Notice", spaced])
+        defer { removeFile(pdf) }
+
+        let rasterizer = PDFRasterizer(dpi: 300)
+        let pipeline = try MaskingPipeline()
+        var analyzed: [AnalyzedPage] = []
+        var temps: [URL] = []
+        defer { temps.forEach(removeFile) }
+
+        try rasterizer.rasterize(url: pdf) { page in
+            // PDF ページは既に平面・全面なので書類検出はバイパスする（§2.3）。
+            let tmp = try Self.writePNG(page.cgImage, baseName: String(format: "pdfpage-%03d", page.index + 1))
+            temps.append(tmp)
+            analyzed.append(try pipeline.analyze(url: tmp, manualQuad: .fullImage))
+        }
+
+        XCTAssertEqual(analyzed.count, 2)
+
+        // 2 ページ目に個人番号がマスク候補として出る。
+        let candidates = analyzed[1].candidates
+        let hasMyNumber = candidates.contains { $0.source == .detector(.myNumber12) }
+        XCTAssertTrue(hasMyNumber,
+                      "PDF 由来ページから個人番号が検出されること（候補: \(candidates.map(\.label))）")
+
+        // 既存の書き出し経路で PDF に戻す。マスクと交差する OCR 観測はテキスト層から除外される。
+        let out = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pdfrast-out-\(UUID().uuidString).pdf")
+        defer { removeFile(out) }
+        let rendered = analyzed.map {
+            RenderedPage(image: $0.page.cgImage, ocrItems: $0.ocr, maskRects: $0.effectiveMaskRects)
+        }
+        try FileExporter().export(rendered, options: ExportOptions(format: .pdf, searchableText: true), to: out)
+
+        let text = try XCTUnwrap(PDFDocument(url: out)?.string)
+        let digitsOnly = text.filter(\.isNumber)
+        XCTAssertFalse(digitsOnly.contains(myNumber), "12桁はテキスト層に残らないこと")
+        XCTAssertTrue(text.contains("Notice"), "マスク外のテキストは検索できること")
+    }
+
+    // MARK: - 5. 上限
+
+    func test_tooManyPages() throws {
+        let url = try makePDF(pages: Array(repeating: "x", count: 6))
+        defer { removeFile(url) }
+
+        let rasterizer = PDFRasterizer(dpi: 72, maxPages: 5)
+        XCTAssertThrowsError(try rasterizer.rasterize(url: url) { _ in }) { error in
+            XCTAssertEqual(error as? PDFRasterizer.Failure, .tooManyPages(6))
+        }
+    }
+
+    func test_maxLongSidePx_capsHugePage() throws {
+        // 2000×3000pt のポスター。300dpi なら長辺 12500px になるが上限で抑える。
+        let url = try makePDF(pages: ["Poster"], size: CGSize(width: 2000, height: 3000))
+        defer { removeFile(url) }
+
+        let rasterizer = PDFRasterizer(dpi: 300, maxLongSidePx: 4000)
+        var page: PDFRasterizer.Page?
+        try rasterizer.rasterize(url: url) { page = $0 }
+
+        let p = try XCTUnwrap(page)
+        XCTAssertLessThanOrEqual(max(p.cgImage.width, p.cgImage.height), 4000)
+        // 縦横比は保たれている。
+        let ratio = Double(p.cgImage.height) / Double(p.cgImage.width)
+        XCTAssertEqual(ratio, 3000.0 / 2000.0, accuracy: 0.01)
+    }
+
+    func test_unreadableFile() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("not-a-pdf-\(UUID().uuidString).pdf")
+        try Data("this is not a pdf".utf8).write(to: url)
+        defer { removeFile(url) }
+
+        let rasterizer = PDFRasterizer(dpi: 72)
+        XCTAssertThrowsError(try rasterizer.rasterize(url: url) { _ in }) { error in
+            XCTAssertEqual(error as? PDFRasterizer.Failure, .unreadable)
+        }
+    }
+
+    // MARK: - ヘルパ
+
+    /// 検査用数字が成立する 12 桁を探す（総務省令式）。
+    private static func validMyNumber() -> String? {
+        for seed in 100_000_000_00...100_000_010_00 {
+            let body = String(format: "%011d", seed)
+            for check in 0...9 {
+                let candidate = body + String(check)
+                if Checkdigits.isValidMyNumber(candidate) { return candidate }
+            }
+        }
+        return nil
+    }
+
+    /// OCR が桁を拾いやすいよう 4 桁ずつ空ける。
+    private static func grouped(_ digits: String) -> String {
+        stride(from: 0, to: digits.count, by: 4).map { offset -> String in
+            let start = digits.index(digits.startIndex, offsetBy: offset)
+            let end = digits.index(start, offsetBy: min(4, digits.count - offset))
+            return String(digits[start..<end])
+        }.joined(separator: " ")
+    }
+
+    private static func writePNG(_ image: CGImage, baseName: String) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(baseName)-\(UUID().uuidString).png")
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL,
+                                                         UTType.png.identifier as CFString, 1, nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        CGImageDestinationAddImage(dest, image, nil)
+        guard CGImageDestinationFinalize(dest) else { throw CocoaError(.fileWriteUnknown) }
+        return url
+    }
+}
+
+// XCTAssertEqual(Int, Int, accuracy:) は無いので用意する。
+private func XCTAssertEqual(_ lhs: Int, _ rhs: Int, accuracy: Int,
+                            _ message: @autoclosure () -> String = "",
+                            file: StaticString = #filePath, line: UInt = #line) {
+    XCTAssertLessThanOrEqual(abs(lhs - rhs), accuracy,
+                             message().isEmpty ? "\(lhs) と \(rhs) の差が \(accuracy) を超えた" : message(),
+                             file: file, line: line)
+}
