@@ -200,6 +200,55 @@ final class PDFRasterizerTests: XCTestCase {
         XCTAssertTrue(text.contains("Notice"), "マスク外のテキストは検索できること")
     }
 
+    // MARK: - 4b. 権限フラグ（印刷不可・コピー不可）でも描画が空にならない
+
+    func test_permissionRestrictedPDF_stillRasterizesContent() throws {
+        // オーナーパスワードのみ（ユーザーパスワード無し）＝開けるが印刷・コピーが禁止された PDF。
+        // 保険会社などの電子交付 PDF に多い形。描画には影響しないはずだが、ここで固定する。
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pdfrast-restricted-\(UUID().uuidString).pdf")
+        defer { removeFile(url) }
+        var mediaBox = CGRect(x: 0, y: 0, width: 595, height: 842)
+        let aux: [String: Any] = [
+            kCGPDFContextOwnerPassword as String: "owner-only",
+            kCGPDFContextAllowsPrinting as String: false,
+            kCGPDFContextAllowsCopying as String: false,
+        ]
+        guard let ctx = CGContext(url as CFURL, mediaBox: &mediaBox, aux as CFDictionary) else {
+            throw XCTSkip("PDF コンテキストを作成できない環境")
+        }
+        ctx.beginPDFPage(nil)
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fill(mediaBox)
+        // 大きな黒い矩形＝描画されていれば必ず暗いピクセルが出る
+        ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        ctx.fill(CGRect(x: 100, y: 500, width: 300, height: 200))
+        ctx.endPDFPage()
+        ctx.closePDF()
+
+        XCTAssertFalse(PDFRasterizer.isLocked(url: url), "ユーザーパスワード無しなので locked ではない")
+
+        var page: PDFRasterizer.Page?
+        try PDFRasterizer(dpi: 72).rasterize(url: url) { page = $0 }
+        let image = try XCTUnwrap(page).cgImage
+
+        // 暗いピクセルの割合を数える（黒矩形は 300×200 / 595×842 ≒ 12%）
+        let w = image.width, h = image.height
+        var data = [UInt8](repeating: 0, count: w * h * 4)
+        let cs = CGColorSpace(name: CGColorSpace.sRGB)!
+        let bmp = try XCTUnwrap(CGContext(data: &data, width: w, height: h, bitsPerComponent: 8,
+                                          bytesPerRow: w * 4, space: cs,
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        bmp.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var dark = 0
+        for i in stride(from: 0, to: data.count, by: 4) where data[i] < 64 && data[i + 1] < 64 && data[i + 2] < 64 {
+            dark += 1
+        }
+        let ratio = Double(dark) / Double(w * h)
+        XCTAssertGreaterThan(ratio, 0.08, "権限フラグ付き PDF の内容が描画されていること（暗画素比 \(ratio)）")
+        XCTAssertLessThan(ratio, 0.20, "全面が黒になっていないこと（白下地が効いていること）")
+    }
+
     // MARK: - 5. 上限
 
     func test_tooManyPages() throws {
