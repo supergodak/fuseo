@@ -283,4 +283,144 @@ final class PDFIntakeTests: XCTestCase {
         XCTAssertEqual(Set(messages).count, 4, "失敗理由ごとに別々の文言であること")
         XCTAssertTrue(messages.allSatisfy { $0.contains("a.pdf") })
     }
+
+    // MARK: - 文字認識の選択（WP-10b・B）
+
+    /// 文字認識の選択 UI のフェイク。呼ばれた回数と引数（総ページ数・見積秒数）を記録する。
+    private final class FakeTextChoice {
+        let answer: PDFIntake.TextChoice?
+        private(set) var calls: [(pages: Int, seconds: Int)] = []
+        init(_ answer: PDFIntake.TextChoice?) { self.answer = answer }
+        @MainActor
+        func provide(_ totalPages: Int, _ seconds: Int) async -> PDFIntake.TextChoice? {
+            calls.append((totalPages, seconds))
+            return answer
+        }
+    }
+
+    /// 閾値ちょうど（10ページ）では聞かない＝短いPDFの動線を1手も増やさない。
+    func test_run_atThreshold_doesNotAskAboutTextRecognition() async throws {
+        let pdf = try makePDF(pageCount: PDFIntake.textRecognitionPromptThreshold)
+        let writer = RecordingWriter(); defer { writer.cleanUp() }
+        let choice = FakeTextChoice(.skip)
+
+        let outcome = await PDFIntake.run(urls: [pdf], limit: nil, rasterizer: PDFRasterizer(dpi: 72),
+                                          passwordProvider: { _, _ in nil },
+                                          textChoiceProvider: choice.provide,
+                                          writer: writer.write)
+
+        guard case .files(let files) = outcome else { return XCTFail("展開に失敗: \(outcome)") }
+        XCTAssertTrue(choice.calls.isEmpty, "閾値以下では文字認識の選択を聞かない")
+        XCTAssertTrue(files.allSatisfy(\.recognizeText), "既定は文字認識あり")
+        XCTAssertTrue(files.allSatisfy { $0.analysisOptions == .flatPage })
+    }
+
+    /// 閾値超（11ページ）で1回だけ聞く。見積は 1ページ2秒。
+    func test_run_overThreshold_asksOnceWithEstimate() async throws {
+        let pdf = try makePDF(pageCount: PDFIntake.textRecognitionPromptThreshold + 1)
+        let writer = RecordingWriter(); defer { writer.cleanUp() }
+        let choice = FakeTextChoice(.recognize)
+
+        let outcome = await PDFIntake.run(urls: [pdf], limit: nil, rasterizer: PDFRasterizer(dpi: 72),
+                                          passwordProvider: { _, _ in nil },
+                                          textChoiceProvider: choice.provide,
+                                          writer: writer.write)
+
+        guard case .files(let files) = outcome else { return XCTFail("展開に失敗: \(outcome)") }
+        XCTAssertEqual(choice.calls.count, 1, "取り込み単位で1回だけ聞く")
+        XCTAssertEqual(choice.calls.first?.pages, 11)
+        XCTAssertEqual(choice.calls.first?.seconds, 22, "1ページ2秒の見積")
+        XCTAssertTrue(files.allSatisfy(\.recognizeText))
+        XCTAssertTrue(files.allSatisfy { $0.analysisOptions == .flatPage })
+    }
+
+    /// 複数PDFでも「取り込み全体のPDF総ページ数」で1回だけ聞く。
+    func test_run_multiplePDFs_asksOnceForCombinedPageCount() async throws {
+        let first = try makePDF(pageCount: 6, name: "first")
+        let second = try makePDF(pageCount: 6, name: "second")
+        let writer = RecordingWriter(); defer { writer.cleanUp() }
+        let choice = FakeTextChoice(.recognize)
+
+        let outcome = await PDFIntake.run(urls: [first, second], limit: nil, rasterizer: PDFRasterizer(dpi: 72),
+                                          passwordProvider: { _, _ in nil },
+                                          textChoiceProvider: choice.provide,
+                                          writer: writer.write)
+
+        guard case .files = outcome else { return XCTFail("展開に失敗: \(outcome)") }
+        XCTAssertEqual(choice.calls.count, 1, "PDFごとではなく取り込み単位で聞く")
+        XCTAssertEqual(choice.calls.first?.pages, 12)
+    }
+
+    /// 「文字認識せずに進む」→ PDF由来ページだけ recognizeText=false（画像は従来どおり）。
+    func test_run_skipChoice_marksOnlyPDFPagesWithoutText() async throws {
+        let pdf = try makePDF(pageCount: 11)
+        let image = URL(fileURLWithPath: "/tmp/photo.jpeg")
+        let writer = RecordingWriter(); defer { writer.cleanUp() }
+        let choice = FakeTextChoice(.skip)
+
+        let outcome = await PDFIntake.run(urls: [image, pdf], limit: nil, rasterizer: PDFRasterizer(dpi: 72),
+                                          passwordProvider: { _, _ in nil },
+                                          textChoiceProvider: choice.provide,
+                                          writer: writer.write)
+
+        guard case .files(let files) = outcome else { return XCTFail("展開に失敗: \(outcome)") }
+        XCTAssertEqual(files.count, 12)
+        XCTAssertTrue(files[0].recognizeText, "画像は文字認識の対象のまま")
+        XCTAssertEqual(files[0].analysisOptions, .default)
+        XCTAssertTrue(files.dropFirst().allSatisfy { !$0.recognizeText }, "PDFページは全て文字認識なし")
+        XCTAssertTrue(files.dropFirst().allSatisfy { $0.analysisOptions == .flatPageWithoutText })
+    }
+
+    /// キャンセル＝取り込み中止。1ページも書き出さない（エラー表示もしない）。
+    func test_run_textChoiceCancelled_abortsWithoutImporting() async throws {
+        let pdf = try makePDF(pageCount: 11)
+        let writer = RecordingWriter(); defer { writer.cleanUp() }
+        let choice = FakeTextChoice(nil)
+
+        let outcome = await PDFIntake.run(urls: [pdf], limit: nil, rasterizer: PDFRasterizer(dpi: 72),
+                                          passwordProvider: { _, _ in nil },
+                                          textChoiceProvider: choice.provide,
+                                          writer: writer.write)
+
+        XCTAssertEqual(outcome, .cancelled)
+        XCTAssertTrue(writer.baseNames.isEmpty, "選択前に1ページも書き出さない")
+    }
+
+    // MARK: - 見積の文言（WP-10b・B）
+
+    /// UI言語が日本語か（英語UIのシミュレータでも壊れないように厳密比較はjaのときだけ行う）。
+    private var uiIsJapanese: Bool {
+        Bundle.main.preferredLocalizations.first?.hasPrefix("ja") ?? true
+    }
+
+    func test_estimatedSeconds_isTwoSecondsPerPage() {
+        XCTAssertEqual(PDFIntake.estimatedSeconds(pages: 25), 50)
+        XCTAssertEqual(PDFIntake.estimatedSeconds(pages: 40), 80)
+    }
+
+    func test_estimatedDurationText_underOneMinute_isSeconds() {
+        let text = PDFIntake.estimatedDurationText(pages: 25)
+        XCTAssertTrue(text.contains("50"), "秒数をそのまま出す: \(text)")
+        if uiIsJapanese { XCTAssertEqual(text, "約50秒") }
+    }
+
+    func test_estimatedDurationText_overOneMinute_roundsUpToMinutes() {
+        let text = PDFIntake.estimatedDurationText(pages: 40)
+        XCTAssertFalse(text.contains("80"), "60秒以上は分に切り上げる: \(text)")
+        XCTAssertTrue(text.contains("2"), "80秒→2分（切り上げ）: \(text)")
+        if uiIsJapanese { XCTAssertEqual(text, "約2分") }
+    }
+
+    // MARK: - 上限超過の案内（WP-10b・D）
+
+    func test_limitMessage_suggestsMacAppOnlyOniOS() {
+        let message = PDFIntake.limitMessage(total: 30, limit: 10)
+        #if os(iOS)
+        XCTAssertTrue(PDFIntake.mentionsMacApp(message), "iOSは行き止まりにせずMac版を案内する: \(message)")
+        XCTAssertTrue(message.contains("50"), "Mac版のページ上限を伝える: \(message)")
+        #else
+        XCTAssertFalse(PDFIntake.mentionsMacApp(message), "Mac版は自分自身を案内しない")
+        XCTAssertFalse(message.contains("Mac"), "Mac版の案内が漏れている: \(message)")
+        #endif
+    }
 }

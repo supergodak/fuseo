@@ -63,6 +63,92 @@ struct PDFPasswordSheet: View {
     }
 }
 
+/// ページ数の多い PDF で「文字認識をするか」を選ばせるシート（WP-10b・B）。
+///
+/// 文字認識を省くと OCR は 1 回も走らないので取り込みは大幅に速いが、**番号系の自動検出・
+/// 種別判定・検索可能PDF が使えなくなる**。何が使えて何が使えないかを明示してから選ばせる
+/// （「自動で完璧」を謳わない・ユーザーが判断できる材料を出す）。
+///
+/// キャンセル＝取り込み中止（エラー表示なし）。スワイプ等での暗黙の破棄は禁止（継続が宙に浮くため）。
+struct PDFTextChoiceSheet: View {
+    @Environment(AppState.self) private var appState
+    let request: AppState.PDFTextChoiceRequest
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("文字認識をしますか？")
+                .font(.headline)
+
+            Text("\(request.totalPages)ページのPDFです。文字認識には\(PDFIntake.durationText(seconds: request.estimatedSeconds))かかります（1ページ約2秒）。文字認識をしないと、マイナンバーなど番号の自動検出・書類種別の判定・検索可能PDFは使えません。顔・QRコードの自動検出と手動マスクは使えます。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("pdfTextChoice.body")
+
+            VStack(spacing: 10) {
+                Button {
+                    appState.submitPDFTextChoice(.recognize)
+                } label: {
+                    Text("文字認識して進む").frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut(.defaultAction)
+                .accessibilityIdentifier("pdfTextChoice.recognize")
+
+                Button {
+                    appState.submitPDFTextChoice(.skip)
+                } label: {
+                    Text("文字認識せずに進む").frame(maxWidth: .infinity)
+                }
+                .accessibilityIdentifier("pdfTextChoice.skip")
+
+                Button(role: .cancel) {
+                    appState.cancelPDFTextChoice()
+                } label: {
+                    Text("キャンセル").frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut(.cancelAction)
+                .accessibilityIdentifier("pdfTextChoice.cancel")
+            }
+        }
+        .padding(20)
+        .frame(minWidth: 360)
+        .accessibilityIdentifier("pdfTextChoice.sheet")
+        .interactiveDismissDisabled()
+    }
+}
+
+/// 文字認識せずに取り込んだページがあるときの注意（WP-10b・C）。
+/// 「PDFは画像として処理する」バナー（`PDFNoticeBanner`）とは**別の情報**なので別行で出す。
+struct PDFNoTextBanner: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        if appState.hasPagesWithoutText && !appState.noTextNoticeDismissed {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "text.viewfinder")
+                    .foregroundStyle(.orange)
+                Text("このPDFは文字認識していません。番号の自動検出・検索可能PDFは使えません。")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Button {
+                    appState.noTextNoticeDismissed = true
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("閉じる")
+                .accessibilityIdentifier("review.noTextNotice.close")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.thinMaterial)
+            .accessibilityIdentifier("review.noTextNotice")
+        }
+    }
+}
+
 /// PDF を取り込んだときの「安全側の仕様」の説明（WP-10 §2.1・必ず一度は目に入る位置に出す）。
 /// 出力が画像化されるのは機能の欠落ではなく、下のテキストが復元できないようにするための仕様。
 struct PDFNoticeBanner: View {

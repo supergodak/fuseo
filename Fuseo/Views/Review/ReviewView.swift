@@ -10,6 +10,8 @@ struct ReviewView: View {
         VStack(spacing: 0) {
             // PDF を取り込んだ直後に必ず目に入る位置（WP-10 §2.1「安全側の仕様」の説明）
             PDFNoticeBanner()
+            // 文字認識せずに取り込んだ場合の注意（WP-10b・別条件なので別行）
+            PDFNoTextBanner()
             Group {
                 if appState.reviewLayout == .grid && appState.pages.count > 1 {
                     BatchGridView()

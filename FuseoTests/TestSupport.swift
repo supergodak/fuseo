@@ -50,16 +50,23 @@ final class FakeAnalysis: Analyzing, @unchecked Sendable {
     private(set) var lastForcedType: DocumentType?
     private(set) var lastManualQuad: Quad?
     private(set) var lastManualRotation: Int = 0
+    /// 直近の解析オプション（WP-10b: PDF由来ページは .flatPage / OCRなしは .flatPageWithoutText）。
+    private(set) var lastOptions: AnalysisOptions?
+    /// 呼び出しごとの解析オプション（初回解析と再解析で同じ値が渡ることの確認用）。
+    private(set) var optionsLog: [AnalysisOptions] = []
 
     init(pageFactory: @escaping (DocumentType?) -> AnalyzedPage) {
         self.pageFactory = pageFactory
     }
 
-    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage {
+    func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int,
+                 options: AnalysisOptions) async throws -> AnalyzedPage {
         analyzeCallCount += 1
         lastForcedType = forcedType
         lastManualQuad = manualQuad
         lastManualRotation = manualRotation
+        lastOptions = options
+        optionsLog.append(options)
         return pageFactory(forcedType)
     }
 

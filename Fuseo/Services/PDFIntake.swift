@@ -14,10 +14,24 @@ struct IntakeFile: Equatable, Sendable {
     /// PDF 由来のページか。**true なら平面・全面**として扱い、初回解析にも再解析にも
     /// `Quad.fullImage` を渡して書類検出をバイパスする（§2.3）。
     let isFlatPage: Bool
+    /// 文字認識を行うか（WP-10b）。ページ数の多い PDF でユーザーが「文字認識せずに進む」を
+    /// 選んだときだけ false になる（画像は常に true）。
+    let recognizeText: Bool
 
-    init(url: URL, isFlatPage: Bool = false) {
+    init(url: URL, isFlatPage: Bool = false, recognizeText: Bool = true) {
         self.url = url
         self.isFlatPage = isFlatPage
+        self.recognizeText = recognizeText
+    }
+
+    /// このファイルの解析オプション（WP-10b）。
+    ///
+    /// PDF 由来ページは `/Rotate` 適用済みで既に正立しているため**正立判定を常に省略**する
+    /// （機能の欠落なし・OCR 1回で済むので約1/4の時間）。文字認識まで省く場合は
+    /// `.flatPageWithoutText`。画像は従来どおり `.default`。
+    var analysisOptions: AnalysisOptions {
+        guard isFlatPage else { return .default }
+        return recognizeText ? .flatPage : .flatPageWithoutText
     }
 }
 
@@ -35,6 +49,18 @@ enum PDFIntake {
     /// パスワード入力 UI。`nil` を返したら「キャンセル＝取り込み中止」。
     /// 第2引数 `retry` は「直前の入力が誤りだった」の意（再入力の文言切替に使う）。
     typealias PasswordProvider = @MainActor (String, Bool) async -> String?
+
+    /// 文字認識をするかの選択（WP-10b）。
+    enum TextChoice: Equatable {
+        /// 文字認識して進む（既定）。番号系の自動検出・種別判定・検索可能PDFが使える。
+        case recognize
+        /// 文字認識せずに進む。顔・QR の自動検出と手動マスク・書き出しは使える。
+        case skip
+    }
+
+    /// 文字認識の選択 UI。`nil` を返したら「キャンセル＝取り込み中止」（エラー表示はしない）。
+    /// 引数は (取り込み全体の PDF 総ページ数, 文字認識の見積秒数)。
+    typealias TextChoiceProvider = @MainActor (_ totalPages: Int, _ estimatedSeconds: Int) async -> TextChoice?
 
     /// 取り込みの結果。理由の分からない失敗は作らない（`failed` は必ず表示可能な文言を持つ）。
     enum Outcome: Equatable {
@@ -56,7 +82,31 @@ enum PDFIntake {
     static let combinedLimit = 50
     #endif
 
+    /// 文字認識の選択を聞き始める PDF 総ページ数（WP-10b）。**これを超えたときだけ**聞く。
+    /// iOS は `combinedLimit` が 10 なので実質 Mac 専用の分岐になる。
+    static let textRecognitionPromptThreshold = 10
+
+    /// 文字認識の所要時間の見積（1ページあたりの秒数・WP-0 実測の桁に合わせた概算）。
+    static let estimatedSecondsPerPage = 2.0
+
     // MARK: - 判定・命名（純関数）
+
+    /// 文字認識の見積秒数（`estimatedSecondsPerPage` × ページ数）。
+    static func estimatedSeconds(pages: Int) -> Int {
+        Int((Double(max(0, pages)) * estimatedSecondsPerPage).rounded())
+    }
+
+    /// 見積時間の表示文言。60秒未満は「約N秒」、以上は分に**切り上げて**「約N分」。
+    static func durationText(seconds: Int) -> String {
+        if seconds < 60 { return String(localized: "約\(seconds)秒") }
+        let minutes = Int((Double(seconds) / 60).rounded(.up))
+        return String(localized: "約\(minutes)分")
+    }
+
+    /// ページ数から見積時間の表示文言を作る（25ページ→「約50秒」・40ページ→「約2分」）。
+    static func estimatedDurationText(pages: Int) -> String {
+        durationText(seconds: estimatedSeconds(pages: pages))
+    }
 
     /// 拡張子から PDF かを判定する。
     static func isPDF(_ url: URL) -> Bool {
@@ -89,9 +139,34 @@ enum PDFIntake {
     }
 
     /// 合計上限の超過メッセージ（黙って切り捨てず、必ず理由を出す）。
+    ///
+    /// iOS は上限 10 ページと小さいので、**行き止まりにせず** Mac 版（無料・最大50ページ）を案内する
+    /// （WP-10b・D）。Mac 側は既に 50 ページ上限なので同じ案内は付けない。
     static func limitMessage(total: Int, limit: Int) -> String {
-        String(localized: "一度に取り込めるのは合計\(limit)ページまでです（選んだ画像とPDFのページを合わせて\(total)ページありました）。減らしてからもう一度お試しください。")
+        let base = String(localized: "一度に取り込めるのは合計\(limit)ページまでです（選んだ画像とPDFのページを合わせて\(total)ページありました）。減らしてからもう一度お試しください。")
+        #if os(iOS)
+        return base + macAppSuggestion
+        #else
+        return base
+        #endif
     }
+
+    #if os(iOS)
+    /// 上限超過メッセージの末尾に付ける Mac 版の案内（アラートの「Mac版を見る」ボタンの表示条件も兼ねる）。
+    static let macAppSuggestion = String(localized: "長いPDFは Mac 版（無料・最大50ページ）で扱えます。")
+
+    /// 案内先の LP（DMG 直リンクではなく製品ページ）。開くのは OS の URL オープンで、アプリ内通信はしない。
+    static let macAppURL = URL(string: "https://fuseo.ati-mirai.co.jp/")!
+
+    /// このメッセージが Mac 版の案内を含むか（アラートにボタンを出すかの判定）。
+    static func mentionsMacApp(_ message: String?) -> Bool {
+        guard let message else { return false }
+        return message.contains(macAppSuggestion)
+    }
+    #else
+    /// Mac 版では常に false（同じ案内を自分自身に出さない）。
+    static func mentionsMacApp(_ message: String?) -> Bool { false }
+    #endif
 
     // MARK: - 一時ファイル書き出し（Mac 経路）
 
@@ -128,12 +203,15 @@ enum PDFIntake {
     ///   - limit: 画像枚数＋PDFページ数の合計上限。`nil` で無制限。**PDF を含むときだけ判定する**。
     ///   - rasterizer: 差し替え可能（テストで `maxPages` を小さくする）。
     ///   - passwordProvider: 暗号化 PDF のパスワード入力 UI。
+    ///   - textChoiceProvider: 文字認識の選択 UI（PDF 総ページ数が閾値超のときだけ呼ばれる）。
+    ///     既定は「常に文字認識する」＝従来挙動。
     ///   - writer: ページ画像の一時ファイル化。
     @MainActor
     static func run(urls: [URL],
                     limit: Int? = combinedLimit,
                     rasterizer: PDFRasterizer = PDFRasterizer(),
                     passwordProvider: PasswordProvider,
+                    textChoiceProvider: TextChoiceProvider = { _, _ in .recognize },
                     writer: @escaping PageWriter) async -> Outcome {
         guard !urls.isEmpty else { return .files([]) }
 
@@ -145,6 +223,8 @@ enum PDFIntake {
 
         var entries: [Entry] = []
         var totalPages = 0
+        /// PDF ページだけの合計（文字認識を聞くかの閾値判定に使う。画像は含めない）。
+        var pdfPageTotal = 0
         var sawPDF = false
 
         // 1) 分類＋（暗号化なら）パスワード確定＋ページ数の確定
@@ -179,6 +259,7 @@ enum PDFIntake {
             }
             entries.append(.pdf(url: url, password: password, pageCount: count))
             totalPages += count
+            pdfPageTotal += count
         }
 
         // 2) 合計上限（黙って切り捨てない）。PDF を含む取り込みのみ判定する。
@@ -186,7 +267,17 @@ enum PDFIntake {
             return .failed(limitMessage(total: totalPages, limit: limit))
         }
 
-        // 3) 逐次ラスタライズ（1ページずつ書き出して解放）
+        // 3) 文字認識をするかの選択（WP-10b）。ページ数が多いときだけ・**取り込み単位で1回**聞く。
+        //    ラスタライズ前に聞くので、キャンセルなら1ページも書き出さない。
+        var recognizeText = true
+        if pdfPageTotal > textRecognitionPromptThreshold {
+            let seconds = estimatedSeconds(pages: pdfPageTotal)
+            guard let choice = await textChoiceProvider(pdfPageTotal, seconds) else { return .cancelled }
+            recognizeText = (choice == .recognize)
+            UILog.intake.info("文字認識の選択: \(recognizeText ? "する" : "しない", privacy: .public)（PDF \(pdfPageTotal, privacy: .public)ページ）")
+        }
+
+        // 4) 逐次ラスタライズ（1ページずつ書き出して解放）
         var files: [IntakeFile] = []
         for entry in entries {
             switch entry {
@@ -197,7 +288,7 @@ enum PDFIntake {
                 do {
                     let pages = try await rasterizePages(url, password: password,
                                                          rasterizer: rasterizer, writer: writer)
-                    files += pages.map { IntakeFile(url: $0, isFlatPage: true) }
+                    files += pages.map { IntakeFile(url: $0, isFlatPage: true, recognizeText: recognizeText) }
                 } catch let failure as PDFRasterizer.Failure {
                     return .failed(message(for: failure, fileName: url.lastPathComponent, maxPages: rasterizer.maxPages))
                 } catch {

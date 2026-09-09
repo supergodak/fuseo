@@ -70,5 +70,14 @@ struct RootView: View {
             PDFPasswordSheet(request: request)
                 .environment(appState)
         }
+        // 文字認識の選択（WP-10b）。同一ビューへの .sheet 二重付けは片方が無効化されるため、
+        // 別ノード（background）に載せる（ReviewView の切り抜きシートと同じ回避）。
+        .background(
+            Color.clear
+                .sheet(item: $appState.pdfTextChoiceRequest) { request in
+                    PDFTextChoiceSheet(request: request)
+                        .environment(appState)
+                }
+        )
     }
 }

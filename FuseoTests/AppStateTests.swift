@@ -27,7 +27,8 @@ final class AppStateTests: XCTestCase {
 
     func test_processFiles_allFail_returnsToEmpty() async {
         final class FailAnalysis: Analyzing {
-            func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int) async throws -> AnalyzedPage {
+            func analyze(url: URL, forcedType: DocumentType?, manualQuad: Quad?, manualRotation: Int,
+                         options: AnalysisOptions) async throws -> AnalyzedPage {
                 throw MaskingError.loadFailed("x")
             }
             func cropPreview(url: URL) async throws -> VisionRectifier.CropPreview? { nil }

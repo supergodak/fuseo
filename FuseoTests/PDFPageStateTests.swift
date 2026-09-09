@@ -174,4 +174,91 @@ final class PDFPageStateTests: XCTestCase {
             XCTAssertFalse(fm.fileExists(atPath: dir.path), "リセット後に一時ページ画像が残っている: \(dir.lastPathComponent)")
         }
     }
+
+    // MARK: - 解析オプション（WP-10b・A）
+
+    private let pdfPageWithoutText = IntakeFile(url: URL(fileURLWithPath: "/tmp/hoken-p001.png"),
+                                                isFlatPage: true, recognizeText: false)
+
+    func test_processFiles_pdfPageSkipsUprightDetection() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([pdfPage])
+
+        XCTAssertEqual(fake.lastOptions, .flatPage, "PDF由来ページは正立判定を省略する（/Rotate適用済み）")
+        XCTAssertTrue(state.pages[0].textRecognized)
+        XCTAssertFalse(state.hasPagesWithoutText)
+    }
+
+    func test_processFiles_imageKeepsDefaultOptions() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([photo])
+
+        XCTAssertEqual(fake.lastOptions, .default, "画像は従来どおり正立判定も文字認識も行う")
+    }
+
+    func test_processFiles_pdfPageWithoutText_usesFlatPageWithoutText() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([pdfPageWithoutText])
+
+        XCTAssertEqual(fake.lastOptions, .flatPageWithoutText)
+        XCTAssertFalse(state.pages[0].textRecognized)
+        XCTAssertTrue(state.hasPagesWithoutText, "OCRなし注意文の表示条件を満たす")
+    }
+
+    func test_appendFiles_usesPerFileOptions() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([photo])
+        XCTAssertEqual(fake.lastOptions, .default)
+
+        await state.appendFiles([pdfPageWithoutText])
+        XCTAssertEqual(fake.lastOptions, .flatPageWithoutText)
+        XCTAssertTrue(state.hasPagesWithoutText)
+    }
+
+    /// 再解析（種別変更）でも初回と同じ options を渡す（文字認識の有無が勝手に変わらない）。
+    func test_typeChange_keepsAnalysisOptions() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([pdfPage])
+
+        await state.performTypeChange(page: state.pages[0], to: .menkyoshoFront)
+        XCTAssertEqual(fake.lastOptions, .flatPage, "種別変更の再解析でも正立判定の省略を維持する")
+        XCTAssertEqual(fake.optionsLog, [.flatPage, .flatPage])
+    }
+
+    func test_typeChange_keepsWithoutTextOption() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([pdfPageWithoutText])
+
+        await state.performTypeChange(page: state.pages[0], to: .menkyoshoFront)
+        XCTAssertEqual(fake.lastOptions, .flatPageWithoutText, "OCRなしのまま再解析する（勝手に走らせない）")
+        XCTAssertEqual(fake.optionsLog, [.flatPageWithoutText, .flatPageWithoutText])
+    }
+
+    func test_rotate_keepsAnalysisOptions() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([pdfPageWithoutText])
+
+        await state.performRotate(page: state.pages[0])
+        XCTAssertEqual(fake.lastOptions, .flatPageWithoutText, "回転の再解析でも同じ options を渡す")
+        XCTAssertEqual(fake.lastManualRotation, 1)
+    }
+
+    func test_applyCrop_keepsAnalysisOptions() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([pdfPageWithoutText])
+        let page = state.pages[0]
+
+        let quad = Quad(topLeft: CGPoint(x: 0.1, y: 0.9), topRight: CGPoint(x: 0.9, y: 0.9),
+                        bottomRight: CGPoint(x: 0.9, y: 0.1), bottomLeft: CGPoint(x: 0.1, y: 0.1))
+        await state.applyCrop(page: page, quad: quad)
+        XCTAssertEqual(fake.lastOptions, .flatPageWithoutText)
+    }
 }

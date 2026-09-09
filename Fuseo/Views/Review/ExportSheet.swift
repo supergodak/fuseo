@@ -75,6 +75,16 @@ struct ExportSheet: View {
                     .accessibilityIdentifier("export.pdfNotice")
             }
 
+            // 検索可能PDFをオンにしても、文字認識していないページにはテキスト層が付かない（WP-10b・C）。
+            if appState.exportOptions.format == .pdf && appState.exportOptions.searchableText
+                && appState.hasPagesWithoutText {
+                Text("文字認識していないページには検索テキストが付きません。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("export.noTextNotice")
+            }
+
             if !appState.allWarnings.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(appState.allWarnings, id: \.self) { w in

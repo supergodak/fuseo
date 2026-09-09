@@ -61,11 +61,19 @@ final class PageState: Identifiable {
     /// PDF 由来のページか（WP-10 §2.3）。PDF ページは既に平面・全面なので、書類検出を走らせると
     /// 内枠や表罫線に誤クロップし得る。**種別変更・回転などの再解析でも `Quad.fullImage` を維持する。**
     let isFlatSource: Bool
+    /// このページの解析オプション（WP-10b）。初回解析で決まり、**種別変更・回転などの再解析でも
+    /// 同じ値を渡す**（`reanalysisQuad` と同じ扱い。文字認識の有無が再解析で勝手に変わらないように）。
+    let analysisOptions: AnalysisOptions
 
-    init(sourceURL: URL, analyzed: AnalyzedPage, isFlatSource: Bool = false) {
+    /// 文字認識済みのページか（OCR なしページの注意文の表示条件）。
+    var textRecognized: Bool { analysisOptions.recognizeText }
+
+    init(sourceURL: URL, analyzed: AnalyzedPage, isFlatSource: Bool = false,
+         analysisOptions: AnalysisOptions = .default) {
         self.sourceURL = sourceURL
         self.analyzed = analyzed
         self.isFlatSource = isFlatSource
+        self.analysisOptions = analysisOptions
     }
 
     /// 再解析（種別変更・回転・追加解析）に渡す切り抜き四隅。
@@ -275,10 +283,12 @@ final class AppState {
             do {
                 var analyzed = try await analysis.analyze(
                     url: file.url, forcedType: nil,
-                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0)
+                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0,
+                    options: file.analysisOptions)
                 applyFaceDefault(to: &analyzed)
                 built.append(PageState(sourceURL: file.url, analyzed: analyzed,
-                                       isFlatSource: file.isFlatPage))
+                                       isFlatSource: file.isFlatPage,
+                                       analysisOptions: file.analysisOptions))
             } catch {
                 failures += 1
             }
@@ -314,10 +324,12 @@ final class AppState {
             do {
                 var analyzed = try await analysis.analyze(
                     url: file.url, forcedType: nil,
-                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0)
+                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0,
+                    options: file.analysisOptions)
                 applyFaceDefault(to: &analyzed)
                 pages.append(PageState(sourceURL: file.url, analyzed: analyzed,
-                                       isFlatSource: file.isFlatPage))
+                                       isFlatSource: file.isFlatPage,
+                                       analysisOptions: file.analysisOptions))
                 added += 1
             } catch {
                 // 個別失敗はスキップ
@@ -341,10 +353,45 @@ final class AppState {
     var pdfPasswordRequest: PDFPasswordRequest?
     private var pdfPasswordContinuation: CheckedContinuation<String?, Never>?
 
+    /// 文字認識をするかの選択要求（`sheet(item:)` 用・WP-10b）。
+    struct PDFTextChoiceRequest: Identifiable, Equatable {
+        let id = UUID()
+        /// 取り込み全体の PDF 総ページ数。
+        let totalPages: Int
+        /// 文字認識の見積秒数（表示は `PDFIntake.durationText(seconds:)`）。
+        let estimatedSeconds: Int
+    }
+
+    /// 表示中の文字認識選択要求（nil = 出さない）。
+    var pdfTextChoiceRequest: PDFTextChoiceRequest?
+    private var pdfTextChoiceContinuation: CheckedContinuation<PDFIntake.TextChoice?, Never>?
+
     /// 「PDFは画像として処理する」注意文を閉じたか。PDF を取り込むたびに再表示する。
     var pdfNoticeDismissed = false
+    /// 「このPDFは文字認識していません」注意文を閉じたか。取り込みのたびに再表示する。
+    var noTextNoticeDismissed = false
     /// PDF 由来のページを含むか（注意文の表示条件）。
     var hasPDFPages: Bool { pages.contains(where: \.isFlatSource) }
+    /// 文字認識していないページを含むか（OCRなし注意文・書き出しシートの1行の表示条件）。
+    var hasPagesWithoutText: Bool { pages.contains { !$0.textRecognized } }
+
+    /// 文字認識の選択シートを出して選択を待つ。`nil` = キャンセル（取り込み中止・エラー表示なし）。
+    func requestPDFTextChoice(totalPages: Int, estimatedSeconds: Int) async -> PDFIntake.TextChoice? {
+        await withCheckedContinuation { continuation in
+            pdfTextChoiceContinuation = continuation
+            pdfTextChoiceRequest = PDFTextChoiceRequest(totalPages: totalPages, estimatedSeconds: estimatedSeconds)
+        }
+    }
+
+    func submitPDFTextChoice(_ choice: PDFIntake.TextChoice) { finishPDFTextChoice(choice) }
+    func cancelPDFTextChoice() { finishPDFTextChoice(nil) }
+
+    private func finishPDFTextChoice(_ value: PDFIntake.TextChoice?) {
+        pdfTextChoiceRequest = nil
+        let continuation = pdfTextChoiceContinuation
+        pdfTextChoiceContinuation = nil
+        continuation?.resume(returning: value)
+    }
 
     /// パスワード入力シートを出して入力を待つ。`nil` = キャンセル。
     func requestPDFPassword(fileName: String, retry: Bool) async -> String? {
@@ -431,11 +478,16 @@ final class AppState {
                 guard let self else { return nil }
                 return await self.requestPDFPassword(fileName: fileName, retry: retry)
             },
+            textChoiceProvider: { [weak self] totalPages, seconds in
+                guard let self else { return nil }
+                return await self.requestPDFTextChoice(totalPages: totalPages, estimatedSeconds: seconds)
+            },
             writer: writer)
 
         switch outcome {
         case .cancelled:
-            UILog.intake.info("PDFのパスワード入力がキャンセルされたため取り込みを中止")
+            // パスワード入力／文字認識の選択のキャンセル（ユーザー操作なのでエラーは出さない）。
+            UILog.intake.info("ユーザーのキャンセルにより取り込みを中止")
             discardStagedPageDirectories()
             if !append { stage = stageBeforeImport }
         case .failed(let message):
@@ -449,6 +501,7 @@ final class AppState {
                 return
             }
             if files.contains(where: \.isFlatPage) { pdfNoticeDismissed = false }
+            if files.contains(where: { !$0.recognizeText }) { noTextNoticeDismissed = false }
             if append {
                 await appendFiles(files)
             } else {
@@ -511,7 +564,8 @@ final class AppState {
             let keepManual = page.analyzed.manual
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: type,
                                                 manualQuad: page.reanalysisQuad,
-                                                manualRotation: page.manualRotation)
+                                                manualRotation: page.manualRotation,
+                                                options: page.analysisOptions)
             applyFaceDefault(to: &re)
             re.manual = keepManual
             page.analyzed = re
@@ -549,7 +603,8 @@ final class AppState {
         do {
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
                                                 manualQuad: quad,
-                                                manualRotation: page.manualRotation)
+                                                manualRotation: page.manualRotation,
+                                                options: page.analysisOptions)
             applyFaceDefault(to: &re)
             page.analyzed = re
             page.manualQuad = quad
@@ -591,7 +646,8 @@ final class AppState {
             let next = (page.manualRotation + 1) % 4
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
                                                 manualQuad: page.reanalysisQuad,
-                                                manualRotation: next)
+                                                manualRotation: next,
+                                                options: page.analysisOptions)
             applyFaceDefault(to: &re)
             page.analyzed = re
             page.manualRotation = next
