@@ -294,7 +294,7 @@ final class PDFRasterizerTests: XCTestCase {
     /// 検査用数字が成立する 12 桁を探す（総務省令式）。
     private static func validMyNumber() -> String? {
         for seed in 100_000_000_00...100_000_010_00 {
-            let body = String(format: "%011d", seed)
+            let body = String(format: "%011ld", seed)   // Int は 64bit なので %ld（%d だと下位32bitに切られる）
             for check in 0...9 {
                 let candidate = body + String(check)
                 if Checkdigits.isValidMyNumber(candidate) { return candidate }

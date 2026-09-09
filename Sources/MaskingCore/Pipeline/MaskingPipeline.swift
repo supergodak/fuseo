@@ -51,16 +51,19 @@ public final class MaskingPipeline {
     ///     この四隅（元画像の正規化・左下原点）で台形補正する。標準実装（VisionRectifier）でのみ有効。
     ///   - manualRotation: 確認UIの「回転」用。自動正立化の結果へ追加で適用する時計回りの
     ///     90°回転数（0..3）。回転後は再OCRする（座標系が変わるため）。
+    ///   - options: 正立判定・文字認識の省略（`AnalysisOptions`）。既定は従来どおり。PDF 由来の平面ページは
+    ///     `.flatPage`（正立判定なし）、長文書の高速取り込みは `.flatPageWithoutText`（OCR なし）。
     public func analyze(url: URL, forcedType: DocumentType? = nil,
-                        manualQuad: Quad? = nil, manualRotation: Int = 0) throws -> AnalyzedPage {
+                        manualQuad: Quad? = nil, manualRotation: Int = 0,
+                        options: AnalysisOptions = .default) throws -> AnalyzedPage {
         // 標準実装（VisionRectifier）は正立化の判定過程で OCR を得ているため再OCRしない高速経路を使う。
         var basePage: PageImage
         var ocr: [OCRItem]
         if let vision = rectifier as? VisionRectifier {
-            (basePage, ocr) = try vision.rectifyKeepingOCR(imageAt: url, manualQuad: manualQuad)
+            (basePage, ocr) = try vision.rectifyKeepingOCR(imageAt: url, manualQuad: manualQuad, options: options)
         } else {
             basePage = try rectifier.rectify(imageAt: url)
-            ocr = try recognizer.recognize(basePage)
+            ocr = options.recognizeText ? try recognizer.recognize(basePage) : []
         }
 
         // 手動回転（時計回り90°×n）。自動正立化が外した場合のユーザー救済。
@@ -69,7 +72,7 @@ public final class MaskingPipeline {
             MaskingLog.pipeline.info("手動回転: 90°×\(turns, privacy: .public)（時計回り）で再OCR")
             basePage = PageImage(cgImage: rotated, sourceURL: basePage.sourceURL,
                                  rectified: basePage.rectified, quadConfidence: basePage.quadConfidence)
-            ocr = try recognizer.recognize(basePage)
+            if options.recognizeText { ocr = try recognizer.recognize(basePage) }
         }
 
         let classification = classifier.classify(ocr: ocr, presets: presets)
@@ -93,7 +96,7 @@ public final class MaskingPipeline {
                 MaskingLog.pipeline.info("ID-1アスペクト正規化: 長短比 \(String(format: "%.3f", aspect), privacy: .public) → 1.586 で再OCR")
                 basePage = PageImage(cgImage: resampled, sourceURL: basePage.sourceURL,
                                      rectified: basePage.rectified, quadConfidence: basePage.quadConfidence)
-                ocr = try recognizer.recognize(basePage)
+                if options.recognizeText { ocr = try recognizer.recognize(basePage) }
             }
         }
 

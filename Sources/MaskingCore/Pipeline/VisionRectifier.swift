@@ -42,7 +42,8 @@ public struct VisionRectifier: DocumentRectifier {
     /// - Parameter manualQuad: ユーザーが四隅を手動指定した場合。自動検出をスキップしてこの四隅で台形補正する
     ///   （rectified=true・quadConfidence=nil。正立化以降は通常どおり）。
     public func rectifyKeepingOCR(imageAt url: URL,
-                                  manualQuad: Quad? = nil) throws -> (page: PageImage, ocr: [OCRItem]) {
+                                  manualQuad: Quad? = nil,
+                                  options: AnalysisOptions = .default) throws -> (page: PageImage, ocr: [OCRItem]) {
         let original = try Self.loadOriginal(url)
 
         let rectified: CIImage
@@ -65,7 +66,20 @@ public struct VisionRectifier: DocumentRectifier {
             confidence = nil
         }
 
-        let (cg, items) = try Self.uprightOrientation(of: rectified, tuning: tuning)
+        let result: (CGImage, [OCRItem])
+        if options.detectUpright {
+            result = try Self.uprightOrientation(of: rectified, tuning: tuning)
+        } else {
+            // 平面ページ（PDF 由来など）: 向きは入力のまま。OCR は必要なら 1 回だけ。
+            let normalized = rectified.transformed(by: .init(translationX: -rectified.extent.origin.x,
+                                                             y: -rectified.extent.origin.y))
+            guard let cg = VisionSupport.ciContext.createCGImage(normalized, from: normalized.extent) else {
+                throw MaskingError.renderFailed
+            }
+            let items = options.recognizeText ? try VisionTextRecognizer.recognize(in: cg, tuning: tuning) : []
+            result = (cg, items)
+        }
+        let (cg, items) = result
         let page = PageImage(cgImage: cg, sourceURL: url,
                              rectified: isRectified, quadConfidence: confidence)
         return (page, items)
