@@ -12,6 +12,8 @@ struct ReviewView: View {
             PDFNoticeBanner()
             // 文字認識せずに取り込んだ場合の注意（WP-10b・別条件なので別行）
             PDFNoTextBanner()
+            // WP-13: 自動保存に失敗したら黙らずここに出す
+            saveErrorBanner
             Group {
                 if appState.reviewLayout == .grid && appState.pages.count > 1 {
                     BatchGridView()
@@ -48,12 +50,6 @@ struct ReviewView: View {
         } message: {
             Text("候補の編集内容（チェックの変更）は失われます。手動マスクは保持されます。")
         }
-        .alert("新しい書類を開きますか？", isPresented: confirmingResetBinding) {
-            Button("破棄して新規", role: .destructive) { appState.confirmReset() }
-            Button("キャンセル", role: .cancel) { appState.confirmingReset = false }
-        } message: {
-            Text("現在の書類・マスクの編集内容は破棄されます。書き出していない内容は元に戻せません。")
-        }
         .alert("回転しますか？", isPresented: pendingRotationBinding) {
             Button("回転する", role: .destructive) { appState.confirmPendingRotation() }
             Button("キャンセル", role: .cancel) { appState.cancelPendingRotation() }
@@ -73,9 +69,23 @@ struct ReviewView: View {
                 set: { if !$0 { appState.cancelPendingRotation() } })
     }
 
-    private var confirmingResetBinding: Binding<Bool> {
-        Binding(get: { appState.confirmingReset },
-                set: { appState.confirmingReset = $0 })
+    // MARK: - 保存失敗バナー（WP-13）
+
+    @ViewBuilder
+    private var saveErrorBanner: some View {
+        if let message = appState.librarySaveError {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Text(message).font(.callout).fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button { appState.librarySaveError = nil } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.borderless)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.orange.opacity(0.18))
+            .accessibilityIdentifier("review.saveErrorBanner")
+        }
     }
 
     // MARK: - ツールバー
@@ -129,7 +139,8 @@ struct ReviewView: View {
                 .accessibilityIdentifier("review.previewToggle")
             Button { appState.showingExportSheet = true } label: { Label("書き出す…", systemImage: "square.and.arrow.up") }
                 .accessibilityIdentifier("review.exportButton")
-            Button { appState.requestReset() } label: { Label("新しい書類", systemImage: "doc.badge.plus") }
+            // WP-13: 作業はライブラリに自動保存されるので確認は挟まない
+            Button { appState.startNewDocument() } label: { Label("新しい書類", systemImage: "doc.badge.plus") }
                 .accessibilityIdentifier("review.newDocButton")
         }
     }
@@ -190,6 +201,8 @@ struct ReviewView: View {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 Text("書き出しました: \(url.lastPathComponent)")
                 Button("Finderで表示") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                Button("次の書類へ") { appState.startNewDocument() }
+                    .accessibilityIdentifier("review.nextDocButton")
                 Button {
                     appState.showingExportDone = false
                 } label: { Image(systemName: "xmark") }

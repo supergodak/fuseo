@@ -32,10 +32,11 @@ struct CandidateListView: View {
     private var typeSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("種別").font(.headline)
+            // WP-13: 選択肢は classification.ranking ではなく**プリセット全件**から作る
+            // （ライブラリから復元したページは ranking が空のため）。スコアは分かるものだけ添える。
             Picker("種別", selection: typeBinding) {
-                ForEach(page.analyzed.classification.ranking, id: \.type) { entry in
-                    Text("\(appState.analysis.displayName(for: entry.type))（\(entry.score)）")
-                        .tag(entry.type)
+                ForEach(appState.typeOptions(for: page)) { option in
+                    Text(appState.typeOptionLabel(option)).tag(option.type)
                 }
             }
             .labelsHidden()

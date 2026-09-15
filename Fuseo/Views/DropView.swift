@@ -10,6 +10,15 @@ struct DropView: View {
     @State private var showingUnsupported = false
 
     var body: some View {
+        VStack(spacing: 0) {
+            // WP-13: 保存済みの「作業中の書類」。空なら何も描かない（従来の空画面のまま）。
+            WorkLibraryView()
+            dropZone
+        }
+        .onAppear { appState.refreshLibrary() }
+    }
+
+    private var dropZone: some View {
         VStack(spacing: 20) {
             Image(systemName: "doc.viewfinder")
                 .font(.system(size: 56, weight: .light))

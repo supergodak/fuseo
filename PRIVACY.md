@@ -1,11 +1,11 @@
 # Privacy Policy / プライバシーポリシー
 
-_Fuseo — macOS ID-document redaction tool by ATI Inc. (ATI株式会社)_
+_Fuseo — ID-document redaction tool for macOS and iPhone by ATI Inc. (ATI株式会社)_
 
-**Last updated: 2026-07-08**
+**Last updated: 2026-09-15**
 
-> **Fuseo processes your documents entirely on your Mac. Nothing is ever sent off your device.**
-> **Fuseo は書類の処理をすべてあなたの Mac の中だけで行います。外部へ送信することは一切ありません。**
+> **Fuseo processes your documents entirely on your device. Nothing is ever sent off it.**
+> **Fuseo は書類の処理をすべてお使いの端末の中だけで行います。外部へ送信することは一切ありません。**
 
 ---
 
@@ -13,18 +13,18 @@ _Fuseo — macOS ID-document redaction tool by ATI Inc. (ATI株式会社)_
 
 ### 1. Summary
 
-Fuseo is a local-only tool for redacting ID documents. It opens your document photos, finds and blacks out sensitive areas, and exports a clean copy — all on your own Mac. It never transmits your documents, images, or detection results anywhere. There are **no servers, no accounts, no analytics, no telemetry, and no crash reporting**. ATI Inc. cannot see your documents, because they never leave your device.
+Fuseo is a local-only tool for redacting ID documents. It opens your document photos, finds and blacks out sensitive areas, and exports a clean copy — all on your own device (Mac or iPhone). It never transmits your documents, images, or detection results anywhere. There are **no servers, no accounts, no analytics, no telemetry, and no crash reporting**. ATI Inc. cannot see your documents, because they never leave your device.
 
 ### 2. What data Fuseo handles
 
-- **Document images you open** — the photos you drag in or choose (JPEG / PNG / HEIC / TIFF). These are read into memory to be cropped, deskewed, classified, and redacted.
+- **Documents you open** — the photos or PDFs you drag in, choose, or share to Fuseo (JPEG / PNG / HEIC / TIFF / PDF). PDF pages are converted to images first. These are read into memory to be cropped, deskewed, classified, and redacted.
 - **Detection results** — the redaction candidates found in your document (their positions and labels), used only to build the on-screen review.
 - **Exported files** — the redacted PDF / JPEG / PNG that you choose to save, written only to the location you pick.
 - **Settings** — your preferences (default export format, searchable-PDF, JPEG quality, scan-finish strength, whether to mask faces by default).
 
 ### 3. Where it is processed and stored
 
-All processing happens **in memory on your Mac**. Fuseo does not keep a hidden copy of your documents: the only files it writes are the exports you explicitly save and your own settings. Your original photo files are left untouched. Nothing is synced to iCloud, uploaded to any server, or shared with ATI Inc. or any third party.
+All processing happens **on your device**. Fuseo keeps no hidden copies: the only files it writes are the exports you explicitly save, your settings, and the work-in-progress library described in section 8 — which you can see and delete at any time inside the app. Your original photo files are left untouched. Nothing is synced to iCloud, uploaded to any server, or shared with ATI Inc. or any third party.
 
 ### 4. Redaction is irreversible by design
 
@@ -44,7 +44,7 @@ Fuseo is a tool that helps you redact, but it does not decide what is legal to s
 
 ### 8. Data retention and deletion
 
-Fuseo keeps no library of your documents. Once you close a document or quit the app, the in-memory copy is gone; only the exports you saved and your settings remain, both under your control. Removing the app deletes its settings.
+Fuseo keeps your work only where you can see it. Documents you are working on are saved automatically in the app's "Documents in progress" list so you can resume them later; nothing else is retained. They stay on this device (excluded from iCloud backup), are never transmitted, and can be deleted one by one from the list or all at once from Settings. Removing the app deletes the library and its settings.
 
 ### 9. Children
 
@@ -68,18 +68,18 @@ ATI Inc. (ATI株式会社) — https://fuseo.ati-mirai.co.jp · security & priva
 
 ### 1. 概要
 
-Fuseo は完全ローカルの本人確認書類・黒塗りツールです。書類の写真を読み込み、見せる必要のない部分を見つけて黒く塗りつぶし、提出用のきれいなコピーを書き出します。これらの処理はすべてあなたの Mac の中だけで行われ、書類・画像・検出結果をどこにも送信しません。**サーバー・アカウント・解析・テレメトリ・クラッシュレポートは一切ありません。** データは端末から出ないため、ATI株式会社があなたの書類を見ることはできません。
+Fuseo は完全ローカルの本人確認書類・黒塗りツールです。書類の写真を読み込み、見せる必要のない部分を見つけて黒く塗りつぶし、提出用のきれいなコピーを書き出します。これらの処理はすべてお使いの端末（Mac または iPhone）の中だけで行われ、書類・画像・検出結果をどこにも送信しません。**サーバー・アカウント・解析・テレメトリ・クラッシュレポートは一切ありません。** データは端末から出ないため、ATI株式会社があなたの書類を見ることはできません。
 
 ### 2. Fuseo が扱うデータ
 
-- **読み込んだ書類の画像** — ドラッグまたは選択した写真（JPEG／PNG／HEIC／TIFF）。切り抜き・傾き補正・種別判定・黒塗りのためにメモリ上に読み込みます。
+- **読み込んだ書類** — ドラッグ・選択・共有で渡した写真や PDF（JPEG／PNG／HEIC／TIFF／PDF）。PDF は各ページを画像に変換してから扱います。切り抜き・傾き補正・種別判定・黒塗りのためにメモリ上に読み込みます。
 - **検出結果** — 書類内で見つかった黒塗り候補（位置・ラベル）。画面での確認表示にのみ使います。
 - **書き出したファイル** — あなたが保存を選んだ黒塗り済みの PDF／JPEG／PNG。指定した保存先にのみ書き込みます。
 - **設定** — 既定の書き出し形式・検索可能PDF・JPEG品質・スキャン風仕上げ強度・顔写真を既定でマスクするか、などの環境設定。
 
 ### 3. 処理・保存の場所
 
-処理はすべて**あなたの Mac のメモリ上**で行います。Fuseo が書類の隠しコピーを持つことはありません。書き込むファイルは、あなたが明示的に保存した書き出しファイルと、あなた自身の設定だけです。元の写真ファイルはそのまま残します。iCloud 同期も、サーバーへのアップロードも、ATI株式会社や第三者への共有も行いません。
+処理はすべて**お使いの端末の中**で行います。Fuseo が隠しコピーを持つことはありません。書き込むファイルは、あなたが明示的に保存した書き出しファイル、あなた自身の設定、そして第8項の「作業中の書類」だけで、作業中の書類はアプリ内でいつでも確認・削除できます。元の写真ファイルはそのまま残します。iCloud 同期も、サーバーへのアップロードも、ATI株式会社や第三者への共有も行いません。
 
 ### 4. 黒塗りは設計上、復元できません
 
@@ -99,7 +99,7 @@ Fuseo は黒塗りを手伝う道具であり、何を提出してよいかを�
 
 ### 8. 保持と削除
 
-Fuseo はあなたの書類をため込みません。書類を閉じるかアプリを終了すると、メモリ上のコピーは失われ、残るのは保存した書き出しファイルと設定だけで、どちらもあなたの管理下にあります。アプリを削除すると設定も削除されます。
+Fuseo が書類を保持するのは、あなたに見える場所だけです。作業中の書類はあとから再開できるようアプリ内の「作業中の書類」一覧に自動保存され、それ以外は保持しません。保存先はこの端末の中だけ（iCloud バックアップ対象外）で、外部に送信されることはなく、一覧から1件ずつ、または設定から一括で削除できます。アプリを削除するとライブラリと設定も削除されます。
 
 ### 9. 子どもについて
 

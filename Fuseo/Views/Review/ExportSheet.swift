@@ -128,8 +128,7 @@ struct ExportSheet: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try appState.export(to: url)
-            appState.lastExportedURL = url
-            appState.showingExportDone = true
+            appState.markExported(name: url.lastPathComponent, url: url)
             dismiss()
         } catch {
             appState.errorMessage = "書き出しに失敗しました: \(error)"
@@ -148,8 +147,8 @@ struct ExportSheet: View {
         guard panel.runModal() == .OK, let dir = panel.url else { return }
         do {
             let written = try appState.exportSeparately(to: dir)
-            appState.lastExportedURL = written.first ?? dir
-            appState.showingExportDone = true
+            let first = written.first ?? dir
+            appState.markExported(name: first.lastPathComponent, url: first)
             dismiss()
         } catch {
             appState.errorMessage = "書き出しに失敗しました: \(error)"

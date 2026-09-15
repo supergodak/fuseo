@@ -8,6 +8,8 @@ enum UILog {
     static let review = Logger(subsystem: "jp.co.ati-mirai.fuseo", category: "ui.review")
     /// 取り込み（PDFのページ展開など）。**パスワードは絶対に記録しない**。ファイル名は `.private`。
     static let intake = Logger(subsystem: "jp.co.ati-mirai.fuseo", category: "ui.intake")
+    /// 作業ライブラリの自動保存（WP-13）。**理由だけ**を出す。タイトル・ファイル名は `.private`。
+    static let library = Logger(subsystem: "jp.co.ati-mirai.fuseo", category: "ui.library")
 }
 
 /// 画面フローの状態（wp5 §1）。単一ウィンドウ・3状態＋取り込み中（WP-10）。
@@ -57,32 +59,50 @@ final class PageState: Identifiable {
     /// ユーザーが種別を手動選択済みか（切り抜き再解析時に自動判定へ戻さないため）。
     var forcedType: DocumentType?
     /// 手動回転（時計回り90°×n・0..3）。自動正立化が外れた場合の救済。再解析に必ず引き継ぐ。
-    var manualRotation: Int = 0
+    var manualRotation: Int = 0 { didSet { if manualRotation != oldValue { noteEdited() } } }
     /// PDF 由来のページか（WP-10 §2.3）。PDF ページは既に平面・全面なので、書類検出を走らせると
     /// 内枠や表罫線に誤クロップし得る。**種別変更・回転などの再解析でも `Quad.fullImage` を維持する。**
     let isFlatSource: Bool
     /// このページの解析オプション（WP-10b）。初回解析で決まり、**種別変更・回転などの再解析でも
     /// 同じ値を渡す**（`reanalysisQuad` と同じ扱い。文字認識の有無が再解析で勝手に変わらないように）。
     let analysisOptions: AnalysisOptions
+    /// ライブラリ（WP-13）から復元したページか。復元元は**解析後の基準画像**なので、
+    /// 台形補正・正立化・切り抜きは適用済み＝**平面**として扱う（再解析でも `Quad.fullImage`）。
+    let isRestored: Bool
+    /// 基準画像に**すでに適用済み**の手動回転（復元ページ用）。`manualRotation` は
+    /// 「ユーザーが今までに回した合計」を保つため、再解析へ渡す量はこの差分になる。
+    let rotationBaseline: Int
+    /// 編集が起きたことの通知（WP-13 の自動保存トリガ）。`AppState` が差し込む。
+    var onEdit: (() -> Void)?
 
     /// 文字認識済みのページか（OCR なしページの注意文の表示条件）。
     var textRecognized: Bool { analysisOptions.recognizeText }
 
     init(sourceURL: URL, analyzed: AnalyzedPage, isFlatSource: Bool = false,
-         analysisOptions: AnalysisOptions = .default) {
+         analysisOptions: AnalysisOptions = .default,
+         isRestored: Bool = false, rotationBaseline: Int = 0) {
         self.sourceURL = sourceURL
         self.analyzed = analyzed
         self.isFlatSource = isFlatSource
         self.analysisOptions = analysisOptions
+        self.isRestored = isRestored
+        self.rotationBaseline = rotationBaseline
     }
 
     /// 再解析（種別変更・回転・追加解析）に渡す切り抜き四隅。
-    /// **ユーザーが「切り抜きを調整」で指定した quad が最優先**。指定が無ければ PDF 由来は全面固定、
-    /// それ以外は nil（=自動の書類検出に任せる）。
+    /// **ユーザーが「切り抜きを調整」で指定した quad が最優先**。指定が無ければ PDF 由来・復元済みは
+    /// 全面固定、それ以外は nil（=自動の書類検出に任せる）。
     var reanalysisQuad: Quad? {
         if let manualQuad { return manualQuad }
-        return isFlatSource ? .fullImage : nil
+        return (isFlatSource || isRestored) ? .fullImage : nil
     }
+
+    /// 再解析へ渡す回転量（基準画像に対する差分・0..3）。
+    /// 新規取り込みのページは `rotationBaseline == 0` なので `manualRotation` と一致する。
+    var analysisRotation: Int { ((manualRotation - rotationBaseline) % 4 + 4) % 4 }
+
+    /// 編集通知（自動保存のトリガ）。
+    func noteEdited() { onEdit?() }
 
     /// ユーザー編集（候補チェック変更・手動マスク）があるか。切り抜き変更の確認アラート条件。
     var hasUserEdits: Bool { candidatesEdited || manualMaskCount > 0 }
@@ -104,6 +124,7 @@ final class PageState: Identifiable {
         guard let idx = analyzed.candidates.firstIndex(where: { $0.id == id }) else { return }
         analyzed.candidates[idx].isOn.toggle()
         candidatesEdited = true
+        noteEdited()
     }
 
     // MARK: - 手動マスク（スナップショット方式で Undo 対応・wp5 §2.1）
@@ -112,6 +133,7 @@ final class PageState: Identifiable {
     func mutateManual(undo: UndoManager?, _ change: (inout ManualMask) -> Void) {
         let before = analyzed.manual
         change(&analyzed.manual)
+        noteEdited()
         undo?.registerUndo(withTarget: self) { target in
             MainActor.assumeIsolated {
                 target.mutateManual(undo: undo) { $0 = before }
@@ -148,6 +170,7 @@ final class PageState: Identifiable {
         } else if let i = selectedManualRectIndex, analyzed.manual.rects.indices.contains(i) {
             analyzed.manual.rects[i] = box
         }
+        noteEdited()
     }
 
     /// ドラッグ確定: 開始時の矩形との差分を Undo に登録（1ドラッグ=1操作）。
@@ -174,6 +197,7 @@ final class PageState: Identifiable {
         let old = analyzed.candidates[idx].box
         analyzed.candidates[idx].box = box
         candidatesEdited = true
+        noteEdited()
         undo?.registerUndo(withTarget: self) { target in
             MainActor.assumeIsolated {
                 target.setCandidateBox(id, old, undo: undo)
@@ -188,6 +212,7 @@ final class PageState: Identifiable {
             if analyzed.candidates[idx].isOn {
                 analyzed.candidates[idx].isOn = false
                 candidatesEdited = true
+                noteEdited()
             }
         } else if let i = selectedManualRectIndex, analyzed.manual.rects.indices.contains(i) {
             mutateManual(undo: undo) { $0.rects.remove(at: i) }
@@ -253,11 +278,18 @@ final class AppState {
     let analysis: Analyzing
     let settings: SettingsStore
     let exportService: ExportService
+    /// 作業ライブラリ（WP-13）。nil = 保存しない（既存の層1テスト・保存先を作れない環境）。
+    let library: WorkLibrary?
+    /// プリセット全件。種別ピッカーの選択肢と、ライブラリ復元のプリセット引きに使う。
+    let allPresets: [DocumentPreset]
 
-    init(analysis: Analyzing, settings: SettingsStore, exportService: ExportService = ExportService()) {
+    init(analysis: Analyzing, settings: SettingsStore, exportService: ExportService = ExportService(),
+         library: WorkLibrary? = nil) {
         self.analysis = analysis
         self.settings = settings
         self.exportService = exportService
+        self.library = library
+        self.allPresets = (try? PresetStore.loadAll()) ?? []
         self.exportOptions = settings.initialExportOptions
     }
 
@@ -299,11 +331,16 @@ final class AppState {
             stage = .empty
             presentError(String(localized: "読み込めませんでした。対応するファイル（JPEG / PNG / HEIC / TIFF / PDF）を選んでください。"))
         } else {
+            // 取り込みは常に「新しい作業」。前の作業はライブラリに残ったままになる（WP-13）。
+            clearWorkIdentity()
             pages = built
+            attachEditObservers()
+            dirtyImagePageIDs = Set(built.map(\.id))
             currentPageIndex = 0
             exportOptions = settings.initialExportOptions
             reviewLayout = built.count >= 5 ? .grid : .single   // 束は一覧から（v1.2）
             stage = .review
+            scheduleAutosave()
             if failures > 0 {
                 presentError(String(localized: "\(failures)枚は読み込めませんでした。読み込めた\(built.count)枚を表示しています。"))
             }
@@ -327,15 +364,19 @@ final class AppState {
                     manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0,
                     options: file.analysisOptions)
                 applyFaceDefault(to: &analyzed)
-                pages.append(PageState(sourceURL: file.url, analyzed: analyzed,
-                                       isFlatSource: file.isFlatPage,
-                                       analysisOptions: file.analysisOptions))
+                let page = PageState(sourceURL: file.url, analyzed: analyzed,
+                                     isFlatSource: file.isFlatPage,
+                                     analysisOptions: file.analysisOptions)
+                page.onEdit = { [weak self] in self?.noteEdited() }
+                pages.append(page)
+                dirtyImagePageIDs.insert(page.id)
                 added += 1
             } catch {
                 // 個別失敗はスキップ
             }
         }
         if added == 0 { presentError(String(localized: "追加した書類を読み込めませんでした。")) }
+        else { noteEdited() }
         }
     }
 
@@ -564,7 +605,7 @@ final class AppState {
             let keepManual = page.analyzed.manual
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: type,
                                                 manualQuad: page.reanalysisQuad,
-                                                manualRotation: page.manualRotation,
+                                                manualRotation: page.analysisRotation,
                                                 options: page.analysisOptions)
             applyFaceDefault(to: &re)
             re.manual = keepManual
@@ -572,6 +613,7 @@ final class AppState {
             page.forcedType = type
             page.candidatesEdited = false
             page.selectedCandidateID = nil
+            noteBaseImageChanged(page)
         } catch {
             presentError(String(localized: "種別を変更した再解析に失敗しました。"))
         }
@@ -603,13 +645,14 @@ final class AppState {
         do {
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
                                                 manualQuad: quad,
-                                                manualRotation: page.manualRotation,
+                                                manualRotation: page.analysisRotation,
                                                 options: page.analysisOptions)
             applyFaceDefault(to: &re)
             page.analyzed = re
             page.manualQuad = quad
             page.candidatesEdited = false
             page.selectedCandidateID = nil
+            noteBaseImageChanged(page)
         } catch {
             presentError(String(localized: "切り抜きを変更した再解析に失敗しました。"))
         }
@@ -644,16 +687,19 @@ final class AppState {
         await withReanalysis {
         do {
             let next = (page.manualRotation + 1) % 4
-            var re = try await analysis.analyze(url: page.sourceURL, forcedType: page.forcedType,
-                                                manualQuad: page.reanalysisQuad,
-                                                manualRotation: next,
-                                                options: page.analysisOptions)
+            var re = try await analysis.analyze(
+                url: page.sourceURL, forcedType: page.forcedType,
+                manualQuad: page.reanalysisQuad,
+                // 基準画像に対する差分（復元ページは baseline 分がすでに適用済み）。
+                manualRotation: ((next - page.rotationBaseline) % 4 + 4) % 4,
+                options: page.analysisOptions)
             applyFaceDefault(to: &re)
             page.analyzed = re
             page.manualRotation = next
             page.candidatesEdited = false
             page.selectedCandidateID = nil
             page.selectedManualRectIndex = nil
+            noteBaseImageChanged(page)
         } catch {
             presentError(String(localized: "回転後の再解析に失敗しました。"))
         }
@@ -712,22 +758,13 @@ final class AppState {
 
     // MARK: - セッション
 
-    /// 「新しい書類」の確認待ち（作業内容の誤破棄防止）。
-    var confirmingReset = false
-
-    /// 「新しい書類」ボタン: 書類を開いている間は必ず確認を挟む（書き出し済みかどうかに関わらず、
-    /// 解析結果と編集内容が失われるため）。何も開いていなければ即リセット。
-    func requestReset() {
-        if pages.isEmpty {
-            reset()
-        } else {
-            confirmingReset = true
-        }
-    }
-
-    func confirmReset() {
-        confirmingReset = false
+    /// 「新しい書類」（WP-13）。**確認は挟まない**。デバウンス中の保存を確定してから空の状態へ戻す。
+    /// 作業はライブラリに残るので、あとから一覧で開き直せる。
+    func startNewDocument() {
+        flushAutosave()
+        clearWorkIdentity()
         reset()
+        refreshLibrary()
     }
 
     func reset() {
@@ -737,7 +774,6 @@ final class AppState {
         currentPageIndex = 0
         tool = .select
         reviewLayout = .single
-        confirmingReset = false
         previewMode = false
         showingExportSheet = false
         pendingTypeChange = nil
@@ -749,5 +785,219 @@ final class AppState {
     private func presentError(_ message: String) {
         errorMessage = message
         showingError = true
+    }
+
+    // MARK: - 作業ライブラリ（WP-13・docs/wp13-library-design.md §2）
+
+    /// 一覧（更新日時の降順）。空なら一覧 UI は出さない。
+    private(set) var libraryItems: [WorkDocumentSummary] = []
+    /// 保存に失敗したときの文言（確認画面のバナー。黙って失敗しないための唯一の出口）。
+    var librarySaveError: String?
+    /// いま編集している作業の id（nil = まだ保存対象になっていない）。
+    private(set) var currentWorkID: UUID?
+    /// 現在の作業の状態（書き出し済みバッジの根拠）。
+    private(set) var workStatus: WorkDocument.Status = .inProgress
+    /// 直近に書き出したファイル名。
+    private(set) var lastExportedName: String?
+    /// 自動保存のデバウンス幅（テストで短くする）。
+    var autosaveDebounce: Duration = .seconds(1)
+
+    private var workCreatedAt: Date?
+    /// 最後の保存以降に変更があったか（フラッシュを空振りさせないための番人）。
+    private var hasUnsavedChanges = false
+    /// 次の保存でページ画像を書き込む必要があるページ（新規取り込み・再解析で基準画像が変わった分）。
+    private var dirtyImagePageIDs: Set<PageState.ID> = []
+    private var autosaveTask: Task<Void, Never>?
+
+    /// 種別ピッカーの選択肢（`classification.ranking` に依存しない）。
+    /// 自動判定のスコアがある種別だけスコアを添える。ライブラリから復元したページは ranking が空なので、
+    /// プリセット全件から一覧を作る（契約 B）。
+    struct TypeOption: Identifiable, Equatable {
+        let type: DocumentType
+        /// 自動判定のスコア（無ければ nil = 表示しない）。
+        let score: Int?
+        var id: DocumentType { type }
+    }
+
+    func typeOptions(for page: PageState) -> [TypeOption] {
+        var seen = Set<DocumentType>()
+        var out: [TypeOption] = []
+        for entry in page.analyzed.classification.ranking where seen.insert(entry.type).inserted {
+            out.append(TypeOption(type: entry.type, score: entry.score))
+        }
+        for preset in allPresets where seen.insert(preset.documentType).inserted {
+            out.append(TypeOption(type: preset.documentType, score: nil))
+        }
+        // いま適用されている種別は必ず選択肢に含める（プリセットが読めない環境でも空にしない）。
+        let current = page.analyzed.preset.documentType
+        if seen.insert(current).inserted {
+            out.insert(TypeOption(type: current, score: nil), at: 0)
+        }
+        return out
+    }
+
+    /// ラベル（表示名＋あればスコア）。
+    func typeOptionLabel(_ option: TypeOption) -> String {
+        let name = analysis.displayName(for: option.type)
+        guard let score = option.score else { return name }
+        return String(localized: "\(name)（\(score)）")
+    }
+
+    // MARK: 一覧・削除
+
+    func refreshLibrary() {
+        guard let library else { libraryItems = []; return }
+        do { libraryItems = try library.list() }
+        catch {
+            libraryItems = []
+            UILog.library.error("一覧を読めません: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    func deleteWork(id: UUID) {
+        guard let library else { return }
+        do { try library.delete(id: id) }
+        catch { UILog.library.error("削除できません: \(String(describing: error), privacy: .public)") }
+        if currentWorkID == id { clearWorkIdentity() }
+        refreshLibrary()
+    }
+
+    func deleteAllWorks() {
+        guard let library else { return }
+        do { try library.deleteAll() }
+        catch { UILog.library.error("全削除に失敗: \(String(describing: error), privacy: .public)") }
+        clearWorkIdentity()
+        refreshLibrary()
+    }
+
+    /// 作業ディレクトリ（Mac の「Finderで表示」用）。
+    func workDirectory(for id: UUID) -> URL? {
+        (try? library?.load(id: id))?.directory
+    }
+
+    // MARK: 開く
+
+    /// 保存済みの作業を開く。**Vision は走らせない**（基準画像とマスク状態をそのまま復元する）。
+    /// 開いた作業が以後の自動保存の対象（同じ id に上書き）になる。
+    func openWork(id: UUID) {
+        guard let library else { return }
+        flushAutosave()
+        do {
+            let (doc, dir) = try library.load(id: id)
+            let restored = try WorkDocumentBridge.restore(document: doc, directory: dir,
+                                                          presets: allPresets)
+            purgePageImageDirectories()   // 前の取り込みの一時領域は不要
+            pages = restored
+            attachEditObservers()
+            currentWorkID = doc.id
+            workCreatedAt = doc.createdAt
+            workStatus = doc.status
+            lastExportedName = doc.lastExportedName
+            dirtyImagePageIDs = []        // 画像は保存済み。触るまで書き直さない
+            currentPageIndex = 0
+            tool = .select
+            previewMode = false
+            exportOptions = settings.initialExportOptions
+            reviewLayout = restored.count >= 5 ? .grid : .single
+            librarySaveError = nil
+            stage = .review
+        } catch {
+            UILog.library.error("開けません: \(String(describing: error), privacy: .public)")
+            presentError(String(localized: "保存した作業を開けませんでした。"))
+            refreshLibrary()
+        }
+    }
+
+    // MARK: 自動保存
+
+    /// 編集が起きた（候補の採否・マスクの追加/削除/移動など）。書き出し済みなら「作業中」へ戻す。
+    func noteEdited() {
+        if workStatus == .exported { workStatus = .inProgress }
+        scheduleAutosave()
+    }
+
+    /// 基準画像が変わった（初回解析・再解析）。次の保存でこのページの PNG を書き直す。
+    func noteBaseImageChanged(_ page: PageState) {
+        dirtyImagePageIDs.insert(page.id)
+        noteEdited()
+    }
+
+    /// 書き出しが完了した。状態を「書き出し済み」にし、完了トーストを出す。
+    func markExported(name: String, url: URL?) {
+        workStatus = .exported
+        lastExportedName = name
+        lastExportedURL = url
+        showingExportDone = true
+        scheduleAutosave()
+    }
+
+    /// デバウンス付きの自動保存予約（既定1秒）。
+    func scheduleAutosave() {
+        guard library != nil, !pages.isEmpty else { return }
+        hasUnsavedChanges = true
+        autosaveTask?.cancel()
+        let delay = autosaveDebounce
+        autosaveTask = Task { [weak self] in
+            if delay > .zero { try? await Task.sleep(for: delay) }
+            guard !Task.isCancelled, let self else { return }
+            self.performSave()
+        }
+    }
+
+    /// 予約中の保存を即座に確定する（「新しい書類」・アプリ終了・バックグラウンド移行）。
+    func flushAutosave() {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        guard hasUnsavedChanges else { return }
+        performSave()
+    }
+
+    private func performSave() {
+        autosaveTask = nil
+        guard let library, !pages.isEmpty else { return }
+        let id = currentWorkID ?? UUID()
+        let created = workCreatedAt ?? Date()
+        let doc = WorkDocumentBridge.makeDocument(
+            id: id,
+            title: pages.first?.sourceURL.lastPathComponent ?? "document",
+            createdAt: created,
+            updatedAt: Date(),
+            status: workStatus,
+            lastExportedName: lastExportedName,
+            pages: pages)
+        let images = WorkDocumentBridge.pageImages(for: pages, dirty: dirtyImagePageIDs)
+        do {
+            try library.save(doc, pageImages: images)
+            currentWorkID = id
+            workCreatedAt = created
+            dirtyImagePageIDs = []
+            hasUnsavedChanges = false
+            librarySaveError = nil
+            refreshLibrary()
+        } catch {
+            // 黙らない: 確認画面のバナーに理由を出す。ログにもタイトル・ファイル名は出さない。
+            UILog.library.error("保存できません: \(String(describing: error), privacy: .public)")
+            librarySaveError = String(localized: "保存できませんでした: \(String(describing: error))")
+        }
+    }
+
+    /// 全ページに編集通知を差し込む（自動保存のトリガ）。
+    func attachEditObservers() {
+        for page in pages {
+            page.onEdit = { [weak self] in self?.noteEdited() }
+        }
+    }
+
+    /// 現在の作業の同一性を手放す（次の保存は新しい id になる）。
+    private func clearWorkIdentity() {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        currentWorkID = nil
+        workCreatedAt = nil
+        workStatus = .inProgress
+        lastExportedName = nil
+        dirtyImagePageIDs = []
+        hasUnsavedChanges = false
+        librarySaveError = nil
     }
 }

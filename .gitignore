@@ -15,6 +15,7 @@ docs/poc-results.md
 # ビルド成果物
 .build/
 build/
+build
 *.xcodeproj
 .swiftpm/
 .DS_Store

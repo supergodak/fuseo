@@ -158,29 +158,21 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - 「新しい書類」の誤操作防止
 
-    func test_requestReset_confirmsWhenDocumentsAreOpen() async {
+    /// WP-13 で導線が変わった: 「新しい書類」は**確認を挟まない**（作業はライブラリに自動保存され、
+    /// あとから一覧で開き直せるため）。旧テスト名 `test_requestReset_confirmsWhenDocumentsAreOpen`
+    /// が検証していた「確認アラート」は仕様として撤去された。
+    func test_startNewDocument_returnsToEmptyWithoutConfirmation() async {
         let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
         let state = makeState(analysis: fake, settings: makeSettings())
 
-        // 何も開いていない → 即リセット（確認なし）
-        state.requestReset()
-        XCTAssertFalse(state.confirmingReset)
+        // 何も開いていない → そのまま空
+        state.startNewDocument()
         XCTAssertEqual(state.stage, .empty)
 
-        // 書類を開いている → 確認待ちになり、作業内容は無傷
+        // 書類を開いている → 確認なしで即座に空へ戻る
         await state.processFiles([URL(fileURLWithPath: "/tmp/a.jpg")])
-        state.requestReset()
-        XCTAssertTrue(state.confirmingReset)
-        XCTAssertEqual(state.pages.count, 1, "確認前に破棄しない")
-        XCTAssertEqual(state.stage, .review)
-
-        // キャンセル → 何も失われない
-        state.confirmingReset = false
         XCTAssertEqual(state.pages.count, 1)
-
-        // 確認 → 破棄して新規へ
-        state.requestReset()
-        state.confirmReset()
+        state.startNewDocument()
         XCTAssertTrue(state.pages.isEmpty)
         XCTAssertEqual(state.stage, .empty)
     }

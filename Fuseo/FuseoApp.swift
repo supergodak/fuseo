@@ -35,14 +35,18 @@ struct FuseoApp: App {
         } catch {
             fatalError("解析サービスの初期化に失敗: \(error)")
         }
-        let state = AppState(analysis: analysis, settings: settings)
-        // 終了時の一時ファイル掃除（applicationWillTerminate）のため、通常起動でも参照を渡す。
+        // WP-13: 作業ライブラリ（端末内のみ）。UIテスト時は一時領域に作り、実ユーザーの保存を汚さない。
+        let state = AppState(analysis: analysis, settings: settings,
+                             library: WorkLibraryLocation.makeLibrary(testing: Self.isRunningTests))
+        state.refreshLibrary()
+        // 終了時の一時ファイル掃除・自動保存の確定（applicationWillTerminate）のため、通常起動でも参照を渡す。
         AppDelegate.appState = state
 
         // UIテスト時のみ、AppDelegate が提示するビュー（環境注入済み）を準備する。
         if Self.isRunningTests {
             if CommandLine.arguments.contains("--uitest-open-settings") {
-                AppDelegate.settingsContent = AnyView(SettingsView().environment(settings))
+                AppDelegate.settingsContent = AnyView(
+                    SettingsView().environment(settings).environment(state))
             } else {
                 AppDelegate.mainContent = AnyView(
                     RootView().environment(state).environment(settings)
@@ -81,6 +85,7 @@ struct FuseoApp: App {
         Settings {
             SettingsView()
                 .environment(settings)
+                .environment(appState)      // WP-13「すべての作業を削除」に必要
         }
     }
 
@@ -122,9 +127,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// 終了時に PDF ページ画像の一時ディレクトリを消す（本人確認書類の像を temp に残さない・WP-10）。
+    /// 終了時に、デバウンス中の自動保存を確定し（WP-13）、PDF ページ画像の一時ディレクトリを消す
+    /// （本人確認書類の像を temp に残さない・WP-10）。順序は保存が先。
     func applicationWillTerminate(_ notification: Notification) {
-        MainActor.assumeIsolated { Self.appState?.purgePageImageDirectories() }
+        MainActor.assumeIsolated {
+            Self.appState?.flushAutosave()
+            Self.appState?.purgePageImageDirectories()
+        }
     }
 
     private func present(_ content: AnyView, title: String, size: NSSize) {
