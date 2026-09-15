@@ -27,3 +27,6 @@ dist/
 
 # Zenn記事ドラフト（マーケ素材・非公開）
 docs/zenn/
+
+build.noindex/
+docs/wp13-library-design.md

@@ -30,7 +30,7 @@ sync_tree() {
   xcodegen generate >/dev/null
   echo "==> rsync → $VM:$REMOTE/ …"
   rsync -az --delete \
-    --exclude .git --exclude .build --exclude build --exclude dist \
+    --exclude .git --exclude .build --exclude build --exclude build.noindex --exclude dist \
     --exclude fixtures-private --exclude site --exclude .playwright-mcp \
     --exclude '*.xcresult' \
     ./ "$VM:$REMOTE/"
