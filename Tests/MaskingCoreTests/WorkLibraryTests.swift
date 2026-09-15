@@ -406,6 +406,8 @@ extension WorkLibraryTests {
     {
       "analysisOptions" : {
         "detectUpright" : false,
+        "documentDetection" : "insetOnly",
+        "insetMaxArea" : 0.85,
         "recognizeText" : true
       },
       "candidates" : [

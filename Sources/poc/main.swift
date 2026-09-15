@@ -2,7 +2,8 @@ import Foundation
 import MaskingCore
 
 // WP-0/WP-2 測定・回帰ハーネス CLI（MaskingPipeline 駆動）。
-//   swift run poc <画像...> [--out <出力ディレクトリ>] [--dump]
+//   swift run poc <画像...> [--out <出力ディレクトリ>] [--dump] [--flat]
+//   --flat: PDF由来の平面ページとして解析（AnalysisOptions.flatPage＝正立判定なし・ページ内の書類だけ切り抜き）
 // 各画像を analyze し、種別判定・マスク候補・処理時間を stdout（markdown）へ、
 // 候補つきオーバレイPNGを出力ディレクトリへ書く。検出番号は部分マスク表示（実物書類のため）。
 
@@ -13,6 +14,8 @@ if let i = args.firstIndex(of: "--out"), i + 1 < args.count {
     args.removeSubrange(i...(i + 1))
 }
 var dumpOCR = false
+var flat = false
+if let i = args.firstIndex(of: "--flat") { flat = true; args.remove(at: i) }
 if let i = args.firstIndex(of: "--dump") {
     dumpOCR = true
     args.remove(at: i)
@@ -41,7 +44,7 @@ for path in args {
     print("## \(url.lastPathComponent)\n")
     do {
         let t0 = Date()
-        let page = try pipeline.analyze(url: url)
+        let page = try pipeline.analyze(url: url, options: flat ? .flatPage : .default)
         let elapsed = Date().timeIntervalSince(t0)
 
         let size = page.page.pixelSize

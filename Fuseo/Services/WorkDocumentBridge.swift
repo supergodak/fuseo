@@ -45,7 +45,8 @@ enum WorkDocumentBridge {
                 sourceName: page.sourceURL.lastPathComponent,
                 isFlatSource: page.isFlatSource,
                 analysisOptions: AnalysisOptions(detectUpright: false,
-                                                 recognizeText: page.analysisOptions.recognizeText),
+                                                 recognizeText: page.analysisOptions.recognizeText,
+                                                 documentDetection: .off),   // 基準画像は切り抜き済み
                 documentType: page.analyzed.preset.documentType,
                 forcedType: page.forcedType,
                 // ユーザーが指定した切り抜きの**記録**。基準画像には適用済みなので復元時には使わない。

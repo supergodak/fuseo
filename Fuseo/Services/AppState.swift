@@ -60,14 +60,14 @@ final class PageState: Identifiable {
     var forcedType: DocumentType?
     /// 手動回転（時計回り90°×n・0..3）。自動正立化が外れた場合の救済。再解析に必ず引き継ぐ。
     var manualRotation: Int = 0 { didSet { if manualRotation != oldValue { noteEdited() } } }
-    /// PDF 由来のページか（WP-10 §2.3）。PDF ページは既に平面・全面なので、書類検出を走らせると
-    /// 内枠や表罫線に誤クロップし得る。**種別変更・回転などの再解析でも `Quad.fullImage` を維持する。**
+    /// PDF 由来のページか（WP-10 §2.3）。書類検出は `analysisOptions.documentDetection = .insetOnly`
+    /// （ページの中に小さく写った書類だけ切り抜く。文字だけのページはそのまま）。バナー表示などの判定に使う。
     let isFlatSource: Bool
     /// このページの解析オプション（WP-10b）。初回解析で決まり、**種別変更・回転などの再解析でも
     /// 同じ値を渡す**（`reanalysisQuad` と同じ扱い。文字認識の有無が再解析で勝手に変わらないように）。
     let analysisOptions: AnalysisOptions
     /// ライブラリ（WP-13）から復元したページか。復元元は**解析後の基準画像**なので、
-    /// 台形補正・正立化・切り抜きは適用済み＝**平面**として扱う（再解析でも `Quad.fullImage`）。
+    /// 台形補正・正立化・切り抜きは適用済み（`analysisOptions.documentDetection = .off`）。
     let isRestored: Bool
     /// 基準画像に**すでに適用済み**の手動回転（復元ページ用）。`manualRotation` は
     /// 「ユーザーが今までに回した合計」を保つため、再解析へ渡す量はこの差分になる。
@@ -93,8 +93,9 @@ final class PageState: Identifiable {
     /// **ユーザーが「切り抜きを調整」で指定した quad が最優先**。指定が無ければ PDF 由来・復元済みは
     /// 全面固定、それ以外は nil（=自動の書類検出に任せる）。
     var reanalysisQuad: Quad? {
-        if let manualQuad { return manualQuad }
-        return (isFlatSource || isRestored) ? .fullImage : nil
+        // 手動切り抜きが最優先。それ以外は analysisOptions.documentDetection に任せる
+        // （PDF 由来=insetOnly: ページ内の小さな書類だけ切り抜く／復元=off: 基準画像をそのまま）。
+        manualQuad
     }
 
     /// 再解析へ渡す回転量（基準画像に対する差分・0..3）。
@@ -315,7 +316,7 @@ final class AppState {
             do {
                 var analyzed = try await analysis.analyze(
                     url: file.url, forcedType: nil,
-                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0,
+                    manualQuad: nil, manualRotation: 0,
                     options: file.analysisOptions)
                 applyFaceDefault(to: &analyzed)
                 built.append(PageState(sourceURL: file.url, analyzed: analyzed,
@@ -361,7 +362,7 @@ final class AppState {
             do {
                 var analyzed = try await analysis.analyze(
                     url: file.url, forcedType: nil,
-                    manualQuad: file.isFlatPage ? .fullImage : nil, manualRotation: 0,
+                    manualQuad: nil, manualRotation: 0,
                     options: file.analysisOptions)
                 applyFaceDefault(to: &analyzed)
                 let page = PageState(sourceURL: file.url, analyzed: analyzed,

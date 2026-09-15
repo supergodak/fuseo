@@ -54,13 +54,24 @@ public struct VisionRectifier: DocumentRectifier {
             rectified = Self.perspectiveCorrect(CIImage(cgImage: original), quad: manualQuad)
             isRectified = true
             confidence = nil
-        } else if let obs = try Self.detectQuad(in: original) {
+        } else if options.documentDetection == .off {
+            // 切り抜き済み・正立済みの入力（復元した基準画像など）: 検出せず全面を使う（失敗ではない）
+            rectified = CIImage(cgImage: original)
+            isRectified = true
+            confidence = nil
+        } else if let obs = try Self.detectQuad(in: original),
+                  options.acceptsDocumentQuad(confidence: obs.confidence, area: Self.quadArea(obs)) {
             rectified = Self.perspectiveCorrect(CIImage(cgImage: original), quad: Quad(observation: obs))
             isRectified = true
             confidence = obs.confidence
+        } else if options.documentDetection == .insetOnly {
+            // 平面ページ（PDF 等）: ページの中に小さな書類が無ければ、ページそのものが書類（失敗ではない）
+            rectified = CIImage(cgImage: original)
+            isRectified = true
+            confidence = nil
         } else {
-            // 書類セグメンテーション失敗 → 全面フォールバック（throwしない。core-design.md §3）
-            MaskingLog.rectifier.notice("書類検出に失敗。全面フォールバックで続行: \(url.lastPathComponent, privacy: .public)")
+            // 書類セグメンテーション失敗・不採用 → 全面フォールバック（throwしない。core-design.md §3）
+            MaskingLog.rectifier.notice("書類検出なし/不採用。全面フォールバックで続行: \(url.lastPathComponent, privacy: .public)")
             rectified = CIImage(cgImage: original)
             isRectified = false
             confidence = nil
@@ -98,11 +109,27 @@ public struct VisionRectifier: DocumentRectifier {
         return original
     }
 
+    /// 書類の輪郭検出（生の最良観測。採否は `AnalysisOptions.acceptsDocumentQuad` で決める）。
+    ///
+    /// Vision は書類が写っていない写真（例: 机上の小物）でも confidence≈0・面積≈1% の四角形を返すことがあり、
+    /// それを台形補正すると画像が細長い帯に「変形」する（2026-09-16 dogfood）。実書類の観測は
+    /// confidence 0.86〜0.99・面積 15〜39%（PoC 6枚）、PDF 内のカードは 0.94・5%、文字だけの A4 は 0.55・93%。
     static func detectQuad(in image: CGImage) throws -> VNRectangleObservation? {
         let request = VNDetectDocumentSegmentationRequest()
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         try handler.perform([request])
         return request.results?.max(by: { $0.confidence < $1.confidence })
+    }
+
+    /// 正規化座標の四角形の面積（シューレース）。画像全体=1.0。
+    static func quadArea(_ o: VNRectangleObservation) -> Double {
+        let p = [o.topLeft, o.topRight, o.bottomRight, o.bottomLeft]
+        var sum = 0.0
+        for i in 0..<4 {
+            let a = p[i], b = p[(i + 1) % 4]
+            sum += a.x * b.y - b.x * a.y
+        }
+        return abs(sum) / 2
     }
 
     static func perspectiveCorrect(_ image: CIImage, quad: Quad) -> CIImage {

@@ -169,3 +169,40 @@ import PDFKit
 private enum PDFDocumentText {
     static func string(_ url: URL) -> String? { PDFDocument(url: url)?.string }
 }
+
+// MARK: - 書類検出の採否（純関数・実測値ベース）
+
+final class DocumentDetectionPolicyTests: XCTestCase {
+    /// 2026-09-16 実測: 充電器の写真 conf=0.00/area=0.01、PDF内カード 0.94/0.05、文字だけのA4 0.55/0.93、
+    /// 実書類（PoC 6枚）0.86〜0.99 / 0.15〜0.39。
+    func test_auto_rejectsNoDocumentPhotoButAcceptsRealDocuments() {
+        let auto = AnalysisOptions.default
+        XCTAssertFalse(auto.acceptsDocumentQuad(confidence: 0.00, area: 0.01), "書類が無い写真の低信頼・極小観測は不採用")
+        XCTAssertTrue(auto.acceptsDocumentQuad(confidence: 0.86, area: 0.15), "斜め撮影のカード")
+        XCTAssertTrue(auto.acceptsDocumentQuad(confidence: 0.99, area: 0.39), "正面のカード")
+        XCTAssertTrue(auto.acceptsDocumentQuad(confidence: 0.55, area: 0.93), "写真では大きな観測も採用してよい")
+        XCTAssertFalse(auto.acceptsDocumentQuad(confidence: 0.00, area: 0.98), "信頼度ゼロは面積が大きくても不採用")
+    }
+
+    func test_insetOnly_cropsSmallDocumentInsidePageButKeepsTextPage() {
+        let flat = AnalysisOptions.flatPage
+        XCTAssertEqual(flat.documentDetection, .insetOnly)
+        XCTAssertTrue(flat.acceptsDocumentQuad(confidence: 0.94, area: 0.05), "白いページ中央の小さなカードは切り抜く")
+        XCTAssertFalse(flat.acceptsDocumentQuad(confidence: 0.55, area: 0.93), "文字だけの A4 はページそのものが書類＝切り抜かない")
+        XCTAssertFalse(flat.acceptsDocumentQuad(confidence: 0.00, area: 0.01), "低信頼は不採用")
+        XCTAssertFalse(flat.acceptsDocumentQuad(confidence: 0.99, area: 0.90), "上限（0.85）を超える観測は切り抜かない")
+    }
+
+    func test_off_neverAccepts() {
+        XCTAssertFalse(AnalysisOptions.restored.acceptsDocumentQuad(confidence: 0.99, area: 0.30))
+        XCTAssertEqual(AnalysisOptions.restored.documentDetection, .off)
+    }
+
+    func test_decode_missingKeysFallBackToDefaults() throws {
+        let legacy = Data(#"{"detectUpright":false,"recognizeText":true}"#.utf8)
+        let opts = try JSONDecoder().decode(AnalysisOptions.self, from: legacy)
+        XCTAssertEqual(opts.documentDetection, .auto)
+        XCTAssertEqual(opts.insetMaxArea, 0.85, accuracy: 0.0001)
+        XCTAssertFalse(opts.detectUpright)
+    }
+}

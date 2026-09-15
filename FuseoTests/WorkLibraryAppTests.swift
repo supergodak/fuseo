@@ -115,7 +115,7 @@ final class WorkLibraryAppTests: XCTestCase {
 
         XCTAssertTrue(back.isRestored)
         XCTAssertNil(back.manualQuad, "基準画像には切り抜き適用済み。二重に切り抜かない")
-        XCTAssertEqual(back.reanalysisQuad, .fullImage, "再解析は基準画像の全面から")
+        XCTAssertNil(back.reanalysisQuad, "復元ページに手動切り抜きは無い"); XCTAssertEqual(back.analysisOptions.documentDetection, .off, "再解析は基準画像をそのまま（検出 off）")
         XCTAssertFalse(back.analysisOptions.detectUpright, "基準画像は正立済み（再判定させない）")
         XCTAssertEqual(back.analysisRotation, 0, "回転は基準画像に適用済み＝差分は 0")
         XCTAssertEqual(back.analyzed.page.sourceURL, back.sourceURL, "基準画像 PNG を指す")

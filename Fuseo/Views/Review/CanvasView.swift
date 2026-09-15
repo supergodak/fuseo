@@ -31,6 +31,9 @@ struct CanvasView: View {
                         Image(decorative: page.analyzed.page.cgImage, scale: 1.0)
                             .resizable()
                             .frame(width: disp.width, height: disp.height)
+                            // ページの境界を見せる（白い余白の多い PDF ページが「小さな画像」に見えないように）
+                            .overlay(Rectangle().stroke(Color.secondary.opacity(0.35), lineWidth: 1).allowsHitTesting(false))
+                            .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
 
                         candidateOverlays(disp)
                         manualRectOverlays(disp)
@@ -47,6 +50,9 @@ struct CanvasView: View {
                         }
                     }
                     .coordinateSpace(name: "canvas")
+                    // 画像の表示領域そのもの（UI テストのドラッグ座標の基準。レターボックス余白を含まない）
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("review.page")
                     .focusable()
                     .onDeleteCommand { page.deleteSelection(undo: undoManager) }
                     .frame(width: disp.width, height: disp.height)

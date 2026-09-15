@@ -25,7 +25,7 @@ final class PDFPageStateTests: XCTestCase {
         let state = makeState(fake)
         await state.processFiles([pdfPage])
 
-        XCTAssertEqual(fake.lastManualQuad, .fullImage, "PDF由来ページは全面固定で解析する")
+        XCTAssertNil(fake.lastManualQuad, "PDF由来ページは手動切り抜きなし（検出方針は options.insetOnly）")
         XCTAssertTrue(state.pages[0].isFlatSource)
         XCTAssertTrue(state.hasPDFPages)
     }
@@ -47,7 +47,7 @@ final class PDFPageStateTests: XCTestCase {
         await state.appendFiles([pdfPage])
 
         XCTAssertEqual(state.pages.count, 2)
-        XCTAssertEqual(fake.lastManualQuad, .fullImage)
+        XCTAssertNil(fake.lastManualQuad)
         XCTAssertTrue(state.pages[1].isFlatSource)
     }
 
@@ -57,7 +57,7 @@ final class PDFPageStateTests: XCTestCase {
         await state.processFiles([pdfPage])
 
         await state.performTypeChange(page: state.pages[0], to: .menkyoshoFront)
-        XCTAssertEqual(fake.lastManualQuad, .fullImage, "種別変更の再解析でも全面固定を維持する")
+        XCTAssertNil(fake.lastManualQuad, "種別変更の再解析でも手動切り抜きなし（方針は options が持つ）")
     }
 
     func test_rotate_keepsFullImageQuadForPDFPage() async {
@@ -66,7 +66,7 @@ final class PDFPageStateTests: XCTestCase {
         await state.processFiles([pdfPage])
 
         await state.performRotate(page: state.pages[0])
-        XCTAssertEqual(fake.lastManualQuad, .fullImage, "回転の再解析でも全面固定を維持する")
+        XCTAssertNil(fake.lastManualQuad, "回転の再解析でも手動切り抜きなし（方針は options が持つ）")
         XCTAssertEqual(fake.lastManualRotation, 1)
     }
 
