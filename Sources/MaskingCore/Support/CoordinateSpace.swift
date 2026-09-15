@@ -39,7 +39,7 @@ public struct NormRect: Codable, Equatable, Sendable {
 
 /// 書類の四隅（正規化 0..1・**左下原点**。Vision の VNRectangleObservation と同じ向き）。
 /// 切り抜きの手動調整（確認UI）と検出結果の受け渡しに使う。
-public struct Quad: Equatable, Sendable {
+public struct Quad: Equatable, Sendable, Codable {
     public var topLeft: CGPoint
     public var topRight: CGPoint
     public var bottomRight: CGPoint

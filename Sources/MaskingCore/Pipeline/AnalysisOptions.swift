@@ -9,7 +9,7 @@ import Foundation
 /// - ページ数の多い PDF で時間を優先したいとき **文字認識そのものを省略**できる。
 ///   その場合、番号系の自動検出（OCR 文字列に依存）・種別判定（キーワード照合）・検索可能 PDF の
 ///   テキスト層は使えない。顔・QR/バーコードの検出（画像ベース）と手動マスク・書き出しは使える。
-public struct AnalysisOptions: Sendable, Equatable {
+public struct AnalysisOptions: Sendable, Equatable, Codable {
     /// 正立判定（0/90/180/270° を OCR で比較）を行う。false = 入力の向きをそのまま採用。
     public var detectUpright: Bool
     /// 文字認識を行う。false = OCR を走らせない（`AnalyzedPage.ocr` は空・種別は generic）。

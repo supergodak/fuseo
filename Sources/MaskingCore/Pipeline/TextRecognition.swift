@@ -3,7 +3,7 @@ import CoreGraphics
 import Vision
 
 /// OCRの1観測。text は半角正規化済み・box は基準画像正規化（左下原点）。
-public struct OCRItem: Sendable {
+public struct OCRItem: Sendable, Equatable, Codable {
     public let text: String
     public let box: NormRect
     public let confidence: Float
