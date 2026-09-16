@@ -25,7 +25,7 @@ Fuseo は**「提出事故を減らす道具」**です。名称は「伏せる�
 
 1. **完全ローカル** — 書類の処理はすべてお使いの端末の中だけで完結します。写真や検出結果が外部に送信されることはありません。アカウントもテレメトリもありません。
 2. **消したところは復元できません** — 黒塗りは画像そのものを黒いピクセルで塗りつぶす「焼き込み」方式です。あとから透けて見えたり、レイヤーを剥がして復元されたりすることはありません。撮影日時・位置情報などのメタデータも引き継ぎません。
-3. **勝手に保存しません** — 塗る場所は必ずあなたが確認してから書き出します。保存前の確認 UI を外すことはありません。
+3. **勝手に書き出しません** — 塗る場所は必ずあなたが確認してから書き出します。書き出し前の確認 UI を外すことはありません。
 
 ### 対応している書類
 
@@ -39,6 +39,8 @@ Fuseo は**「提出事故を減らす道具」**です。名称は「伏せる�
 | 健康保険証・資格確認書・住民票 | 記号・番号・個人番号など（対応拡充中） |
 
 上記以外の書類でも自動検出は働きます。契約書・申込書・領収書など**どんな書類でも、写り込んだマイナンバー（12桁・検査用数字で検証）・クレジットカード番号・QRコード・顔写真**を自動でマスク候補に挙げます。それ以外の箇所は手動の矩形・ブラシツールで自由に塗れます。各候補には「なぜここを塗るのか」の根拠が表示されます。
+
+PDF（保険料控除証明書・残高証明書などの電子交付書類）も読み込めます。各ページを画像として黒塗りするため、下の文字は残りません。作業は自動保存され、「作業中の書類」からいつでも再開できます（保存先は端末内のみ・iCloud バックアップ対象外）。
 
 > ⚠️ **提出前に確認してほしいこと**
 > - **原本の保存が義務づけられている書類**（扶養控除等申告書など）は、黒塗りしたコピーで代替できません。Fuseo の対象外です。
@@ -56,7 +58,7 @@ Mac 版は **macOS 14（Sonoma）以降**（Apple Silicon／Intel）、iPhone �
 ### 使い方（要約）
 
 1. **起動** — アプリケーションフォルダの Fuseo をダブルクリック。
-2. **読み込む** — 書類の写真をウィンドウにドラッグ＆ドロップ（JPEG／PNG／HEIC／TIFF、複数枚可）。
+2. **読み込む** — 書類の写真や PDF をウィンドウにドラッグ＆ドロップ（JPEG／PNG／HEIC／TIFF／PDF、複数枚可。PDF は各ページを画像として処理し、ページの中に小さく写ったカードは自動で切り抜きます）。
 3. **確認する** — 切り抜き・傾き補正・種別判定・黒塗り候補の検出まで自動で進みます。候補が正しいか画面で確認します。
 4. **調整する** — 塗らない候補はチェックを外す。足りないところは矩形・ブラシで塗り足す。
 5. **書き出す** — PDF／JPEG／PNG を選んで保存。仕上がりプレビューで実際の塗りつぶし状態を確認できます。
@@ -90,7 +92,7 @@ Fuseo is a **tool for reducing submission accidents**. Its automatic detection o
 
 1. **Fully local.** All document processing happens only on your device. Photos and detection results never leave it. No accounts, no telemetry.
 2. **Redactions cannot be recovered.** Masks are *burned in* — the pixels themselves are painted black. Nothing shows through later, and no layer can be peeled off to reveal what was hidden. Metadata such as capture date and GPS location is not carried over.
-3. **Nothing is saved without your say-so.** You always confirm the redactions on screen before exporting. The pre-save confirmation step is never removed.
+3. **Nothing is exported without your say-so.** You always confirm the redactions on screen before exporting. The pre-export confirmation step is never removed.
 
 ### Supported documents
 
@@ -103,6 +105,8 @@ Fuseo is a **tool for reducing submission accidents**. Its automatic detection o
 | Health insurance card / eligibility certificate / residence certificate | Symbol, number, individual number, etc. (expanding) |
 
 Auto-detection works on other documents too. On **any document** — contracts, application forms, receipts — Fuseo flags My Number digits (check-digit verified), credit card numbers, QR/barcodes, and faces that appear anywhere. For anything else you can freely redact with the manual rectangle and brush tools. Every candidate shows the *basis* — why that area is proposed for redaction.
+
+PDFs (e.g. electronically issued deduction or balance certificates) can be opened too. Each page is redacted as an image, so nothing underneath survives. Your work is saved automatically and can be resumed from "Documents in progress" (stored on this device only, excluded from iCloud backup).
 
 > ⚠️ **Before you submit**
 > - Documents you are legally required to keep as originals (e.g. certain tax withholding declarations) **cannot** be replaced by a redacted copy. They are out of scope for Fuseo.
@@ -120,7 +124,7 @@ The Mac app requires **macOS 14 (Sonoma) or later** (Apple Silicon or Intel); th
 ### Usage (in brief)
 
 1. **Launch** Fuseo from your Applications folder.
-2. **Load** a document photo by dragging it into the window (JPEG / PNG / HEIC / TIFF; multiple pages OK).
+2. **Load** a document photo or PDF by dragging it into the window (JPEG / PNG / HEIC / TIFF / PDF; multiple pages OK — PDF pages are processed as images, and a small card inside a page is cropped automatically).
 3. **Review** — cropping, deskew, document-type detection, and redaction candidates run automatically. Check them on screen.
 4. **Adjust** — uncheck candidates you don't want; add missing spots with the rectangle or brush tool.
 5. **Export** — choose PDF / JPEG / PNG and save. A preview shows exactly how the redactions will look.
