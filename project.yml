@@ -117,7 +117,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseo.ios
         PRODUCT_NAME: Fuseo
         PRODUCT_MODULE_NAME: FuseoiOS   # Swift モジュール名を固定（@testable import FuseoiOS 用）
-        MARKETING_VERSION: "1.2"        # v1.2=PDF入力・受け取り口・保存と再開(WP-10/11a/13)。iOSはMac(0.2.x)と独立に採番する
+        MARKETING_VERSION: "1.2.1"      # v1.2.1=PDF入力・受け取り口・保存と再開(WP-10/11a/13)。1.2(1)は縮小バグ入りでアップロード済みのため欠番。iOSはMac(0.2.x)と独立に採番する
+        CURRENT_PROJECT_VERSION: "2"     # 1.2(1) は縮小バグ入りでアップロード済み → 修正版は (2)
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSCameraUsageDescription: "書類を撮影してその場でマスキングするために使用します"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
