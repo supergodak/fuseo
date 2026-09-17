@@ -135,8 +135,13 @@ public struct PDFRasterizer {
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: pxWidth, height: pxHeight))
 
-        let target = CGRect(x: 0, y: 0, width: pxWidth, height: pxHeight)
-        ctx.concatenate(cgPage.getDrawingTransform(.mediaBox, rect: target,
+        // 座標系: まず pt→px の拡大を CTM に載せ、その上で **pt 単位の矩形**（/Rotate 適用後のページサイズ）へ
+        // getDrawingTransform でフィットさせる。ピクセル矩形を直接 getDrawingTransform に渡すと内容が
+        // 約 57% に縮小して中央に描かれる（2026-09-17 実測: 0.21..0.74 / 正しくは 0.10..0.90）。
+        // /Rotate はこの関数が考慮する（自前で回転行列を組むと二重適用になる）。
+        ctx.scaleBy(x: CGFloat(scale), y: CGFloat(scale))
+        let pointRect = CGRect(origin: .zero, size: pointSize)
+        ctx.concatenate(cgPage.getDrawingTransform(.mediaBox, rect: pointRect,
                                                    rotate: 0, preserveAspectRatio: true))
         ctx.drawPDFPage(cgPage)
 

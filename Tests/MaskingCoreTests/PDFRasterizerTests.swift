@@ -122,6 +122,68 @@ final class PDFRasterizerTests: XCTestCase {
         XCTAssertEqual(r.pointSize.height, 595, accuracy: 0.5)
     }
 
+    // MARK: - 2b. 内容がページ全面に描かれる（縮小・中央寄せしない）
+
+    /// ページ端から 10pt 内側に黒い枠線を描いた PDF。ラスタライズ後、暗い画素の範囲が
+    /// ほぼ全面（各辺 ≥ 0.95）に達していること。2026-09-17 のバグ（内容が約 57% に縮小して中央に
+    /// 描かれる）を固定する。回転ページも同様。
+    func test_rasterize_drawsContentAtFullScale_forUprightAndRotatedPages() throws {
+        for rotation in [0, 90] {
+            let url = try makeBorderPDF(rotation: rotation)
+            defer { removeFile(url) }
+            var page: PDFRasterizer.Page?
+            try PDFRasterizer(dpi: 100).rasterize(url: url) { page = $0 }
+            let img = try XCTUnwrap(page).cgImage
+            let bbox = Self.darkBounds(of: img)
+            XCTAssertLessThan(bbox.minX, 0.05, "rotation=\(rotation): 左端まで描かれていない (\(bbox))")
+            XCTAssertGreaterThan(bbox.maxX, 0.95, "rotation=\(rotation): 右端まで描かれていない (\(bbox))")
+            XCTAssertLessThan(bbox.minY, 0.05, "rotation=\(rotation): 上端まで描かれていない (\(bbox))")
+            XCTAssertGreaterThan(bbox.maxY, 0.95, "rotation=\(rotation): 下端まで描かれていない (\(bbox))")
+        }
+    }
+
+    /// 595×842pt のページに、端から 10pt 内側の黒枠（太さ 6pt）を描く。
+    private func makeBorderPDF(rotation: Int) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pdfrast-border-\(UUID().uuidString).pdf")
+        var mediaBox = CGRect(x: 0, y: 0, width: 595, height: 842)
+        guard let ctx = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
+            throw XCTSkip("PDF コンテキストを作成できない環境")
+        }
+        ctx.beginPDFPage(nil)
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1)); ctx.fill(mediaBox)
+        ctx.setStrokeColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1)); ctx.setLineWidth(6)
+        ctx.stroke(mediaBox.insetBy(dx: 10, dy: 10))
+        ctx.endPDFPage(); ctx.closePDF()
+        if rotation != 0 {
+            guard let doc = PDFDocument(url: url) else { throw XCTSkip("PDFKit で再読込できない") }
+            doc.page(at: 0)?.rotation = rotation
+            guard doc.write(to: url) else { throw XCTSkip("PDFKit で書き戻せない") }
+        }
+        return url
+    }
+
+    /// 暗い画素（RGB すべて < 128）の外接矩形を正規化（0..1・左上原点）で返す。
+    private static func darkBounds(of image: CGImage) -> (minX: Double, maxX: Double, minY: Double, maxY: Double) {
+        let w = image.width, h = image.height
+        var data = [UInt8](repeating: 0, count: w * h * 4)
+        let ctx = CGContext(data: &data, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var minX = w, maxX = -1, minY = h, maxY = -1
+        for y in 0..<h {
+            for x in 0..<w {
+                let i = (y * w + x) * 4
+                if data[i] < 128 && data[i + 1] < 128 && data[i + 2] < 128 {
+                    minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+                }
+            }
+        }
+        return (Double(minX) / Double(w), Double(maxX + 1) / Double(w),
+                Double(minY) / Double(h), Double(maxY + 1) / Double(h))
+    }
+
     // MARK: - 3. パスワード
 
     func test_lockedPDF_requiresCorrectPassword() throws {
