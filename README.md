@@ -63,7 +63,7 @@ Mac 版は **macOS 14（Sonoma）以降**（Apple Silicon／Intel）、iPhone �
 4. **調整する** — 塗らない候補はチェックを外す。足りないところは矩形・ブラシで塗り足す。
 5. **書き出す** — PDF／JPEG／PNG を選んで保存。仕上がりプレビューで実際の塗りつぶし状態を確認できます。
 
-iPhone 版は起動後に「カメラで撮影／写真から選ぶ／ファイルから」の 3 つから読み込むだけで、以降（3〜5）の流れは同じです。
+iPhone 版は起動後に「カメラで撮影／写真から選ぶ／ファイルから」の 3 つから読み込むだけで、以降（3〜5）の流れは同じです。メールの添付ファイルや「ファイル」アプリの共有メニューから **「Fuseo にコピー」** を選んで直接開くこともできます。一度に扱える PDF のページ数は iPhone 版が 10 ページ、Mac 版が 50 ページまでです（それより長い書類は Mac 版へ）。
 
 詳しい操作・確認画面の見かた・書き出しオプションは **[docs/user-manual.md](docs/user-manual.md)** にまとめています。
 
@@ -129,7 +129,7 @@ The Mac app requires **macOS 14 (Sonoma) or later** (Apple Silicon or Intel); th
 4. **Adjust** — uncheck candidates you don't want; add missing spots with the rectangle or brush tool.
 5. **Export** — choose PDF / JPEG / PNG and save. A preview shows exactly how the redactions will look.
 
-On iPhone you load documents from the home screen instead — take a photo, pick from your library, or open a file — and steps 3–5 are the same.
+On iPhone you load documents from the home screen instead — take a photo, pick from your library, or open a file — and steps 3–5 are the same. You can also open a document directly from a mail attachment or the Files app share sheet via **Copy to Fuseo**. A single import can hold up to 10 PDF pages on iPhone and 50 on Mac (use the Mac app for longer documents).
 
 See **[docs/user-manual.md](docs/user-manual.md)** for the full guide.
 
