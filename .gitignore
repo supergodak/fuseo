@@ -31,3 +31,5 @@ docs/zenn/
 
 build.noindex/
 docs/wp13-library-design.md
+# Windows 版の内部設計書（モデル割当を含む。公開契約は windows/docs/contract.md に切り出す）
+docs/windows-design.md
