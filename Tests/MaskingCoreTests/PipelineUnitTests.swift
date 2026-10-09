@@ -187,6 +187,61 @@ final class PipelineUnitTests: XCTestCase {
         XCTAssertEqual(result.score, 0)
     }
 
+    // MARK: - 文字の多い画像での採否ゲート（2026-10-09 dogfood: 返済明細書が免許証裏に化けた）
+
+    /// 書類本文っぽい観測を n 個作る（キーワードを含まない）。
+    private func filler(_ n: Int) -> [OCRItem] {
+        (0..<n).map { i in item("明細\(i)", x: 0.05, midY: 0.95 - Double(i) * 0.001, w: 0.1) }
+    }
+
+    func test_classifier_textHeavyPage_singleKeyword_fallsBackToGeneric() {
+        let presets = [
+            preset(.menkyoshoBack, keywords: [("備考", 5), ("臓器提供", 2)]),
+            preset(.generic, keywords: []),
+        ]
+        let ocr = filler(KeywordClassifier.maxCardObservations) + [item("備考", x: 0.1, midY: 0.5, w: 0.1)]
+        let result = KeywordClassifier().classify(ocr: ocr, presets: presets)
+        XCTAssertEqual(result.type, .generic, "文字の多い書類で「備考」1語だけでは免許証裏にしない")
+        XCTAssertEqual(result.score, 0)
+        XCTAssertEqual(result.ranking.first?.type, .menkyoshoBack, "ranking は生スコアのまま（種別変更の候補用）")
+    }
+
+    func test_classifier_textHeavyPage_rejectsCardTypesEvenWithManyKeywords() {
+        let presets = [
+            preset(.menkyoshoBack, keywords: [("備考", 5), ("以下の部分", 3), ("臓器提供", 2)]),
+            preset(.generic, keywords: []),
+        ]
+        let ocr = filler(KeywordClassifier.maxCardObservations + 1)
+            + [item("備考", x: 0.1, midY: 0.5, w: 0.1), item("臓器提供", x: 0.1, midY: 0.4, w: 0.1)]
+        XCTAssertEqual(KeywordClassifier().classify(ocr: ocr, presets: presets).type, .generic,
+                       "カード類は文字数がカード並みのときだけ候補にする")
+    }
+
+    func test_classifier_textHeavyPage_paperDocumentWithTwoKeywords_isAccepted() {
+        let presets = [
+            preset(.juminhyoMyNumber, keywords: [("住民票", 5), ("世帯主", 3), ("続柄", 2)]),
+            preset(.menkyoshoBack, keywords: [("備考", 5)]),
+            preset(.generic, keywords: []),
+        ]
+        let ocr = filler(200) + [item("住民票", x: 0.1, midY: 0.9, w: 0.2), item("世帯主", x: 0.1, midY: 0.8, w: 0.2),
+                                 item("備考", x: 0.1, midY: 0.2, w: 0.1)]
+        let result = KeywordClassifier().classify(ocr: ocr, presets: presets)
+        XCTAssertEqual(result.type, .juminhyoMyNumber, "紙の書類は2語以上一致すれば文字が多くても採用")
+        XCTAssertEqual(result.score, 8)
+    }
+
+    func test_classifier_cardSizedText_singleKeyword_stillAccepted() {
+        // 実物の斜め撮影マイナ裏（1語・18観測）と同じ条件。カードは文字が少ないので1語で確定してよい。
+        let presets = [
+            preset(.myNumberCardBack, keywords: [("コールセンター", 5), ("個人番号", 2)]),
+            preset(.generic, keywords: []),
+        ]
+        let ocr = filler(17) + [item("個人番号", x: 0.1, midY: 0.5, w: 0.2)]
+        let result = KeywordClassifier().classify(ocr: ocr, presets: presets)
+        XCTAssertEqual(result.type, .myNumberCardBack)
+        XCTAssertEqual(result.score, 2)
+    }
+
     // MARK: - RuleEngine（フェイク FieldDetecting）
 
     /// 指定した DetectedField を常に返すスタブ（プロトコル準拠）。
