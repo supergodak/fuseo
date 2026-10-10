@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- UI 非依存の中核（座標・モデル・プリセット・焼き込み・書き出し・ライブラリ）。
+       WPF 型を持ち込まない＝テストが UI 無しで回る（docs/windows-design.md §3.2）。 -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Fuseo.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- プリセットは Mac/iOS と単一の正を共有する（コピーしない）。 -->
+    <EmbeddedResource Include="..\..\..\Sources\MaskingCore\Resources\Presets\*.json"
+                      LogicalName="Fuseo.Presets.%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

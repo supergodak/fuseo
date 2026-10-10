@@ -1,0 +1,12 @@
+<Window x:Class="Fuseo.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Fuseo for Windows" Width="1100" Height="760" MinWidth="720" MinHeight="520">
+    <!-- W0 の骨組み。画面の本体は W3 で組み立てる（docs/windows-design.md §5）。 -->
+    <Grid Margin="24">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Fuseo for Windows" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="StatusText" Margin="0,12,0,0" FontSize="14" Foreground="#555" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>

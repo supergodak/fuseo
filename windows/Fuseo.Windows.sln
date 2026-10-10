@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1D81AEA3-A15C-4EFF-9D7C-76EA908965EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fuseo.Core", "src\Fuseo.Core\Fuseo.Core.csproj", "{FCAA98A6-CBA1-428A-8FD4-17396F9CFA8B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fuseo.App", "src\Fuseo.App\Fuseo.App.csproj", "{8102F44B-510D-4AB6-B070-EDBFAB30AF56}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F1BF4439-B9EB-4565-887C-3494CC25C2EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fuseo.Core.Tests", "tests\Fuseo.Core.Tests\Fuseo.Core.Tests.csproj", "{2572EFB8-16F0-44D5-AD62-908FFF710336}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fuseo.App.Tests", "tests\Fuseo.App.Tests\Fuseo.App.Tests.csproj", "{554B95B2-A6D3-4E2C-A09A-9BB2FC2611C3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FCAA98A6-CBA1-428A-8FD4-17396F9CFA8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCAA98A6-CBA1-428A-8FD4-17396F9CFA8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCAA98A6-CBA1-428A-8FD4-17396F9CFA8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCAA98A6-CBA1-428A-8FD4-17396F9CFA8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8102F44B-510D-4AB6-B070-EDBFAB30AF56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8102F44B-510D-4AB6-B070-EDBFAB30AF56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8102F44B-510D-4AB6-B070-EDBFAB30AF56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8102F44B-510D-4AB6-B070-EDBFAB30AF56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2572EFB8-16F0-44D5-AD62-908FFF710336}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2572EFB8-16F0-44D5-AD62-908FFF710336}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2572EFB8-16F0-44D5-AD62-908FFF710336}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2572EFB8-16F0-44D5-AD62-908FFF710336}.Release|Any CPU.Build.0 = Release|Any CPU
+		{554B95B2-A6D3-4E2C-A09A-9BB2FC2611C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{554B95B2-A6D3-4E2C-A09A-9BB2FC2611C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{554B95B2-A6D3-4E2C-A09A-9BB2FC2611C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{554B95B2-A6D3-4E2C-A09A-9BB2FC2611C3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FCAA98A6-CBA1-428A-8FD4-17396F9CFA8B} = {1D81AEA3-A15C-4EFF-9D7C-76EA908965EB}
+		{8102F44B-510D-4AB6-B070-EDBFAB30AF56} = {1D81AEA3-A15C-4EFF-9D7C-76EA908965EB}
+		{2572EFB8-16F0-44D5-AD62-908FFF710336} = {F1BF4439-B9EB-4565-887C-3494CC25C2EF}
+		{554B95B2-A6D3-4E2C-A09A-9BB2FC2611C3} = {F1BF4439-B9EB-4565-887C-3494CC25C2EF}
+	EndGlobalSection
+EndGlobal

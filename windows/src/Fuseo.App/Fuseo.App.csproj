@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- WPF シェル（画面・ViewModel・入力配線）。量産は W3（Opus）。通信機能は持たない（生命線）。 -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Fuseo.App</RootNamespace>
+    <AssemblyName>Fuseo</AssemblyName>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fuseo.Core\Fuseo.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,4 @@
+Fuseo for Windows — third-party notices
+
+(No third-party runtime libraries are bundled in this build yet.
+ PDFium (BSD-3-Clause) and ZXing.Net (Apache-2.0) will be listed here when added.)

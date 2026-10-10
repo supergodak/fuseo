@@ -1,0 +1,52 @@
+using Fuseo.Core.Geometry;
+using Fuseo.Core.Imaging;
+using Fuseo.Core.Model;
+
+namespace Fuseo.Core.Contracts;
+
+/// <summary>取り込んだ 1 ページ（基準ビットマップ＋元ファイル名・ページ番号）。</summary>
+public sealed record SourcePage(PageBitmap Bitmap, string SourceName, int PageIndex, bool FromPdf);
+
+/// <summary>
+/// ファイル → ページ群（WIC デコード・PDF ラスタライズ・回転の焼き込み・上限判定）。実装は W2。
+/// 契約（§4.4）: PDF は白下地→描画、/Rotate 後の pt サイズから px = pt×300/72・長辺 4000 でクランプ、
+/// パスワードはメモリ内のみ、PDF を含む取り込みは合計 50 ページまで（取り込み前に数えて拒否）。
+/// </summary>
+public interface IPageSource
+{
+    const int MaxPdfPagesPerImport = 50;
+    const double RasterDpi = 300;
+    const int MaxLongSidePx = 4000;
+
+    Task<IReadOnlyList<SourcePage>> LoadAsync(
+        IReadOnlyList<string> paths, Func<string, Task<string?>> askPassword, CancellationToken ct);
+}
+
+/// <summary>動的検出（v0.1 は QR／バーコードのみ・W4）。</summary>
+public interface IDetector
+{
+    DetectorId Id { get; }
+    IReadOnlyList<NormRect> Detect(PageBitmap page);
+}
+
+/// <summary>確定したマスク一式（ON の候補＋手動）。</summary>
+public sealed record ConfirmedMasks(IReadOnlyList<NormRect> Rects, IReadOnlyList<BrushStroke> Strokes);
+
+/// <summary>焼き込み（W1・Fable）。新しいバッファに #000000FF で塗る。α合成・注釈・レイヤーは禁止。</summary>
+public interface IMaskRasterizer
+{
+    PageBitmap BurnIn(PageBitmap page, ConfirmedMasks masks);
+}
+
+public enum ExportFormat { Pdf, Jpeg, Png }
+
+public sealed record ExportOptions(ExportFormat Format, double JpegQuality = 0.95);
+
+/// <summary>
+/// 書き出し（W1・Fable）。焼き込み済みページだけを受け取る。
+/// JPEG/PNG はメタデータ・サムネイルを一切持たない新規フレーム、PDF は画像 XObject のみの自前ライタ（§4.2・§4.3）。
+/// </summary>
+public interface IExporter
+{
+    void Export(IReadOnlyList<PageBitmap> burnedPages, ExportOptions options, Stream destination);
+}

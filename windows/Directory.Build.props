@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Version>0.1.0</Version>
+    <Company>ATI Inc.</Company>
+    <Product>Fuseo for Windows</Product>
+    <Copyright>Copyright (c) 2026 ATI Inc.</Copyright>
+  </PropertyGroup>
+</Project>
