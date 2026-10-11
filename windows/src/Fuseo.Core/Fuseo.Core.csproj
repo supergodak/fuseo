@@ -6,6 +6,9 @@
     <RootNamespace>Fuseo.Core</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Fuseo.Core.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- プリセットは Mac/iOS と単一の正を共有する（コピーしない）。 -->
     <EmbeddedResource Include="..\..\..\Sources\MaskingCore\Resources\Presets\*.json"
                       LogicalName="Fuseo.Presets.%(Filename)%(Extension)" />
