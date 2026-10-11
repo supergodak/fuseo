@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VM="${FUSEO_WIN_VM:-takeyahideyuki@10.211.55.3}"
-REMOTE='C:\fuseo-win'
+REMOTE="${FUSEO_WIN_REMOTE:-C:\fuseo-win}"  # 並行作業（worktree）ごとに別フォルダにする
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=10 "$VM")
 
 sync_tree() {
