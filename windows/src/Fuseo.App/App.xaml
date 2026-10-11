@@ -1,5 +1,11 @@
 <Application x:Class="Fuseo.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             xmlns:v="clr-namespace:Fuseo.App.Views"
+             ShutdownMode="OnMainWindowClose">
+    <!-- StartupUri は使わない: App.xaml.cs で依存（IPageSource / IMaskRasterizer / IExporter）を組み立てて注入する。 -->
+    <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <v:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+    </Application.Resources>
 </Application>

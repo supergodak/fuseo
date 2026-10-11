@@ -7,6 +7,8 @@
     <RootNamespace>Fuseo.App</RootNamespace>
     <AssemblyName>Fuseo</AssemblyName>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Properties/Strings.resx（ニュートラル）は日本語。英語は W6 で Strings.en.resx を足す。 -->
+    <NeutralLanguage>ja</NeutralLanguage>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fuseo.Core\Fuseo.Core.csproj" />
