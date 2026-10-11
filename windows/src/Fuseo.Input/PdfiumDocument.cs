@@ -36,6 +36,9 @@ internal sealed class PdfiumDocument : IDisposable
     private static readonly object Gate = new();
     private static bool _initialized;
 
+    // fpdfview.h の FPDF_ANNOT（注釈を描く）
+    private const int RenderFlagAnnot = 0x01;
+
     // fpdfview.h の FPDF_ERR_*
     public const long ErrPassword = 4;
 
@@ -100,7 +103,10 @@ internal sealed class PdfiumDocument : IDisposable
     /// <summary>
     /// 1 ページを描く（§4.4）: /Rotate 適用後の pt サイズ → px、**白で塗ってから**描画。
     /// 回転引数は 0（PDFium は /Rotate を適用した向きで描く。ここで回すと二重適用になる）。
-    /// 注釈は描かない（FPDF_ANNOT を付けない）。出力は不透明 BGRA。
+    /// **注釈も描く**（FPDF_ANNOT）: 入力済みのフォーム欄・押印注釈など、利用者がビューアで見ている内容と一致させる
+    /// （描かないと「提出したら記入内容が消えていた」事故になる）。全部を画素に焼くので漏れの経路は増えない。
+    /// 非表示フラグ付きの注釈は PDFium が描かない。決定 2026-10-11 Fable（Mac の drawPDFPage は注釈を描かない＝要追随検討）。
+    /// 出力は不透明 BGRA。
     /// </summary>
     public PageBitmap RenderPage(int index)
     {
@@ -121,7 +127,7 @@ internal sealed class PdfiumDocument : IDisposable
                 try
                 {
                     fpdfview.FPDFBitmapFillRect(bitmap, 0, 0, w, h, 0xFFFFFFFFUL); // 白下地（透明ページ対策）
-                    fpdfview.FPDF_RenderPageBitmap(bitmap, page, 0, 0, w, h, 0, 0);
+                    fpdfview.FPDF_RenderPageBitmap(bitmap, page, 0, 0, w, h, 0, RenderFlagAnnot);
 
                     if (fpdfview.FPDFBitmapGetFormat(bitmap) != BitmapFormatBgrx) throw new InvalidDataException("描画バッファの形式が想定外");
                     var stride = fpdfview.FPDFBitmapGetStride(bitmap);

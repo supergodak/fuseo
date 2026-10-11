@@ -112,11 +112,11 @@ public class PdfRasterTests
     }
 
     [Fact]
-    public async Task Annotations_AreNotDrawn()
+    public async Task Annotations_AreDrawn_LikeViewersShowThem()
     {
-        // 外観ストリーム付きの注釈（ページ全面の黒）。FPDF_ANNOT を付けないので描かれない。
+        // 外観ストリーム付きの注釈（ページ全面の黒）。記入済みフォーム・押印注釈が出力から消えないこと。
         var b = await RenderSingle(new(200, 100, "", AnnotAppearance: "0 g 0 0 200 100 re f"));
-        Assert.Null(Img.DarkBounds(b));
+        AssertContentSpans(b);
     }
 
     [Fact]
