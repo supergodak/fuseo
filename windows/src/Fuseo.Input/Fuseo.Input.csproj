@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 取り込み（W2）: ファイル → SourcePage[]。WIC（WPF の System.Windows.Media.Imaging）と PDFium を使う。
+       Core に WPF 型を持ち込まないため、別アセンブリにしている（docs/windows-design.md §3.2）。
+       通信機能は持たない（生命線）。依存は PDFiumCore のみ（ネイティブ pdfium.dll は bblanchon.PDFium.* が運ぶ）。 -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Fuseo.Input</RootNamespace>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- バージョン固定（win-x64 / win-arm64 の pdfium.dll 入りを確認済み・2026-10-11）。
+         更新するときは THIRD-PARTY-NOTICES.txt と内容範囲テストを必ず見直す。 -->
+    <PackageReference Include="PDFiumCore" Version="[155.0.8057]" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fuseo.Core\Fuseo.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fuseo.Input.Tests" />
+  </ItemGroup>
+</Project>

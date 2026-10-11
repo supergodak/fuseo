@@ -12,5 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fuseo.App\Fuseo.App.csproj" />
+    <!-- 通信系アセンブリ不参照の検査対象に入れるため（App 本体への配線は統合時）。 -->
+    <ProjectReference Include="..\..\src\Fuseo.Input\Fuseo.Input.csproj" />
   </ItemGroup>
 </Project>
