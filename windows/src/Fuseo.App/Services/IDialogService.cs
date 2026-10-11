@@ -16,7 +16,7 @@ public interface IDialogService
     /// パスワード入力。<see cref="IPageSource.LoadAsync"/> の askPassword にそのまま渡す。
     /// 入力値は戻り値でだけ返し、どこにも保持しない。取り消しなら null。
     /// </summary>
-    Task<string?> AskPasswordAsync(string fileName);
+    Task<string?> AskPasswordAsync(PasswordRequest request);
 
     /// <summary>保存ダイアログ（上書き確認は標準のもの）。取り消しなら null。</summary>
     string? AskSavePath(ExportFormat format, string defaultFileName);

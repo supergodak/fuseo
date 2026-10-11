@@ -55,7 +55,7 @@ public sealed class PageSource : IPageSource
     }
 
     public async Task<IReadOnlyList<SourcePage>> LoadAsync(
-        IReadOnlyList<string> paths, Func<string, Task<string?>> askPassword, CancellationToken ct)
+        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(askPassword);
@@ -159,10 +159,11 @@ public sealed class PageSource : IPageSource
     /// PDF を開く。パスワードが要る（または違う）間は askPassword を回数制限なしで呼び続け、null なら全体を中止。
     /// </summary>
     private static async Task<PdfiumDocument> OpenPdfAsync(
-        string path, string name, Func<string, Task<string?>> askPassword, CancellationToken ct)
+        string path, string name, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct)
     {
         var bytes = await Task.Run(() => ReadFile(path, name), ct);
         string? password = null;
+        var asked = false; // 一度聞いた後の失敗＝入力違い
         while (true)
         {
             ct.ThrowIfCancellationRequested();
@@ -177,7 +178,8 @@ public sealed class PageSource : IPageSource
             // パスワード以外の失敗（壊れている等）。内部例外にもパスワードを含めない。
             if (error != PdfiumDocument.ErrPassword) throw new UnreadableFileException(name);
 
-            password = await askPassword(name);
+            password = await askPassword(new PasswordRequest(name, IsRetry: asked));
+            asked = true;
             if (password is null) throw new ImportCancelledException(name);
         }
     }

@@ -7,7 +7,7 @@ namespace Fuseo.Input.Tests;
 /// <summary>上限（ラスタライズ前に数えて拒否）・パスワード・壊れたファイル・取り消し。</summary>
 public class ImportPolicyTests
 {
-    private static readonly Func<string, Task<string?>> NoPassword =
+    private static readonly Func<PasswordRequest, Task<string?>> NoPassword =
         _ => throw new Xunit.Sdk.XunitException("パスワードを聞くはずがない");
 
     private static byte[] TinyPdf(int pages) =>
@@ -111,14 +111,15 @@ public class ImportPolicyTests
     public async Task EncryptedPdf_WrongThenRight_Succeeds(string fixture)
     {
         var answers = new Queue<string?>(["wrong-pw-1", "wrong-pw-2", CorrectPassword]);
-        var asked = new List<string>();
-        var pages = await new PageSource().LoadAsync([Fixture(fixture)], name =>
+        var asked = new List<PasswordRequest>();
+        var pages = await new PageSource().LoadAsync([Fixture(fixture)], req =>
         {
-            asked.Add(name);
+            asked.Add(req);
             return Task.FromResult(answers.Dequeue());
         }, CancellationToken.None);
 
-        Assert.Equal(new[] { fixture, fixture, fixture }, asked); // 回数制限なしで聞き直す（ファイル名だけを渡す）
+        // 回数制限なしで聞き直す。初回は IsRetry=false、2 回目以降は「違っていた」
+        Assert.Equal(new[] { new PasswordRequest(fixture, false), new PasswordRequest(fixture, true), new PasswordRequest(fixture, true) }, asked);
         var p = Assert.Single(pages);
         Assert.True(p.FromPdf);
         // 200×100pt・左に 80pt 四方の黒（10..90pt）

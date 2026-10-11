@@ -6,6 +6,7 @@ using Fuseo.App.ViewModels;
 using Fuseo.Core.Export;
 using Fuseo.Core.Model;
 using Fuseo.Core.Rendering;
+using Fuseo.Input;
 
 namespace Fuseo.App;
 
@@ -21,8 +22,7 @@ public partial class App : Application
         var window = new MainWindow();
         var dialogs = new WpfDialogService(window);
         var vm = new MainViewModel(
-            // 統合時に置き換え: W2 の本実装（IPageSource・PDF/パスワード/上限/回転）へ。今は画像だけ読める仮実装。
-            new TemporaryImageSource(),
+            new PageSource(),
             new MaskRasterizer(),
             new Exporter(),
             presets,

@@ -71,6 +71,7 @@
   <data name="TempSourcePdfUnsupported" xml:space="preserve"><value>「{0}」: この開発版では PDF はまだ読み込めません（画像のみ）。</value></data>
   <data name="PasswordTitle" xml:space="preserve"><value>パスワード</value></data>
   <data name="PasswordMessage" xml:space="preserve"><value>「{0}」はパスワードで保護されています。パスワードを入力してください。</value></data>
+  <data name="PasswordRetryMessage" xml:space="preserve"><value>パスワードが違います。「{0}」のパスワードをもう一度入力してください。</value></data>
   <data name="PasswordNote" xml:space="preserve"><value>パスワードは読み込みにだけ使い、保存しません。</value></data>
   <data name="ExportTitle" xml:space="preserve"><value>書き出し</value></data>
   <data name="ExportFormatLabel" xml:space="preserve"><value>形式:</value></data>

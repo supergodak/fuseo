@@ -14,7 +14,7 @@ internal sealed class FakePageSource : IPageSource
     public List<IReadOnlyList<string>> Calls { get; } = [];
 
     public Task<IReadOnlyList<SourcePage>> LoadAsync(
-        IReadOnlyList<string> paths, Func<string, Task<string?>> askPassword, CancellationToken ct)
+        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct)
     {
         Calls.Add(paths);
         if (Throw is not null) return Task.FromException<IReadOnlyList<SourcePage>>(Throw);
@@ -35,7 +35,7 @@ internal sealed class FakeDialogs : IDialogService
     public Action<ExportViewModel>? OnShowExport { get; set; }
 
     public IReadOnlyList<string>? AskOpenFiles() => OpenFiles;
-    public Task<string?> AskPasswordAsync(string fileName) => Task.FromResult<string?>(null);
+    public Task<string?> AskPasswordAsync(PasswordRequest request) => Task.FromResult<string?>(null);
 
     public string? AskSavePath(ExportFormat format, string defaultFileName)
     {

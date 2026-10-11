@@ -12,7 +12,7 @@ public class PdfRasterTests
 {
     private const double S = 300.0 / 72.0;
 
-    private static readonly Func<string, Task<string?>> NoPassword =
+    private static readonly Func<PasswordRequest, Task<string?>> NoPassword =
         _ => throw new Xunit.Sdk.XunitException("暗号化されていない PDF でパスワードを聞いた");
 
     private static int Px(double pt) => (int)Math.Round(pt * S, MidpointRounding.AwayFromZero);

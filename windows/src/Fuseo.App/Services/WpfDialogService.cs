@@ -23,12 +23,12 @@ public sealed class WpfDialogService(Window owner) : IDialogService
         return dlg.ShowDialog(owner) == true ? dlg.FileNames : null;
     }
 
-    public Task<string?> AskPasswordAsync(string fileName)
+    public Task<string?> AskPasswordAsync(PasswordRequest request)
     {
         // 取り込み（W2）はバックグラウンドから呼ぶ可能性があるので、必ず UI スレッドで開く。
         var dispatcher = owner.Dispatcher;
-        if (dispatcher.CheckAccess()) return Task.FromResult(PasswordDialog.Ask(owner, fileName));
-        return dispatcher.InvokeAsync(() => PasswordDialog.Ask(owner, fileName)).Task;
+        if (dispatcher.CheckAccess()) return Task.FromResult(PasswordDialog.Ask(owner, request));
+        return dispatcher.InvokeAsync(() => PasswordDialog.Ask(owner, request)).Task;
     }
 
     public string? AskSavePath(ExportFormat format, string defaultFileName)

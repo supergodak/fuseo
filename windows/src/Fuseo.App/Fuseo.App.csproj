@@ -12,5 +12,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fuseo.Core\Fuseo.Core.csproj" />
+    <ProjectReference Include="..\Fuseo.Input\Fuseo.Input.csproj" />
   </ItemGroup>
 </Project>

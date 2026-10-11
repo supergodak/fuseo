@@ -12,6 +12,9 @@ public sealed record SourcePage(PageBitmap Bitmap, string SourceName, int PageIn
 /// 契約（§4.4）: PDF は白下地→描画、/Rotate 後の pt サイズから px = pt×300/72・長辺 4000 でクランプ、
 /// パスワードはメモリ内のみ、PDF を含む取り込みは合計 50 ページまで（取り込み前に数えて拒否）。
 /// </summary>
+/// <summary>パスワードの問い合わせ。IsRetry=true は直前の入力が違っていた（UI が「パスワードが違います」を出す）。</summary>
+public sealed record PasswordRequest(string FileName, bool IsRetry);
+
 public interface IPageSource
 {
     const int MaxPdfPagesPerImport = 50;
@@ -19,7 +22,7 @@ public interface IPageSource
     const int MaxLongSidePx = 4000;
 
     Task<IReadOnlyList<SourcePage>> LoadAsync(
-        IReadOnlyList<string> paths, Func<string, Task<string?>> askPassword, CancellationToken ct);
+        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct);
 }
 
 /// <summary>動的検出（v0.1 は QR／バーコードのみ・W4）。</summary>

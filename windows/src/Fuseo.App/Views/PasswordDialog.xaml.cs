@@ -1,5 +1,6 @@
 using System.Windows;
 using Fuseo.App.Properties;
+using Fuseo.Core.Contracts;
 
 namespace Fuseo.App.Views;
 
@@ -9,16 +10,16 @@ namespace Fuseo.App.Views;
 /// </summary>
 public partial class PasswordDialog : Window
 {
-    private PasswordDialog(string fileName)
+    private PasswordDialog(PasswordRequest request)
     {
         InitializeComponent();
-        MessageText.Text = string.Format(Strings.PasswordMessage, fileName);
+        MessageText.Text = string.Format(request.IsRetry ? Strings.PasswordRetryMessage : Strings.PasswordMessage, request.FileName);
     }
 
     /// <summary>取り消しなら null。</summary>
-    public static string? Ask(Window? owner, string fileName)
+    public static string? Ask(Window? owner, PasswordRequest request)
     {
-        var dlg = new PasswordDialog(fileName) { Owner = owner };
+        var dlg = new PasswordDialog(request) { Owner = owner };
         var ok = dlg.ShowDialog() == true;
         var value = ok ? dlg.PasswordInput.Password : null;
         dlg.PasswordInput.Clear();

@@ -1,3 +1,4 @@
+using Fuseo.Core.Contracts;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Fuseo.Core.Imaging;
@@ -8,7 +9,7 @@ namespace Fuseo.Input.Tests;
 /// <summary>画像入力（WIC）: EXIF Orientation の焼き込み・α の白合成・長辺 8000 の縮小・マルチページ TIFF。</summary>
 public class ImageInputTests
 {
-    private static readonly Func<string, Task<string?>> NoPassword =
+    private static readonly Func<PasswordRequest, Task<string?>> NoPassword =
         _ => throw new Xunit.Sdk.XunitException("画像でパスワードを聞いた");
 
     private static async Task<IReadOnlyList<Fuseo.Core.Contracts.SourcePage>> Load(params string[] paths) =>

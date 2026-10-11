@@ -1,17 +1,19 @@
 using System.IO;
 using Fuseo.App.Properties;
+using Fuseo.Input;
 
 namespace Fuseo.App.Services;
 
 /// <summary>
-/// 取り込みの例外 → 利用者向けの文言。
-/// W2（IPageSource の本実装）が上限超過・読めないファイルをどの例外型で伝えるかは契約に未定義のため、
-/// 今は型で大まかに分けて例外の Message を添える（統合時に W2 の例外型に合わせて分岐を足す）。
+/// 取り込みの例外 → 利用者向けの文言。W2 の例外（<see cref="PageImportException"/> 系）は
+/// ファイル名・件数を持つので優先して使う（英語化は W6 で例外の値から組み立て直す）。
 /// </summary>
 public static class ImportErrors
 {
     public static string Describe(Exception e) => e switch
     {
+        PageLimitExceededException { FileName: null } p => PageLimit(p.PageCount, p.Limit),
+        PageImportException => e.Message,
         NotSupportedException => string.Format(Strings.ImportErrorNotSupported, e.Message),
         FileNotFoundException or DirectoryNotFoundException => string.Format(Strings.ImportErrorNotFound, e.Message),
         UnauthorizedAccessException => string.Format(Strings.ImportErrorUnreadable, e.Message),

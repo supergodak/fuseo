@@ -78,6 +78,7 @@ public static class Strings
     public static string TempSourcePdfUnsupported => Get(nameof(TempSourcePdfUnsupported));
     public static string PasswordTitle => Get(nameof(PasswordTitle));
     public static string PasswordMessage => Get(nameof(PasswordMessage));
+    public static string PasswordRetryMessage => Get(nameof(PasswordRetryMessage));
     public static string PasswordNote => Get(nameof(PasswordNote));
     public static string ExportTitle => Get(nameof(ExportTitle));
     public static string ExportFormatLabel => Get(nameof(ExportFormatLabel));
