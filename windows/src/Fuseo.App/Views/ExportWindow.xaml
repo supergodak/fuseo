@@ -1,0 +1,103 @@
+<Window x:Class="Fuseo.App.Views.ExportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="clr-namespace:Fuseo.App.Properties"
+        Title="{x:Static p:Strings.ExportTitle}"
+        Width="820" Height="860" MinWidth="560" MinHeight="520"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <!-- 書き出しシート（絶対条件: 保存前の確認 UI を外さない）。プレビューは BurnIn の結果画像そのもの。 -->
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="{x:Static p:Strings.ExportTitle}" FontSize="20" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <TextBlock Text="{x:Static p:Strings.ExportFormatLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <RadioButton Content="PDF" IsChecked="{Binding IsPdf}" Margin="0,0,16,0" GroupName="fmt"
+                             AutomationProperties.AutomationId="export.format.pdf"/>
+                <RadioButton Content="JPEG" IsChecked="{Binding IsJpeg}" Margin="0,0,16,0" GroupName="fmt"
+                             AutomationProperties.AutomationId="export.format.jpeg"/>
+                <RadioButton Content="PNG" IsChecked="{Binding IsPng}" GroupName="fmt"
+                             AutomationProperties.AutomationId="export.format.png"/>
+            </StackPanel>
+            <TextBlock Text="{x:Static p:Strings.ExportPdfNote}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"
+                       Foreground="#555" Visibility="{Binding ShowPdfNote, Converter={StaticResource BoolToVis}}"/>
+            <TextBlock Text="{x:Static p:Strings.ExportSeparateFilesNote}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"
+                       Foreground="#555" Visibility="{Binding ShowSeparateFilesNote, Converter={StaticResource BoolToVis}}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,16,0,6">
+            <TextBlock Text="{x:Static p:Strings.ExportPreviewHeading}" FontWeight="SemiBold"/>
+            <TextBlock Text="{x:Static p:Strings.ExportPreviewNote}" TextWrapping="Wrap" FontSize="12" Foreground="#555"/>
+            <TextBlock Text="{Binding SummaryText}" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="2" BorderBrush="#CCC" BorderThickness="1" Background="#E8E8E8">
+            <Grid>
+                <ItemsControl ItemsSource="{Binding Previews}"
+                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.CanContentScroll="True"
+                              AutomationProperties.AutomationId="export.previews">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="12">
+                                <TextBlock Text="{Binding Title}" Margin="0,0,0,4" FontSize="12"/>
+                                <Border Background="White" HorizontalAlignment="Center" BorderBrush="#AAA" BorderThickness="1">
+                                    <Image Source="{Binding Image}" Stretch="Uniform" MaxHeight="560"
+                                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                </Border>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{x:Static p:Strings.ExportPreparing}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding IsPreparing, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="3" Margin="0,12,0,0">
+            <ItemsControl ItemsSource="{Binding Warnings}" Visibility="{Binding HasWarnings, Converter={StaticResource BoolToVis}}"
+                          AutomationProperties.AutomationId="export.warnings">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets"
+                                       Foreground="#E65100" Margin="0,2,6,0"/>
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{x:Static p:Strings.ExportZeroMaskWarning}" Foreground="#C62828" TextWrapping="Wrap" Margin="0,4,0,0"
+                       Visibility="{Binding HasZeroMaskPage, Converter={StaticResource BoolToVis}}"
+                       AutomationProperties.AutomationId="export.zeroMaskWarning"/>
+        </StackPanel>
+
+        <DockPanel Grid.Row="4" Margin="0,16,0,0" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Text="{x:Static p:Strings.ExportSaving}" VerticalAlignment="Center"
+                       Visibility="{Binding IsSaving, Converter={StaticResource BoolToVis}}"/>
+            <Button DockPanel.Dock="Right" Content="{Binding SaveButtonText}" Command="{Binding SaveCommand}"
+                    IsDefault="True" MinWidth="120" Padding="12,4" AutomationProperties.AutomationId="export.confirmButton"/>
+            <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.Cancel}" Command="{Binding CancelCommand}"
+                    IsCancel="True" MinWidth="88" Padding="12,4" Margin="0,0,8,0"/>
+        </DockPanel>
+    </Grid>
+</Window>
