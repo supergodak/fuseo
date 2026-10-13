@@ -26,7 +26,8 @@ for r in rs:
 echo
 echo "=== LP  https://fuseo.ati-mirai.co.jp ==="
 ssh -o BatchMode=yes -o ConnectTimeout=12 sakura '
-LOG=/var/log/nginx/fuseo.access.log
+LOG=/var/log/fuseo/access.log   # 2026-10-13 から専用フォルダ・90日保存（/etc/logrotate.d/fuseo）
+[ -f "$LOG" ] || LOG=/var/log/nginx/fuseo.access.log
 if [ ! -f "$LOG" ]; then echo "  (ログなし)"; exit 0; fi
 echo "  ページ表示 (GET / 200):    $(grep -c "GET / HTTP" "$LOG" 2>/dev/null)"
 echo "  ユニークIP (概算):         $(awk "{print \$1}" "$LOG" | sort -u | wc -l | tr -d " ")"
@@ -34,4 +35,4 @@ echo "  ダウンロードクリック (/dl): $(grep -cE " /dl[ ?]" "$LOG" 2>/de
 echo "  期間: $(head -1 "$LOG" | grep -oE "\[[^]]+\]" | head -1) 〜 $(tail -1 "$LOG" | grep -oE "\[[^]]+\]" | head -1)"
 '
 echo
-echo "（詳細ダッシュボードが欲しい場合は VPS で: goaccess /var/log/nginx/fuseo.access.log）"
+echo "（詳細ダッシュボードが欲しい場合は VPS で: goaccess /var/log/fuseo/access.log）"
