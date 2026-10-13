@@ -105,4 +105,32 @@
   <data name="SaveFilterJpeg" xml:space="preserve"><value>JPEG (*.jpg)|*.jpg;*.jpeg</value></data>
   <data name="SaveFilterPng" xml:space="preserve"><value>PNG (*.png)|*.png</value></data>
   <data name="DefaultExportBaseName" xml:space="preserve"><value>伏せ済み</value></data>
+  <data name="NewDocument" xml:space="preserve"><value>新しい書類</value></data>
+  <data name="NewDocumentTip" xml:space="preserve"><value>今の作業は「作業中の書類」に残したまま、空の状態にします（Ctrl+N）</value></data>
+  <data name="WorkTitleMany" xml:space="preserve"><value>{0} ほか {1} 件</value></data>
+  <data name="LibraryHeading" xml:space="preserve"><value>作業中の書類</value></data>
+  <data name="LibraryStorageNote" xml:space="preserve"><value>作業中の書類（黒塗り前の画像を含む）は、このパソコンの中（%LOCALAPPDATA%\Fuseo\Library）にだけ保存されます。削除するまで残ります。</value></data>
+  <data name="LibraryOpen" xml:space="preserve"><value>開く</value></data>
+  <data name="LibraryOpenTip" xml:space="preserve"><value>この作業を開きます（ダブルクリックでも開けます）</value></data>
+  <data name="LibraryDelete" xml:space="preserve"><value>削除</value></data>
+  <data name="LibraryDeleteAll" xml:space="preserve"><value>すべて削除…</value></data>
+  <data name="LibraryUpdated" xml:space="preserve"><value>更新 {0:yyyy/MM/dd HH:mm}</value></data>
+  <data name="LibraryPageCount" xml:space="preserve"><value>{0} ページ</value></data>
+  <data name="LibraryStatusInProgress" xml:space="preserve"><value>作業中</value></data>
+  <data name="LibraryStatusExported" xml:space="preserve"><value>書き出し済み</value></data>
+  <data name="LibraryUnreadable" xml:space="preserve"><value>読めない作業</value></data>
+  <data name="LibraryUnreadableNote" xml:space="preserve"><value>壊れているか、別の版の形式です。削除だけできます。</value></data>
+  <data name="LibraryDeleteTitle" xml:space="preserve"><value>作業の削除</value></data>
+  <data name="LibraryDeleteMessage" xml:space="preserve"><value>「{0}」を削除します。黒塗り前の画像も含めて、このパソコンから消えます。元に戻せません。</value></data>
+  <data name="LibraryDeleteAllTitle" xml:space="preserve"><value>すべての作業の削除</value></data>
+  <data name="LibraryDeleteAllMessage" xml:space="preserve"><value>保存されている作業 {0} 件をすべて削除します。黒塗り前の画像も含めて、このパソコンから消えます。元に戻せません。</value></data>
+  <data name="LibraryDeleteFailedTitle" xml:space="preserve"><value>削除できませんでした</value></data>
+  <data name="LibraryDeleteFailed" xml:space="preserve"><value>作業を削除できませんでした。
+{0}</value></data>
+  <data name="LibraryOpenFailedTitle" xml:space="preserve"><value>作業を開けませんでした</value></data>
+  <data name="LibraryOpenFailed" xml:space="preserve"><value>作業を開けませんでした。
+{0}</value></data>
+  <data name="StatusWorkOpened" xml:space="preserve"><value>「{0}」を開きました（{1} ページ）</value></data>
+  <data name="StatusSaveFailed" xml:space="preserve"><value>自動保存に失敗しました: {0}</value></data>
+  <data name="StatusLibraryFailed" xml:space="preserve"><value>作業の一覧を読めませんでした: {0}</value></data>
 </root>

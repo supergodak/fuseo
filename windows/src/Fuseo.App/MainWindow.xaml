@@ -8,6 +8,7 @@
         AllowDrop="True" Background="#F3F3F3">
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenFilesCommand}"/>
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewDocumentCommand}"/>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}"/>
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}"/>
         <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding RedoCommand}"/>
@@ -29,6 +30,9 @@
                 <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
                         Padding="14,4" FontWeight="SemiBold" AutomationProperties.AutomationId="main.export"/>
 
+                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.NewDocument}" Command="{Binding NewDocumentCommand}"
+                        Padding="10,4" Margin="0,0,4,0" ToolTip="{x:Static p:Strings.NewDocumentTip}"
+                        AutomationProperties.AutomationId="main.newDocument"/>
                 <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.OpenFiles}" Command="{Binding OpenFilesCommand}"
                         Padding="10,4" ToolTip="{x:Static p:Strings.OpenFilesTip}"/>
                 <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
@@ -187,12 +191,76 @@
                         <v:MaskOverlay x:Name="Overlay" IsHitTestVisible="False"/>
                     </Grid>
                 </Canvas>
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
-                            Visibility="{Binding HasPages, Converter={StaticResource InverseBoolToVis}}">
-                    <TextBlock Text="{x:Static p:Strings.EmptyTitle}" FontSize="20" Foreground="White" HorizontalAlignment="Center"/>
+                <!-- 空の画面: 案内＋「作業中の書類」一覧（W5）。一覧以外は当たり判定なし（ドロップはウィンドウで受ける）。 -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding HasPages, Converter={StaticResource InverseBoolToVis}}">
+                <StackPanel VerticalAlignment="Center" Margin="24,16">
+                    <TextBlock Text="{x:Static p:Strings.EmptyTitle}" FontSize="20" Foreground="White" HorizontalAlignment="Center"
+                               IsHitTestVisible="False"/>
                     <TextBlock Text="{x:Static p:Strings.EmptySubtitle}" FontSize="13" Foreground="#DDD" HorizontalAlignment="Center"
-                               Margin="0,8,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="460"/>
+                               Margin="0,8,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="460" IsHitTestVisible="False"/>
+                    <Border Background="White" CornerRadius="6" Padding="14,12" Margin="0,24,0,0" MaxWidth="600"
+                            Visibility="{Binding IsLibraryVisible, Converter={StaticResource BoolToVis}}"
+                            AutomationProperties.AutomationId="library.panel">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="{x:Static p:Strings.LibraryHeading}" FontWeight="SemiBold" FontSize="15"/>
+                            <TextBlock DockPanel.Dock="Top" Text="{x:Static p:Strings.LibraryStorageNote}" TextWrapping="Wrap"
+                                       FontSize="11" Foreground="#555" Margin="0,4,0,8"/>
+                            <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,8,0,0" Padding="10,3"
+                                    Content="{x:Static p:Strings.LibraryDeleteAll}" Command="{Binding DeleteAllWorksCommand}"
+                                    AutomationProperties.AutomationId="library.deleteAll"/>
+                            <ListBox ItemsSource="{Binding LibraryItems}" Height="260" BorderBrush="#DDD"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
+                                     VirtualizingPanel.IsVirtualizing="True" AutomationProperties.AutomationId="library.list">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <EventSetter Event="MouseDoubleClick" Handler="OnLibraryItemDoubleClick"/>
+                                        <Setter Property="Padding" Value="4"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="2" ToolTip="{Binding Problem}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="84"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Background="#EEE" Width="76" Height="64" VerticalAlignment="Top">
+                                                <Image Source="{Binding Thumbnail}" Stretch="Uniform"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <WrapPanel Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding UpdatedText}" FontSize="11" Foreground="#666" Margin="0,0,10,0"/>
+                                                    <TextBlock Text="{Binding PageCountText}" FontSize="11" Foreground="#666" Margin="0,0,10,0"/>
+                                                    <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="#B45309"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsExported}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#15803D"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </WrapPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <Button Content="{x:Static p:Strings.LibraryOpen}" Command="{Binding OpenCommand}" Padding="12,2"
+                                                            Margin="0,0,4,0" ToolTip="{x:Static p:Strings.LibraryOpenTip}"
+                                                            Visibility="{Binding IsReadable, Converter={StaticResource BoolToVis}}"/>
+                                                    <Button Content="{x:Static p:Strings.LibraryDelete}" Command="{Binding DeleteCommand}" Padding="12,2"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
                 </StackPanel>
+                </ScrollViewer>
             </Grid>
         </DockPanel>
     </DockPanel>

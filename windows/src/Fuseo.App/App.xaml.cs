@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using Fuseo.App.Library;
 using Fuseo.App.Properties;
 using Fuseo.App.Services;
 using Fuseo.App.ViewModels;
@@ -28,10 +29,12 @@ public partial class App : Application
             new Exporter(),
             presets,
             dialogs,
-            detector: new QrDetector());
+            detector: new QrDetector(),
+            library: new FileWorkLibrary()); // %LOCALAPPDATA%\Fuseo\Library（このパソコンの中だけ）
         window.DataContext = vm;
         MainWindow = window;
         window.Show();
+        _ = vm.RefreshLibraryAsync();
     }
 
     private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)

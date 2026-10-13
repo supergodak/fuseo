@@ -41,8 +41,9 @@ public sealed class PageState
     private readonly object _baseLock = new();
     private (int Rotation, PageBitmap Bitmap)? _rotatedCache;
 
-    public PageState(PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf)
+    public PageState(PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf, Guid? id = null)
     {
+        Id = id ?? Guid.NewGuid();
         Original = original ?? throw new ArgumentNullException(nameof(original));
         SourceName = sourceName;
         SourcePageIndex = sourcePageIndex;
@@ -52,7 +53,30 @@ public sealed class PageState
     public static PageState From(SourcePage page) =>
         new(page.Bitmap, page.SourceName, page.PageIndex, page.FromPdf);
 
-    public Guid Id { get; } = Guid.NewGuid();
+    /// <summary>ページの id（自動保存のファイル名 pages/&lt;id&gt;.png に使う。復元時は保存時と同じ値）。</summary>
+    public Guid Id { get; }
+
+    /// <summary>
+    /// 自動保存（W5）から復元する。検出は走らせない（保存した候補・生の箱をそのまま戻す）。
+    /// **Undo 履歴は空**（履歴は保存しない）。座標は保存時と同じ「<paramref name="rotation"/> で回した画像の上」。
+    /// </summary>
+    public static PageState Restore(
+        Guid id, PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf,
+        DocumentType type, int rotation, ManualMask manual, IReadOnlyList<MaskCandidate> candidates,
+        DetectorId? rawDetector, IReadOnlyList<NormRect> rawDetections, IEnumerable<string> checkedRuleIds)
+    {
+        if (rotation is < 0 or > 3) throw new ArgumentOutOfRangeException(nameof(rotation), "回転は 0..3");
+        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id)
+        {
+            RawDetector = rawDetector,
+            RawDetections = rawDetections.ToList(),
+        };
+        state._current = new EditSnapshot(
+            new ManualMask { Rects = [.. manual.Rects], Strokes = [.. manual.Strokes] },
+            candidates.ToList(), rotation, type);
+        foreach (var r in checkedRuleIds) state.CheckedRuleIds.Add(r);
+        return state;
+    }
 
     /// <summary>取り込んだままの画像（不変・回転 0）。</summary>
     public PageBitmap Original { get; }

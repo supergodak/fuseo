@@ -60,7 +60,7 @@ public sealed record PresetOption(DocumentType Type, string DisplayName, Documen
 }
 
 /// <summary>チェックリストの 1 行。チェックの状態はページ側（<see cref="PageState.CheckedRuleIds"/>）に持つ。</summary>
-public sealed class ChecklistItemViewModel(ChecklistRow row, PageState page) : ObservableObject
+public sealed class ChecklistItemViewModel(ChecklistRow row, PageState page, Action? changed = null) : ObservableObject
 {
     public ChecklistRow Row { get; } = row;
     public string Label => Row.Label;
@@ -81,9 +81,9 @@ public sealed class ChecklistItemViewModel(ChecklistRow row, PageState page) : O
         get => page.CheckedRuleIds.Contains(Row.RuleId);
         set
         {
-            if (value) page.CheckedRuleIds.Add(Row.RuleId);
-            else page.CheckedRuleIds.Remove(Row.RuleId);
+            var done = value ? page.CheckedRuleIds.Add(Row.RuleId) : page.CheckedRuleIds.Remove(Row.RuleId);
             OnPropertyChanged();
+            if (done) changed?.Invoke(); // 自動保存の予約（W5）
         }
     }
 }

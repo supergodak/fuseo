@@ -67,6 +67,9 @@ public sealed class ExportViewModel : ObservableObject
     /// <summary>保存できたときの案内（メイン画面のステータスに出す）。未保存なら null。</summary>
     public string? SavedSummary { get; private set; }
 
+    /// <summary>保存できたファイル名（複数ファイルなら 1 つ目・パスは持たない）。自動保存の lastExportedName に入れる。</summary>
+    public string? SavedFileName { get; private set; }
+
     public ExportFormat Format
     {
         get => _format;
@@ -156,6 +159,7 @@ public sealed class ExportViewModel : ObservableObject
             SavedSummary = targets.Count == 1
                 ? string.Format(Strings.StatusExportedOne, Path.GetFileName(targets[0]))
                 : string.Format(Strings.StatusExportedMany, targets.Count, Path.GetFileName(targets[0]));
+            SavedFileName = Path.GetFileName(targets[0]);
             IsSaving = false;
             CloseRequested?.Invoke(this, EventArgs.Empty);
         }

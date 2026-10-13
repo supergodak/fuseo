@@ -316,6 +316,32 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    // ---- 作業中の書類（W5） ----
+
+    private void OnLibraryItemDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: LibraryItemViewModel item } && item.OpenCommand.CanExecute(null))
+        {
+            item.OpenCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>閉じる前に保留中の自動保存を確定する（書きかけで終わらない）。</summary>
+    private bool _closeAfterFlush;
+
+    protected override async void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (e.Cancel || _closeAfterFlush || _vm is not { HasPendingSave: true } vm) return;
+        e.Cancel = true;
+        IsEnabled = false;
+        try { await vm.FlushSaveAsync(); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"終了時の保存に失敗: {ex.GetType().Name}"); }
+        _closeAfterFlush = true;
+        Close();
+    }
+
     private async void OnDrop(object sender, DragEventArgs e)
     {
         if (_vm is null || e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } paths) return;

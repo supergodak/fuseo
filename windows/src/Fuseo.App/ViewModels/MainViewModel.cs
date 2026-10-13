@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Fuseo.App.Library;
 using Fuseo.App.Mvvm;
 using Fuseo.App.Properties;
 using Fuseo.App.Services;
@@ -18,7 +19,7 @@ public enum BrushSize { Thin, Medium, Thick }
 /// 自動検出（IDetector・W4 は QR／バーコードのみ）はコンストラクタ注入。キャンバスのマウス操作はビューが座標を正規化（CoordinateSpace.FromView）してから
 /// ここのメソッドを呼ぶ＝この型は画面座標を一切知らない。
 /// </summary>
-public sealed class MainViewModel : ObservableObject
+public sealed partial class MainViewModel : ObservableObject
 {
     /// <summary>ブラシの太さ（画像短辺に対する比）。Mac 版の既定 0.03 を「中」にする。</summary>
     public static double BrushWidthFor(BrushSize size) => size switch
@@ -49,7 +50,8 @@ public sealed class MainViewModel : ObservableObject
 
     public MainViewModel(IPageSource source, IMaskRasterizer rasterizer, IExporter exporter,
                          IReadOnlyList<DocumentPreset> presets, IDialogService dialogs, Func<DateTime>? now = null,
-                         IDetector? detector = null)
+                         IDetector? detector = null, FileWorkLibrary? library = null,
+                         Func<TimeSpan, CancellationToken, Task>? saveDelay = null)
     {
         _detector = detector;
         _source = source;
@@ -75,6 +77,7 @@ public sealed class MainViewModel : ObservableObject
         RotateRightCommand = new RelayCommand(() => Rotate(+1), () => SelectedPage is not null && !IsBusy);
         SetToolCommand = new RelayCommand(p => { if (p is EditorTool t) Tool = t; });
         SetBrushSizeCommand = new RelayCommand(p => { if (p is BrushSize s) BrushSize = s; });
+        InitLibrary(library, saveDelay);
     }
 
     public ObservableCollection<PageViewModel> Pages { get; } = [];
@@ -240,6 +243,7 @@ public sealed class MainViewModel : ObservableObject
             }
             Renumber();
             if (first is not null) SelectedPage = first;
+            if (loaded.Count > 0) NoteEdited();
             StatusMessage = failed > 0 ? string.Format(Strings.StatusDetectFailed, loaded.Count, failed)
                 : loaded.Count > 0 ? string.Format(Strings.StatusImported, loaded.Count) : null;
         }
@@ -305,6 +309,7 @@ public sealed class MainViewModel : ObservableObject
         Pages.RemoveAt(index);
         Renumber();
         SelectedPage = Pages.Count == 0 ? null : Pages[Math.Min(index, Pages.Count - 1)];
+        NoteEdited();
     }
 
     private bool CanMove(int delta)
@@ -321,12 +326,14 @@ public sealed class MainViewModel : ObservableObject
         Pages.Move(i, i + delta);
         Renumber();
         RefreshCommands();
+        NoteEdited();
     }
 
     private void Renumber()
     {
         for (var i = 0; i < Pages.Count; i++) Pages[i].Number = i + 1;
         OnPropertyChanged(nameof(HasPages));
+        OnPropertyChanged(nameof(IsLibraryVisible));
         RefreshCommands();
     }
 
@@ -406,6 +413,7 @@ public sealed class MainViewModel : ObservableObject
         RebuildCandidates();
         RefreshCommands();
         CanvasChanged?.Invoke(this, EventArgs.Empty);
+        NoteEdited();
     }
 
     // ---- 右ペイン ----
@@ -414,7 +422,7 @@ public sealed class MainViewModel : ObservableObject
     {
         Checklist.Clear();
         if (SelectedPage is { } p && _presets.TryGetValue(p.State.Type, out var preset))
-            foreach (var row in State.Checklist.Build(preset)) Checklist.Add(new ChecklistItemViewModel(row, p.State));
+            foreach (var row in State.Checklist.Build(preset)) Checklist.Add(new ChecklistItemViewModel(row, p.State, NoteEdited));
         RebuildCandidates();
         OnPropertyChanged(nameof(BannerWarnings));
         OnPropertyChanged(nameof(IsBannerVisible));
@@ -440,6 +448,7 @@ public sealed class MainViewModel : ObservableObject
         ExportCommand.RaiseCanExecuteChanged();
         RotateLeftCommand.RaiseCanExecuteChanged();
         RotateRightCommand.RaiseCanExecuteChanged();
+        RefreshLibraryCommands();
     }
 
     // ---- 書き出し（確認シートを必ず通す） ----
@@ -454,5 +463,6 @@ public sealed class MainViewModel : ObservableObject
         var vm = CreateExportViewModel();
         _dialogs.ShowExport(vm);
         if (vm.SavedSummary is { } saved) StatusMessage = saved;
+        if (vm.SavedFileName is { } name) NoteExported(name);
     }
 }

@@ -35,3 +35,30 @@ Windows 版の実装が守る約束です。ここに書いたことはテスト
 - 画像（JPEG / PNG / BMP / TIFF、HEIC は Windows の HEIF 拡張がある場合）と PDF。
 - PDF は各ページを 300dpi・長辺 4000px 以内で画像化（白下地）。パスワードはメモリ内でのみ扱う。
 - PDF を含む取り込みは合計 50 ページまで。
+
+## 6. 作業の自動保存（ライブラリ・`fuseo-win/1`）
+- 保存先は**このパソコンの中だけ**: `%LOCALAPPDATA%\Fuseo\Library\<作業id>\`。通信・同期はしない。
+  保存されるのは**黒塗り前の画像**を含むデータで、利用者が削除するまで残る（自動削除なし）。空の画面の一覧にその旨を出す。
+- 1 作業 = 画面に開いているページ一式。中身は `document.json`・`pages/<ページid>.png`（取り込んだままの元画像・回転 0・可逆）・
+  `thumbs/<ページid>.jpg`（一覧用・長辺 320px）。
+- `document.json` の項目名は macOS 版の WorkDocument と同じ（`schemaVersion`=`"fuseo-win/1"`・`id`・`title`・`createdAt`・`updatedAt`・
+  `status`（`inProgress`/`exported`）・`lastExportedName`・`pages[]{index, imageFile, thumbnailFile, sourceName, documentType,
+  manualRotation, candidates, manual, pixelWidth, pixelHeight}`）。Windows で足す項目: `"origin": "topLeft"`、各ページの
+  `"coordinateFrame": "rotatedImage"`・`fromPdf`・`sourcePageIndex`・`rawDetections`（padding 前・回転 0 基準）・`rawDetector`・
+  `checkedRuleIds`。macOS 互換用の `ocr`/`manualQuad`/`analysisOptions` は空（`[]`/`null`）。
+  - マスク・候補の座標は `manualRotation`（時計回り 90° の回数・0..3）で回した画像の上の正規化座標（左上原点）。`pixelWidth/Height` は元画像の寸法。
+  - 候補は macOS と同じ形（`id`・`ruleID`・`label`・`box{x,y,w,h}`・`source{kind, detector}`・`confidence`・`isOn`・`basis`）、ブラシの点は `[x, y]`。
+  - 列挙は camelCase の文字列、日時は ISO 8601・UTC・ミリ秒、JSON は UTF-8（BOM なし）・インデント付き。Undo 履歴は保存しない。
+  - 形はゴールデンテストで固定（`tests/Fuseo.Core.Tests/WorkDocumentJsonTests.cs`）。
+- **壊れない保存**: ページ画像とサムネイルは初めて保存するときに 1 回だけ、一時ファイル → 名前の変更で書く。`document.json` は毎回
+  同じフォルダの一時ファイルに書いてから置き換える。途中で失敗しても既存の `document.json` は壊れず、一時ファイルは消す（残ったものは
+  一覧を読むときに掃除する）。JSON から消えたページの画像は保存の後に消す。
+- **読み込みの安全**: `imageFile`/`thumbnailFile` は**その作業フォルダ内の相対パスだけ**（英数字と `. _ -` の要素を `/` でつないだもの）。
+  絶対パス・ドライブ指定・`..`・`\`・`:`・予約名は拒否し、解決後の完全パスが作業フォルダの中かも確かめる。
+  版が違う・JSON が壊れている・値が範囲外（未知の列挙・回転が 0..3 以外など）・画像が無い作業は「読めない作業」として一覧に出し、
+  削除だけできる（アプリは落ちない）。
+- **自動保存**: 取り込み・手動マスク・候補の ON/OFF・回転・種別・チェックリストの印・ページの並べ替え/削除・Undo/Redo・書き出し完了の
+  たびに、1 秒のデバウンスでバックグラウンド保存（中身は UI スレッドで写し取ってから別スレッドで書く）。失敗はステータスバーに出す。
+  終了時は保留中の保存を確定してから閉じる。書き出し完了で `exported`、その後に編集したら `inProgress` に戻す。
+- 「新しい書類」は今の作業をライブラリに残したまま（確認なし）空にする。開いた作業は元画像と状態をそのまま戻し、検出は走らせない。
+- 削除（1 件・すべて）は確認ダイアログを通す。
