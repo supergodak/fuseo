@@ -14,6 +14,8 @@
         <KeyBinding Key="Delete" Command="{Binding DeleteSelectionCommand}"/>
         <KeyBinding Key="Back" Command="{Binding DeleteSelectionCommand}"/>
         <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportCommand}"/>
+        <KeyBinding Key="L" Modifiers="Control" Command="{Binding RotateLeftCommand}"/>
+        <KeyBinding Key="R" Modifiers="Control" Command="{Binding RotateRightCommand}"/>
         <KeyBinding Key="V" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}"/>
         <KeyBinding Key="R" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rect}"/>
         <KeyBinding Key="B" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}"/>
@@ -23,6 +25,10 @@
         <!-- ツールバー -->
         <Border DockPanel.Dock="Top" Background="White" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="10,6">
             <DockPanel LastChildFill="False">
+                <!-- 書き出しは先に右へ置く（幅が足りないときに左側の道具が切れても、書き出しボタンは必ず見える）。 -->
+                <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
+                        Padding="14,4" FontWeight="SemiBold" AutomationProperties.AutomationId="main.export"/>
+
                 <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.OpenFiles}" Command="{Binding OpenFilesCommand}"
                         Padding="10,4" ToolTip="{x:Static p:Strings.OpenFilesTip}"/>
                 <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
@@ -51,13 +57,15 @@
                 <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.DeleteSelection}" Command="{Binding DeleteSelectionCommand}"
                         Padding="8,4" ToolTip="{x:Static p:Strings.DeleteSelectionTip}"/>
                 <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
+                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.RotateLeft}" Command="{Binding RotateLeftCommand}" Padding="8,4"
+                        ToolTip="{x:Static p:Strings.RotateLeftTip}" AutomationProperties.AutomationId="main.rotateLeft"/>
+                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.RotateRight}" Command="{Binding RotateRightCommand}" Padding="8,4" Margin="2,0"
+                        ToolTip="{x:Static p:Strings.RotateRightTip}" AutomationProperties.AutomationId="main.rotateRight"/>
+                <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
                 <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.ZoomOut}" Click="OnZoomOut" Padding="8,4" MinWidth="30"/>
                 <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.ZoomIn}" Click="OnZoomIn" Padding="8,4" MinWidth="30" Margin="2,0"/>
                 <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.ZoomFit}" Click="OnZoomFit" Padding="8,4"
                         ToolTip="{x:Static p:Strings.ZoomTip}"/>
-
-                <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
-                        Padding="14,4" FontWeight="SemiBold" AutomationProperties.AutomationId="main.export"/>
             </DockPanel>
         </Border>
 

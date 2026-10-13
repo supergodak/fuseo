@@ -134,9 +134,9 @@ public class ExportViewModelTests
     [Fact]
     public void Warnings_AreUnionOfPageTypes_AndZeroMaskIsFlagged()
     {
-        var a = Page(); a.Type = DocumentType.MyNumberCardBack;
-        var b = Page(); b.Type = DocumentType.MyNumberCardBack;
-        var c = Page(); c.Type = DocumentType.Generic;
+        var a = Page(); a.ChangeType(DocumentType.MyNumberCardBack, null);
+        var b = Page(); b.ChangeType(DocumentType.MyNumberCardBack, null);
+        var c = Page(); c.ChangeType(DocumentType.Generic, null);
         a.AddRect(new NormRect(0, 0, 0.1, 0.1));
         var vm = Vm([a, b, c], new RecordingExporter());
         Assert.Equal(_presets[DocumentType.MyNumberCardBack].Warnings, vm.Warnings);

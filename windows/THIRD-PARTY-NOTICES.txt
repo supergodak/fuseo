@@ -1,7 +1,7 @@
 Fuseo for Windows — third-party notices
 
 This software bundles the following third-party components. Their licenses
-are reproduced below. (ZXing.Net (Apache-2.0) will be listed here when added.)
+are reproduced below.
 
 ================================================================================
 1. PDFiumCore 155.0.8057 — .NET bindings for PDFium
@@ -2238,3 +2238,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
 SOFTWARE.
 
+
+================================================================================
+4. ZXing.Net 0.16.10 — barcode / QR code decoding (managed .NET port of ZXing)
+   https://github.com/micjahn/ZXing.Net
+   Copyright 2012 ZXing.Net authors (Michael Jahn)
+   Copyright 2007 ZXing authors (https://github.com/zxing/zxing)
+   License: Apache License 2.0 (the full text is reproduced in section 3
+   above, as part of the PDFium license)
+   Used only to decode QR codes and barcodes in pages on this computer.
+================================================================================

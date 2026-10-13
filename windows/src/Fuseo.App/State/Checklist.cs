@@ -9,7 +9,7 @@ public enum ChecklistRowKind
     Check,
     /// <summary>dynamic で detector が qrBarcode 以外: 「手動で塗ってください」の案内行（チェックボックス無し）。</summary>
     ManualGuide,
-    /// <summary>dynamic・qrBarcode: 検出結果を候補として出す行（W4 で候補が入る。今は枠だけ）。</summary>
+    /// <summary>dynamic・qrBarcode: 検出結果を候補として出す行（候補そのものは「自動検出の候補」欄に出る・W4）。</summary>
     QrCandidate,
 }
 

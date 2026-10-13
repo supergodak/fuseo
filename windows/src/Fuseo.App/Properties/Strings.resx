@@ -29,6 +29,10 @@
   <data name="RedoTip" xml:space="preserve"><value>取り消した操作をやり直します（Ctrl+Y）</value></data>
   <data name="DeleteSelection" xml:space="preserve"><value>削除</value></data>
   <data name="DeleteSelectionTip" xml:space="preserve"><value>選んだ矩形を削除します。候補の場合はオフにします（Delete）</value></data>
+  <data name="RotateLeft" xml:space="preserve"><value>左に回転</value></data>
+  <data name="RotateLeftTip" xml:space="preserve"><value>このページを左に 90° 回します。塗ったマスクも一緒に回ります（Ctrl+L）</value></data>
+  <data name="RotateRight" xml:space="preserve"><value>右に回転</value></data>
+  <data name="RotateRightTip" xml:space="preserve"><value>このページを右に 90° 回します。塗ったマスクも一緒に回ります（Ctrl+R）</value></data>
   <data name="ZoomOut" xml:space="preserve"><value>－</value></data>
   <data name="ZoomIn" xml:space="preserve"><value>＋</value></data>
   <data name="ZoomFit" xml:space="preserve"><value>全体表示</value></data>
@@ -54,6 +58,8 @@
   <data name="BannerClose" xml:space="preserve"><value>注意書きを閉じる</value></data>
   <data name="StatusImporting" xml:space="preserve"><value>読み込んでいます…</value></data>
   <data name="StatusImported" xml:space="preserve"><value>{0} ページを読み込みました</value></data>
+  <data name="StatusDetecting" xml:space="preserve"><value>QR コード・バーコードを探しています…</value></data>
+  <data name="StatusDetectFailed" xml:space="preserve"><value>{0} ページを読み込みました。うち {1} ページで QR コードの自動検出ができませんでした。必要な箇所は手で塗ってください。</value></data>
   <data name="StatusExportedOne" xml:space="preserve"><value>書き出しました: {0}</value></data>
   <data name="StatusExportedMany" xml:space="preserve"><value>{0} ファイルを書き出しました: {1} ほか</value></data>
   <data name="OpenFilesTitle" xml:space="preserve"><value>画像か PDF を開く</value></data>

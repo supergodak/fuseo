@@ -40,6 +40,10 @@ public static class Strings
     public static string RedoTip => Get(nameof(RedoTip));
     public static string DeleteSelection => Get(nameof(DeleteSelection));
     public static string DeleteSelectionTip => Get(nameof(DeleteSelectionTip));
+    public static string RotateLeft => Get(nameof(RotateLeft));
+    public static string RotateLeftTip => Get(nameof(RotateLeftTip));
+    public static string RotateRight => Get(nameof(RotateRight));
+    public static string RotateRightTip => Get(nameof(RotateRightTip));
     public static string ZoomOut => Get(nameof(ZoomOut));
     public static string ZoomIn => Get(nameof(ZoomIn));
     public static string ZoomFit => Get(nameof(ZoomFit));
@@ -65,6 +69,8 @@ public static class Strings
     public static string BannerClose => Get(nameof(BannerClose));
     public static string StatusImporting => Get(nameof(StatusImporting));
     public static string StatusImported => Get(nameof(StatusImported));
+    public static string StatusDetecting => Get(nameof(StatusDetecting));
+    public static string StatusDetectFailed => Get(nameof(StatusDetectFailed));
     public static string StatusExportedOne => Get(nameof(StatusExportedOne));
     public static string StatusExportedMany => Get(nameof(StatusExportedMany));
     public static string OpenFilesTitle => Get(nameof(OpenFilesTitle));

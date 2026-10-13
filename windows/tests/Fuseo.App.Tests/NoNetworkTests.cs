@@ -5,7 +5,7 @@ namespace Fuseo.App.Tests;
 
 /// <summary>
 /// 通信機能を持たないこと（製品の生命線）を静的に確認する。
-/// アプリ・Core・Input（と同梱の PDFiumCore）のアセンブリが通信系の名前空間（System.Net.Http / Sockets / WebSockets 等）を参照していないこと。
+/// アプリ・Core・Input（と同梱の PDFiumCore・ZXing.Net）のアセンブリが通信系の名前空間（System.Net.Http / Sockets / WebSockets 等）を参照していないこと。
 /// </summary>
 public class NoNetworkTests
 {
@@ -17,6 +17,7 @@ public class NoNetworkTests
     [InlineData("Fuseo.Core")]
     [InlineData("Fuseo.Input")]
     [InlineData("PDFiumCore")]
+    [InlineData("zxing")]
     public void Assembly_DoesNotReferenceNetworkAssemblies(string name)
     {
         var asm = Assembly.Load(name);

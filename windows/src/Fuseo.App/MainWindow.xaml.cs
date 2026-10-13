@@ -24,6 +24,7 @@ public partial class MainWindow : Window
 
     private MainViewModel? _vm;
     private PageViewModel? _shownPage;
+    private Fuseo.Core.Imaging.PageBitmap? _shownBase;
     private bool _userZoomed;
 
     private DragMode _drag;
@@ -68,10 +69,12 @@ public partial class MainWindow : Window
     private void OnCanvasChanged(object? sender, EventArgs e)
     {
         var page = _vm?.SelectedPage;
-        if (!ReferenceEquals(page, _shownPage))
+        // ページが変わったとき、または回転（Undo/Redo を含む）で基準画像が変わったときは画像を差し替えて全体表示に戻す。
+        if (!ReferenceEquals(page, _shownPage) || !ReferenceEquals(page?.State.Base, _shownBase))
         {
             CancelDrag();
             _shownPage = page;
+            _shownBase = page?.State.Base;
             if (page is null)
             {
                 PageImage.Source = null;

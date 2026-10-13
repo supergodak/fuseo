@@ -7,6 +7,7 @@ using Fuseo.Core.Export;
 using Fuseo.Core.Model;
 using Fuseo.Core.Rendering;
 using Fuseo.Input;
+using Fuseo.Input.Detection;
 
 namespace Fuseo.App;
 
@@ -26,7 +27,8 @@ public partial class App : Application
             new MaskRasterizer(),
             new Exporter(),
             presets,
-            dialogs);
+            dialogs,
+            detector: new QrDetector());
         window.DataContext = vm;
         MainWindow = window;
         window.Show();

@@ -14,8 +14,8 @@ public enum EditorTool { Select, Rect, Brush }
 public enum BrushSize { Thin, Medium, Thick }
 
 /// <summary>
-/// メイン画面の ViewModel。取り込み（IPageSource）・焼き込み（IMaskRasterizer）・書き出し（IExporter）は
-/// コンストラクタ注入。キャンバスのマウス操作はビューが座標を正規化（CoordinateSpace.FromView）してから
+/// メイン画面の ViewModel。取り込み（IPageSource）・焼き込み（IMaskRasterizer）・書き出し（IExporter）・
+/// 自動検出（IDetector・W4 は QR／バーコードのみ）はコンストラクタ注入。キャンバスのマウス操作はビューが座標を正規化（CoordinateSpace.FromView）してから
 /// ここのメソッドを呼ぶ＝この型は画面座標を一切知らない。
 /// </summary>
 public sealed class MainViewModel : ObservableObject
@@ -35,6 +35,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IMaskRasterizer _rasterizer;
     private readonly IExporter _exporter;
     private readonly IDialogService _dialogs;
+    private readonly IDetector? _detector;
     private readonly Dictionary<DocumentType, DocumentPreset> _presets;
     private readonly HashSet<DocumentType> _dismissedBanners = [];
     private readonly Func<DateTime> _now;
@@ -47,8 +48,10 @@ public sealed class MainViewModel : ObservableObject
     private string? _statusMessage;
 
     public MainViewModel(IPageSource source, IMaskRasterizer rasterizer, IExporter exporter,
-                         IReadOnlyList<DocumentPreset> presets, IDialogService dialogs, Func<DateTime>? now = null)
+                         IReadOnlyList<DocumentPreset> presets, IDialogService dialogs, Func<DateTime>? now = null,
+                         IDetector? detector = null)
     {
+        _detector = detector;
         _source = source;
         _rasterizer = rasterizer;
         _exporter = exporter;
@@ -68,6 +71,8 @@ public sealed class MainViewModel : ObservableObject
         DeleteSelectionCommand = new RelayCommand(DeleteSelection, () => Selection is not null);
         ExportCommand = new RelayCommand(OpenExport, () => Pages.Count > 0 && !IsBusy);
         DismissBannerCommand = new RelayCommand(DismissBanner);
+        RotateLeftCommand = new RelayCommand(() => Rotate(-1), () => SelectedPage is not null && !IsBusy);
+        RotateRightCommand = new RelayCommand(() => Rotate(+1), () => SelectedPage is not null && !IsBusy);
         SetToolCommand = new RelayCommand(p => { if (p is EditorTool t) Tool = t; });
         SetBrushSizeCommand = new RelayCommand(p => { if (p is BrushSize s) BrushSize = s; });
     }
@@ -86,6 +91,8 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand DeleteSelectionCommand { get; }
     public RelayCommand ExportCommand { get; }
     public RelayCommand DismissBannerCommand { get; }
+    public RelayCommand RotateLeftCommand { get; }
+    public RelayCommand RotateRightCommand { get; }
     public RelayCommand SetToolCommand { get; }
     public RelayCommand SetBrushSizeCommand { get; }
 
@@ -115,9 +122,12 @@ public sealed class MainViewModel : ObservableObject
         set
         {
             if (SelectedPage is not { } p || value is null || p.State.Type == value.Type) return;
-            p.State.Type = value.Type;
+            // 種別に合わせて候補（defaultOn）を作り直す。種別ごと 1 回の変更として Undo できる。
+            p.State.ChangeType(value.Type, _presets.GetValueOrDefault(value.Type));
+            Selection = null;
             OnPropertyChanged();
             RebuildSidePane();
+            AfterEdit();
         }
     }
 
@@ -216,16 +226,22 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var loaded = await _source.LoadAsync(paths, _dialogs.AskPasswordAsync, CancellationToken.None);
+            // 検出は取り込みの一部として済ませる（後から非同期に届いて編集履歴と競合しないように）。
+            var (detections, failed) = await DetectAsync(loaded);
             PageViewModel? first = null;
-            foreach (var sp in loaded)
+            for (var i = 0; i < loaded.Count; i++)
             {
-                var vm = new PageViewModel(PageState.From(sp));
+                var state = PageState.From(loaded[i]);
+                if (_detector is not null && detections[i] is { } boxes)
+                    state.InitializeDetections(_detector.Id, boxes, _presets.GetValueOrDefault(state.Type));
+                var vm = new PageViewModel(state);
                 Pages.Add(vm);
                 first ??= vm;
             }
             Renumber();
             if (first is not null) SelectedPage = first;
-            StatusMessage = loaded.Count > 0 ? string.Format(Strings.StatusImported, loaded.Count) : null;
+            StatusMessage = failed > 0 ? string.Format(Strings.StatusDetectFailed, loaded.Count, failed)
+                : loaded.Count > 0 ? string.Format(Strings.StatusImported, loaded.Count) : null;
         }
         catch (OperationCanceledException)
         {
@@ -240,6 +256,44 @@ public sealed class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>同時に検出するページ数の上限（1 ページで数十 MB の作業領域を使うため）。</summary>
+    public const int MaxDetectParallelism = 4;
+
+    /// <summary>
+    /// 取り込んだ全ページで検出する（別スレッド・ページ並列・上限付き）。ページごとの失敗はそのページを 0 件扱いにして数える
+    /// （検出はベストエフォート。失敗したページはステータスで知らせ、手で塗ってもらう）。
+    /// </summary>
+    private async Task<(IReadOnlyList<NormRect>?[] Boxes, int Failed)> DetectAsync(IReadOnlyList<SourcePage> pages)
+    {
+        var boxes = new IReadOnlyList<NormRect>?[pages.Count];
+        if (_detector is not { } detector || pages.Count == 0) return (boxes, 0);
+        StatusMessage = Strings.StatusDetecting;
+        var failed = 0;
+        await Task.Run(() => Parallel.For(0, pages.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 1, MaxDetectParallelism) },
+            i =>
+            {
+                try { boxes[i] = detector.Detect(pages[i].Bitmap); }
+                catch (Exception e) when (e is not OutOfMemoryException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"QR 検出に失敗（{i + 1} ページ目）: {e.GetType().Name}");
+                    Interlocked.Increment(ref failed);
+                }
+            }));
+        return (boxes, failed);
+    }
+
+    // ---- 回転（画像とマスクを同じ回数だけ回す・Undo できる） ----
+
+    private void Rotate(int turns)
+    {
+        if (SelectedPage is not { } p) return;
+        if (turns > 0) p.State.RotateClockwise();
+        else p.State.RotateCounterClockwise();
+        Selection = null;
+        AfterEdit();
     }
 
     // ---- ページの削除・並べ替え ----
@@ -328,14 +382,21 @@ public sealed class MainViewModel : ObservableObject
     private void Undo()
     {
         if (SelectedPage is not { } p || !p.State.Undo()) return;
-        Selection = null;
-        AfterEdit();
+        AfterHistoryMove();
     }
 
     private void Redo()
     {
         if (SelectedPage is not { } p || !p.State.Redo()) return;
+        AfterHistoryMove();
+    }
+
+    /// <summary>Undo/Redo の後。種別・回転も戻りうるので右ペインごと作り直す。</summary>
+    private void AfterHistoryMove()
+    {
         Selection = null;
+        OnPropertyChanged(nameof(SelectedDocumentType));
+        RebuildSidePane();
         AfterEdit();
     }
 
@@ -377,6 +438,8 @@ public sealed class MainViewModel : ObservableObject
         RedoCommand.RaiseCanExecuteChanged();
         DeleteSelectionCommand.RaiseCanExecuteChanged();
         ExportCommand.RaiseCanExecuteChanged();
+        RotateLeftCommand.RaiseCanExecuteChanged();
+        RotateRightCommand.RaiseCanExecuteChanged();
     }
 
     // ---- 書き出し（確認シートを必ず通す） ----

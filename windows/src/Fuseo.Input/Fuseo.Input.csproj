@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- 取り込み（W2）: ファイル → SourcePage[]。WIC（WPF の System.Windows.Media.Imaging）と PDFium を使う。
        Core に WPF 型を持ち込まないため、別アセンブリにしている（docs/windows-design.md §3.2）。
-       通信機能は持たない（生命線）。依存は PDFiumCore のみ（ネイティブ pdfium.dll は bblanchon.PDFium.* が運ぶ）。 -->
+       通信機能は持たない（生命線）。依存は PDFiumCore（ネイティブ pdfium.dll は bblanchon.PDFium.* が運ぶ）と
+       ZXing.Net（QR／バーコード検出・W4。System.Drawing 系のバインディングは入れない）のみ。 -->
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -13,6 +14,8 @@
     <!-- バージョン固定（win-x64 / win-arm64 の pdfium.dll 入りを確認済み・2026-10-11）。
          更新するときは THIRD-PARTY-NOTICES.txt と内容範囲テストを必ず見直す。 -->
     <PackageReference Include="PDFiumCore" Version="[155.0.8057]" />
+    <!-- 2026-10-13 W4 で追加（Apache-2.0）。BGRA 生バッファを RGBLuminanceSource で渡すので描画系パッケージは不要。 -->
+    <PackageReference Include="ZXing.Net" Version="[0.16.10]" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fuseo.Core\Fuseo.Core.csproj" />
