@@ -51,7 +51,7 @@ public class QrDetectorTests(ITestOutputHelper output)
         return new Drawn(x + first * scale, y, (last - first + 1) * scale, barHeight);
     }
 
-    private static void Fill(PageBitmap bmp, int x, int y, int w, int h)
+    internal static void Fill(PageBitmap bmp, int x, int y, int w, int h)
     {
         for (var yy = y; yy < y + h; yy++)
             for (var xx = x; xx < x + w; xx++) bmp.SetPixel(xx, yy, 0, 0, 0, 255);
@@ -123,6 +123,37 @@ public class QrDetectorTests(ITestOutputHelper output)
         var (bmp, d) = Rotated(bmp0, d0, turns);
         var box = Assert.Single(TimedDetect(bmp, $"QR turns={turns}"));
         AssertCovers(box, d, bmp.Width, bmp.Height);
+    }
+
+    /// <summary>
+    /// 1 次元の箱は走査線からの比率で決め打ちしない（2026-10-13 メイン判断）。最短の Code128（1 文字）や、
+    /// 高さが線の長さに近いバー（EAN-13 は高さ≒幅の 0.7）でも、端が 1px も欠けないこと。
+    /// </summary>
+    [Theory]
+    [InlineData("x", 0.2, 0)] [InlineData("x", 0.2, 1)] [InlineData("x", 0.2, 2)] [InlineData("x", 0.2, 3)]
+    [InlineData("FUSEO-42", 0.8, 0)] [InlineData("FUSEO-42", 0.8, 1)] [InlineData("FUSEO-42", 0.8, 2)] [InlineData("FUSEO-42", 0.8, 3)]
+    [InlineData("x", 0.9, 0)] [InlineData("x", 0.9, 3)]
+    public void Code128_ShortOrTall_BoxCoversWholeSymbol(string content, double heightRatio, int turns)
+    {
+        var bmp0 = White(1000, 700);
+        var m = Encode(BarcodeFormat.CODE_128, content);
+        var d0 = DrawLinear(bmp0, m, 300, 150, 4, (int)(m.Width * 4 * heightRatio));
+        var (bmp, d) = Rotated(bmp0, d0, turns);
+        var box = Assert.Single(TimedDetect(bmp, $"Code128 '{content}' h={heightRatio} turns={turns}"));
+        AssertCovers(box, d, bmp.Width, bmp.Height, maxAreaRatio: 4.0);
+    }
+
+    [Fact]
+    public void Code128_WithTextLinesAboveAndBelow_DoesNotSwallowWholePage()
+    {
+        // バーの上下に文字行（横線の並び）があっても、箱がそこまで伸び続けない。
+        var bmp = White(1200, 900);
+        for (var y = 60; y < 840; y += 40)
+            if (y < 300 || y > 520) for (var x = 100; x < 1100; x += 9) Fill(bmp, x, y, 6, 14);
+        var m = Encode(BarcodeFormat.CODE_128, "FUSEO-SYNTH-7");
+        var d = DrawLinear(bmp, m, 250, 340, 4, 140);
+        var box = Assert.Single(TimedDetect(bmp, "Code128 with text"));
+        AssertCovers(box, d, bmp.Width, bmp.Height, maxAreaRatio: 4.0);
     }
 
     [Theory]
