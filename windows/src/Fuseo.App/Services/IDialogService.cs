@@ -27,4 +27,13 @@ public interface IDialogService
 
     /// <summary>書き出しシートをモーダルで開く（閉じるまで戻らない）。</summary>
     void ShowExport(ExportViewModel viewModel);
+
+    /// <summary>設定ウィンドウをモーダルで開く（W6）。</summary>
+    void ShowSettings(SettingsViewModel viewModel);
+
+    /// <summary>バージョン情報をモーダルで開く（W6）。</summary>
+    void ShowAbout();
+
+    /// <summary>ローカルのフォルダをエクスプローラーで開く（URL は渡さない・<see cref="FolderLauncher"/>）。</summary>
+    void OpenFolder(string path);
 }

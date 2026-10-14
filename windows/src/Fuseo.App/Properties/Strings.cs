@@ -11,11 +11,27 @@ public static class Strings
 {
     private static readonly ResourceManager Manager = new("Fuseo.App.Properties.Strings", typeof(Strings).Assembly);
 
-    /// <summary>表示言語（null なら OS の UI 言語）。英語の resx は W6 で追加。</summary>
+    /// <summary>
+    /// 表示言語のカルチャ（起動時に Configuration.UiLanguage.Resolve の結果を入れる）。
+    /// null なら日本語（ニュートラル）。OS の UI 言語に暗黙に引きずられないよう、null のときは InvariantCulture で引く
+    /// （英語 OS でテストしても日本語の文言・<see cref="IsEnglish"/>=false で一致する）。
+    /// </summary>
     public static CultureInfo? Culture { get; set; }
 
-    public static string Get(string key) =>
-        Manager.GetString(key, Culture) ?? throw new MissingManifestResourceException($"文言が無い: {key}");
+    /// <summary>英語 UI か（プリセットの *En 項目を使うか）。<see cref="Culture"/> と必ず一致させる。</summary>
+    public static bool IsEnglish => IsEnglishCulture(Culture);
+
+    public static bool IsEnglishCulture(CultureInfo? culture) => culture?.TwoLetterISOLanguageName == "en";
+
+    /// <summary>日付・数値の書式に使うカルチャ（表示言語と同じ）。</summary>
+    public static CultureInfo FormatCulture => Culture ?? CultureInfo.GetCultureInfo("ja-JP");
+
+    public static string Get(string key) => Get(key, Culture);
+
+    /// <summary>カルチャを指定して引く（テスト・言語を明示したい箇所用。グローバルの <see cref="Culture"/> を変えない）。</summary>
+    public static string Get(string key, CultureInfo? culture) =>
+        Manager.GetString(key, culture ?? CultureInfo.InvariantCulture)
+        ?? throw new MissingManifestResourceException($"文言が無い: {key}");
 
     public static string AppTitle => Get(nameof(AppTitle));
     public static string Ok => Get(nameof(Ok));
@@ -135,4 +151,43 @@ public static class Strings
     public static string StatusWorkOpened => Get(nameof(StatusWorkOpened));
     public static string StatusSaveFailed => Get(nameof(StatusSaveFailed));
     public static string StatusLibraryFailed => Get(nameof(StatusLibraryFailed));
+    public static string Settings => Get(nameof(Settings));
+    public static string SettingsTip => Get(nameof(SettingsTip));
+    public static string About => Get(nameof(About));
+    public static string AboutTip => Get(nameof(AboutTip));
+    public static string Close => Get(nameof(Close));
+    public static string SettingsTitle => Get(nameof(SettingsTitle));
+    public static string SettingsLanguageLabel => Get(nameof(SettingsLanguageLabel));
+    public static string SettingsLanguageAuto => Get(nameof(SettingsLanguageAuto));
+    public static string SettingsLanguageJapanese => Get(nameof(SettingsLanguageJapanese));
+    public static string SettingsLanguageEnglish => Get(nameof(SettingsLanguageEnglish));
+    public static string SettingsRestartNote => Get(nameof(SettingsRestartNote));
+    public static string SettingsSaveFailed => Get(nameof(SettingsSaveFailed));
+    public static string SettingsStorageHeading => Get(nameof(SettingsStorageHeading));
+    public static string SettingsStorageNote => Get(nameof(SettingsStorageNote));
+    public static string SettingsOpenFolder => Get(nameof(SettingsOpenFolder));
+    public static string SettingsOpenFolderFailed => Get(nameof(SettingsOpenFolderFailed));
+    public static string SettingsDeleteHeading => Get(nameof(SettingsDeleteHeading));
+    public static string SettingsDeleteAll => Get(nameof(SettingsDeleteAll));
+    public static string SettingsDeleteAllNote => Get(nameof(SettingsDeleteAllNote));
+    public static string SettingsDeleteAllBlocked => Get(nameof(SettingsDeleteAllBlocked));
+    public static string SettingsNoWorks => Get(nameof(SettingsNoWorks));
+    public static string SettingsWorkCount => Get(nameof(SettingsWorkCount));
+    public static string AboutTitle => Get(nameof(AboutTitle));
+    public static string AboutVersion => Get(nameof(AboutVersion));
+    public static string AboutCopyright => Get(nameof(AboutCopyright));
+    public static string AboutNoNetwork => Get(nameof(AboutNoNetwork));
+    public static string AboutWebsite => Get(nameof(AboutWebsite));
+    public static string AboutSourceCode => Get(nameof(AboutSourceCode));
+    public static string AboutCopy => Get(nameof(AboutCopy));
+    public static string AboutCopied => Get(nameof(AboutCopied));
+    public static string AboutUrlNote => Get(nameof(AboutUrlNote));
+    public static string AboutLicenseHeading => Get(nameof(AboutLicenseHeading));
+    public static string AboutThirdPartyHeading => Get(nameof(AboutThirdPartyHeading));
+    public static string ClosingSaving => Get(nameof(ClosingSaving));
+    public static string ImportErrorPageLimitFile => Get(nameof(ImportErrorPageLimitFile));
+    public static string ImportErrorHeic => Get(nameof(ImportErrorHeic));
+    public static string ImportErrorUnreadableFile => Get(nameof(ImportErrorUnreadableFile));
+    public static string ImportErrorUnsupportedFile => Get(nameof(ImportErrorUnsupportedFile));
+    public static string ImportErrorFileGeneric => Get(nameof(ImportErrorFileGeneric));
 }

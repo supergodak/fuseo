@@ -51,6 +51,14 @@ internal sealed class FakeDialogs : IDialogService
 
     public void ShowError(string title, string message) => Errors.Add((title, message));
     public void ShowExport(ExportViewModel viewModel) => OnShowExport?.Invoke(viewModel);
+
+    public Action<SettingsViewModel>? OnShowSettings { get; set; }
+    public int AboutShown { get; private set; }
+    public List<string> OpenedFolders { get; } = [];
+
+    public void ShowSettings(SettingsViewModel viewModel) => OnShowSettings?.Invoke(viewModel);
+    public void ShowAbout() => AboutShown++;
+    public void OpenFolder(string path) => OpenedFolders.Add(path);
 }
 
 /// <summary>受け取った焼き込み済みページを記録し、ページ番号を 1 バイト書く書き出し。</summary>

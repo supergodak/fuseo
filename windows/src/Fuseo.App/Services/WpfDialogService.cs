@@ -63,7 +63,21 @@ public sealed class WpfDialogService(Window owner) : IDialogService
         win.ShowDialog();
     }
 
-    /// <summary>書き出しシートが開いていればその上にメッセージを出す。</summary>
+    public void ShowSettings(SettingsViewModel viewModel)
+    {
+        var win = new SettingsWindow { Owner = owner, DataContext = viewModel };
+        win.ShowDialog();
+    }
+
+    public void ShowAbout()
+    {
+        var win = new AboutWindow { Owner = owner };
+        win.ShowDialog();
+    }
+
+    public void OpenFolder(string path) => FolderLauncher.Open(path);
+
+    /// <summary>書き出しシート・設定が開いていればその上にメッセージを出す。</summary>
     private Window ActiveOwner() =>
         owner.OwnedWindows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? owner;
 }

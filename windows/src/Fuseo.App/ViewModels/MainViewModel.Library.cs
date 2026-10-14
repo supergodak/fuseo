@@ -309,10 +309,14 @@ public sealed class LibraryItemViewModel : ObservableObject
     public int PageCount => _summary.PageCount;
     public WorkStatus Status => _summary.Status;
 
-    /// <summary>更新日時（ローカル時刻）。</summary>
-    public string UpdatedText => _summary.UpdatedAt == DateTimeOffset.MinValue
-        ? ""
-        : string.Format(Strings.LibraryUpdated, _summary.UpdatedAt.ToLocalTime().DateTime);
+    /// <summary>更新日時（ローカル時刻・表示言語のカルチャで書式化）。</summary>
+    public string UpdatedText => FormatUpdated(_summary.UpdatedAt, Strings.Culture);
+
+    public static string FormatUpdated(DateTimeOffset updatedAt, System.Globalization.CultureInfo? culture) =>
+        updatedAt == DateTimeOffset.MinValue
+            ? ""
+            : string.Format(culture ?? Strings.FormatCulture, Strings.Get(nameof(Strings.LibraryUpdated), culture),
+                            updatedAt.ToLocalTime().DateTime);
 
     public string StatusText => !_summary.IsReadable ? Strings.LibraryUnreadableNote
         : _summary.Status == WorkStatus.Exported ? Strings.LibraryStatusExported : Strings.LibraryStatusInProgress;

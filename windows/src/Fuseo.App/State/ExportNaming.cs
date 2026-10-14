@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using Fuseo.App.Properties;
 using Fuseo.Core.Contracts;
@@ -17,10 +18,12 @@ public static class ExportNaming
 
     /// <summary>
     /// 既定のファイル名（仮・要決定）。元ファイル名は含めない（提出先に元の名前が漏れないよう無難な名前にする）。
-    /// 例: 伏せ済み_20261011.pdf
+    /// 例: 伏せ済み_20261011.pdf（英語 UI は Redacted_20261011.pdf）。日付部分は言語によらず yyyyMMdd（不変カルチャ）。
     /// </summary>
-    public static string DefaultFileName(DateTime now, ExportFormat format) =>
-        $"{Strings.DefaultExportBaseName}_{now:yyyyMMdd}{Extension(format)}";
+    public static string DefaultFileName(DateTime now, ExportFormat format) => DefaultFileName(now, format, Strings.Culture);
+
+    public static string DefaultFileName(DateTime now, ExportFormat format, CultureInfo? culture) =>
+        $"{Strings.Get(nameof(Strings.DefaultExportBaseName), culture)}_{now.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}{Extension(format)}";
 
     /// <summary>
     /// 実際に書く先の一覧（ページ番号順）。

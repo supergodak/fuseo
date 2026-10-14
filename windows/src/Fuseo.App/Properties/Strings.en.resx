@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- UI 文言（英語）。キーは Strings.resx（日本語・ニュートラル）と同じ集合にする（StringsTests が検査）。 -->
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppTitle" xml:space="preserve"><value>Fuseo for Windows</value></data>
+  <data name="Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="UnexpectedError" xml:space="preserve"><value>An unexpected error occurred.
+{0}</value></data>
+  <data name="OpenFiles" xml:space="preserve"><value>Open files…</value></data>
+  <data name="OpenFilesTip" xml:space="preserve"><value>Open images or PDFs (multiple selection allowed, Ctrl+O). You can also drag and drop files onto the window.</value></data>
+  <data name="ToolLabel" xml:space="preserve"><value>Tool:</value></data>
+  <data name="ToolSelect" xml:space="preserve"><value>Select</value></data>
+  <data name="ToolSelectTip" xml:space="preserve"><value>Select a mask to move or delete it (V)</value></data>
+  <data name="ToolRect" xml:space="preserve"><value>Rectangle</value></data>
+  <data name="ToolRectTip" xml:space="preserve"><value>Drag to paint a rectangle (R)</value></data>
+  <data name="ToolBrush" xml:space="preserve"><value>Brush</value></data>
+  <data name="ToolBrushTip" xml:space="preserve"><value>Paint freehand (B)</value></data>
+  <data name="BrushSizeLabel" xml:space="preserve"><value>Size:</value></data>
+  <data name="BrushThin" xml:space="preserve"><value>Thin</value></data>
+  <data name="BrushMedium" xml:space="preserve"><value>Medium</value></data>
+  <data name="BrushThick" xml:space="preserve"><value>Thick</value></data>
+  <data name="Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="UndoTip" xml:space="preserve"><value>Undo the last change on this page (Ctrl+Z)</value></data>
+  <data name="Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="RedoTip" xml:space="preserve"><value>Redo the change you undid (Ctrl+Y)</value></data>
+  <data name="DeleteSelection" xml:space="preserve"><value>Delete</value></data>
+  <data name="DeleteSelectionTip" xml:space="preserve"><value>Delete the selected rectangle. For a candidate, turns it off (Delete)</value></data>
+  <data name="RotateLeft" xml:space="preserve"><value>Rotate left</value></data>
+  <data name="RotateLeftTip" xml:space="preserve"><value>Rotate this page 90° to the left. Painted masks rotate with it (Ctrl+L)</value></data>
+  <data name="RotateRight" xml:space="preserve"><value>Rotate right</value></data>
+  <data name="RotateRightTip" xml:space="preserve"><value>Rotate this page 90° to the right. Painted masks rotate with it (Ctrl+R)</value></data>
+  <data name="ZoomOut" xml:space="preserve"><value>−</value></data>
+  <data name="ZoomIn" xml:space="preserve"><value>+</value></data>
+  <data name="ZoomFit" xml:space="preserve"><value>Fit</value></data>
+  <data name="ZoomTip" xml:space="preserve"><value>Ctrl+wheel to zoom, wheel to scroll up/down, Shift+wheel to scroll sideways. Drag with the middle or right button, or Space+drag, to pan</value></data>
+  <data name="ExportButton" xml:space="preserve"><value>Export…</value></data>
+  <data name="EmptyTitle" xml:space="preserve"><value>Drop an image or PDF here</value></data>
+  <data name="EmptySubtitle" xml:space="preserve"><value>Or choose one with “Open files”. Supported formats: JPEG / PNG / BMP / TIFF / PDF. Files are processed only on this PC and are never sent anywhere.</value></data>
+  <data name="PagesHeading" xml:space="preserve"><value>Pages</value></data>
+  <data name="MoveUp" xml:space="preserve"><value>↑ Up</value></data>
+  <data name="MoveDown" xml:space="preserve"><value>↓ Down</value></data>
+  <data name="RemovePage" xml:space="preserve"><value>Remove</value></data>
+  <data name="PageTitleImage" xml:space="preserve"><value>{0}. {1}</value></data>
+  <data name="PageTitlePdf" xml:space="preserve"><value>{0}. {1} (page {2})</value></data>
+  <data name="PageNoMask" xml:space="preserve"><value>No masks</value></data>
+  <data name="PageMaskCount" xml:space="preserve"><value>Masks: {0}</value></data>
+  <data name="DocumentTypeLabel" xml:space="preserve"><value>Document type</value></data>
+  <data name="ChecklistHeading" xml:space="preserve"><value>Fields usually hidden on this document</value></data>
+  <data name="ChecklistNote" xml:space="preserve"><value>These are not painted automatically. Paint them yourself on the canvas. The checkboxes are just reminders for you.</value></data>
+  <data name="ChecklistManualGuide" xml:space="preserve"><value>Paint this by hand</value></data>
+  <data name="ChecklistQrNote" xml:space="preserve"><value>QR codes that are found appear under “Auto-detected candidates” below</value></data>
+  <data name="CandidatesHeading" xml:space="preserve"><value>Auto-detected candidates</value></data>
+  <data name="CandidatesEmpty" xml:space="preserve"><value>No candidates. Paint over anything that needs hiding by hand.</value></data>
+  <data name="BannerClose" xml:space="preserve"><value>Close the notice</value></data>
+  <data name="StatusImporting" xml:space="preserve"><value>Loading…</value></data>
+  <data name="StatusImported" xml:space="preserve"><value>Pages loaded: {0}</value></data>
+  <data name="StatusDetecting" xml:space="preserve"><value>Looking for QR codes and barcodes…</value></data>
+  <data name="StatusDetectFailed" xml:space="preserve"><value>Pages loaded: {0}. QR code detection could not run on {1} of them. Paint over anything that needs hiding by hand.</value></data>
+  <data name="StatusExportedOne" xml:space="preserve"><value>Exported: {0}</value></data>
+  <data name="StatusExportedMany" xml:space="preserve"><value>Exported {0} files: {1} and others</value></data>
+  <data name="OpenFilesTitle" xml:space="preserve"><value>Open images or PDFs</value></data>
+  <data name="OpenFilesFilter" xml:space="preserve"><value>Images and PDFs|*.jpg;*.jpeg;*.png;*.bmp;*.tif;*.tiff;*.heic;*.heif;*.pdf|All files|*.*</value></data>
+  <data name="ImportErrorTitle" xml:space="preserve"><value>Couldn't import</value></data>
+  <data name="ImportErrorNotSupported" xml:space="preserve"><value>This format is not supported.
+{0}</value></data>
+  <data name="ImportErrorNotFound" xml:space="preserve"><value>The file was not found.
+{0}</value></data>
+  <data name="ImportErrorUnreadable" xml:space="preserve"><value>Couldn't read the file. It may be damaged or in a format that can't be opened.
+{0}</value></data>
+  <data name="ImportErrorGeneric" xml:space="preserve"><value>Import failed.
+{0}</value></data>
+  <data name="ImportErrorPageLimit" xml:space="preserve"><value>You can import up to {1} pages at a time when PDFs are included (this time: {0} pages). Please reduce the number of pages and try again.</value></data>
+  <data name="TempSourcePdfUnsupported" xml:space="preserve"><value>“{0}”: this development build can't read PDFs yet (images only).</value></data>
+  <data name="PasswordTitle" xml:space="preserve"><value>Password</value></data>
+  <data name="PasswordMessage" xml:space="preserve"><value>“{0}” is password-protected. Enter its password.</value></data>
+  <data name="PasswordRetryMessage" xml:space="preserve"><value>That password is incorrect. Enter the password for “{0}” again.</value></data>
+  <data name="PasswordNote" xml:space="preserve"><value>The password is used only to open the file and is not saved.</value></data>
+  <data name="ExportTitle" xml:space="preserve"><value>Export</value></data>
+  <data name="ExportFormatLabel" xml:space="preserve"><value>Format:</value></data>
+  <data name="ExportPdfNote" xml:space="preserve"><value>PDF export writes each page as an image. Text in the exported PDF can't be selected or searched.</value></data>
+  <data name="ExportSeparateFilesNote" xml:space="preserve"><value>JPEG / PNG export writes a separate file for each page (_1, _2 … is added to the end of the file name).</value></data>
+  <data name="ExportPreviewHeading" xml:space="preserve"><value>Check the result</value></data>
+  <data name="ExportPreviewNote" xml:space="preserve"><value>The images below are exactly the redacted images that will be exported. Check every page for anything left uncovered before saving.</value></data>
+  <data name="ExportSummary" xml:space="preserve"><value>Masks: {0} (auto {1}, manual {2}) / Pages: {3}</value></data>
+  <data name="PreviewPageTitle" xml:space="preserve"><value>Page {0}</value></data>
+  <data name="ExportPreparing" xml:space="preserve"><value>Preparing the result…</value></data>
+  <data name="ExportZeroMaskWarning" xml:space="preserve"><value>Some pages have no masks. If you export as-is, the original information will remain.</value></data>
+  <data name="ExportSave" xml:space="preserve"><value>Save…</value></data>
+  <data name="ExportSaveWithoutMask" xml:space="preserve"><value>Save including pages without masks…</value></data>
+  <data name="ExportSaving" xml:space="preserve"><value>Saving…</value></data>
+  <data name="ExportErrorTitle" xml:space="preserve"><value>Couldn't export</value></data>
+  <data name="ExportPrepareFailed" xml:space="preserve"><value>Couldn't prepare the result.
+{0}</value></data>
+  <data name="ExportFailed" xml:space="preserve"><value>Export failed.
+{0}</value></data>
+  <data name="ExportOverwriteTitle" xml:space="preserve"><value>Confirm overwrite</value></data>
+  <data name="ExportOverwriteMessage" xml:space="preserve"><value>These files already exist. Overwrite them?
+{0}</value></data>
+  <data name="SaveDialogTitle" xml:space="preserve"><value>Export to</value></data>
+  <data name="SaveFilterPdf" xml:space="preserve"><value>PDF (*.pdf)|*.pdf</value></data>
+  <data name="SaveFilterJpeg" xml:space="preserve"><value>JPEG (*.jpg)|*.jpg;*.jpeg</value></data>
+  <data name="SaveFilterPng" xml:space="preserve"><value>PNG (*.png)|*.png</value></data>
+  <data name="DefaultExportBaseName" xml:space="preserve"><value>Redacted</value></data>
+  <data name="NewDocument" xml:space="preserve"><value>New document</value></data>
+  <data name="NewDocumentTip" xml:space="preserve"><value>Clear the screen while keeping the current work in “In-progress documents” (Ctrl+N)</value></data>
+  <data name="WorkTitleMany" xml:space="preserve"><value>{0} and {1} more</value></data>
+  <data name="LibraryHeading" xml:space="preserve"><value>In-progress documents</value></data>
+  <data name="LibraryStorageNote" xml:space="preserve"><value>In-progress documents (including the images before redaction) are stored only on this PC (%LOCALAPPDATA%\Fuseo\Library). They stay until you delete them.</value></data>
+  <data name="LibraryOpen" xml:space="preserve"><value>Open</value></data>
+  <data name="LibraryOpenTip" xml:space="preserve"><value>Open this work (you can also double-click it)</value></data>
+  <data name="LibraryDelete" xml:space="preserve"><value>Delete</value></data>
+  <data name="LibraryDeleteAll" xml:space="preserve"><value>Delete all…</value></data>
+  <data name="LibraryUpdated" xml:space="preserve"><value>Updated {0:g}</value></data>
+  <data name="LibraryPageCount" xml:space="preserve"><value>Pages: {0}</value></data>
+  <data name="LibraryStatusInProgress" xml:space="preserve"><value>In progress</value></data>
+  <data name="LibraryStatusExported" xml:space="preserve"><value>Exported</value></data>
+  <data name="LibraryUnreadable" xml:space="preserve"><value>Unreadable work</value></data>
+  <data name="LibraryUnreadableNote" xml:space="preserve"><value>It is damaged or saved in a different version's format. You can only delete it.</value></data>
+  <data name="LibraryDeleteTitle" xml:space="preserve"><value>Delete work</value></data>
+  <data name="LibraryDeleteMessage" xml:space="preserve"><value>“{0}” will be deleted from this PC, including the images before redaction. This can't be undone.</value></data>
+  <data name="LibraryDeleteAllTitle" xml:space="preserve"><value>Delete all work</value></data>
+  <data name="LibraryDeleteAllMessage" xml:space="preserve"><value>All saved work ({0} items) will be deleted from this PC, including the images before redaction. This can't be undone.</value></data>
+  <data name="LibraryDeleteFailedTitle" xml:space="preserve"><value>Couldn't delete</value></data>
+  <data name="LibraryDeleteFailed" xml:space="preserve"><value>Couldn't delete the work.
+{0}</value></data>
+  <data name="LibraryOpenFailedTitle" xml:space="preserve"><value>Couldn't open the work</value></data>
+  <data name="LibraryOpenFailed" xml:space="preserve"><value>Couldn't open the work.
+{0}</value></data>
+  <data name="StatusWorkOpened" xml:space="preserve"><value>Opened “{0}” (pages: {1})</value></data>
+  <data name="StatusSaveFailed" xml:space="preserve"><value>Auto-save failed: {0}</value></data>
+  <data name="StatusLibraryFailed" xml:space="preserve"><value>Couldn't read the list of saved work: {0}</value></data>
+  <data name="Settings" xml:space="preserve"><value>Settings…</value></data>
+  <data name="SettingsTip" xml:space="preserve"><value>Set the display language and see where your work is stored</value></data>
+  <data name="About" xml:space="preserve"><value>About</value></data>
+  <data name="AboutTip" xml:space="preserve"><value>Show the version and licenses</value></data>
+  <data name="Close" xml:space="preserve"><value>Close</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
+  <data name="SettingsLanguageLabel" xml:space="preserve"><value>Display language</value></data>
+  <data name="SettingsLanguageAuto" xml:space="preserve"><value>Automatic (Japanese if Windows is set to Japanese, otherwise English)</value></data>
+  <data name="SettingsLanguageJapanese" xml:space="preserve"><value>日本語 (Japanese)</value></data>
+  <data name="SettingsLanguageEnglish" xml:space="preserve"><value>English</value></data>
+  <data name="SettingsRestartNote" xml:space="preserve"><value>A change of display language takes effect after you restart the app.</value></data>
+  <data name="SettingsSaveFailed" xml:space="preserve"><value>Couldn't save the settings.
+{0}</value></data>
+  <data name="SettingsStorageHeading" xml:space="preserve"><value>Where your work is stored</value></data>
+  <data name="SettingsStorageNote" xml:space="preserve"><value>In-progress documents (including the images before redaction) are stored only in the following folder on this PC. They stay until you delete them.</value></data>
+  <data name="SettingsOpenFolder" xml:space="preserve"><value>Open folder</value></data>
+  <data name="SettingsOpenFolderFailed" xml:space="preserve"><value>Couldn't open the folder.
+{0}</value></data>
+  <data name="SettingsDeleteHeading" xml:space="preserve"><value>Delete work</value></data>
+  <data name="SettingsDeleteAll" xml:space="preserve"><value>Delete all work…</value></data>
+  <data name="SettingsDeleteAllNote" xml:space="preserve"><value>Deletes all saved work from this PC, including the images before redaction. This can't be undone.</value></data>
+  <data name="SettingsDeleteAllBlocked" xml:space="preserve"><value>You can't delete while a document is open. Close it with “New document” first.</value></data>
+  <data name="SettingsNoWorks" xml:space="preserve"><value>There is no saved work.</value></data>
+  <data name="SettingsWorkCount" xml:space="preserve"><value>Saved works: {0}</value></data>
+  <data name="AboutTitle" xml:space="preserve"><value>About Fuseo for Windows</value></data>
+  <data name="AboutVersion" xml:space="preserve"><value>Version {0}</value></data>
+  <data name="AboutCopyright" xml:space="preserve"><value>© 2026 ATI Inc. (ATI株式会社)</value></data>
+  <data name="AboutNoNetwork" xml:space="preserve"><value>This app never connects to the internet. Your files are processed only on this PC.</value></data>
+  <data name="AboutWebsite" xml:space="preserve"><value>Website</value></data>
+  <data name="AboutSourceCode" xml:space="preserve"><value>Source code</value></data>
+  <data name="AboutCopy" xml:space="preserve"><value>Copy</value></data>
+  <data name="AboutCopied" xml:space="preserve"><value>Copied: {0}</value></data>
+  <data name="AboutUrlNote" xml:space="preserve"><value>This app does not open a web browser. Copy the address and paste it into your browser.</value></data>
+  <data name="AboutLicenseHeading" xml:space="preserve"><value>License (MIT)</value></data>
+  <data name="AboutThirdPartyHeading" xml:space="preserve"><value>Third-party software notices</value></data>
+  <data name="ClosingSaving" xml:space="preserve"><value>Saving your work… The app will close when it's done.</value></data>
+  <data name="ImportErrorPageLimitFile" xml:space="preserve"><value>“{0}” has {1} pages. You can import up to {2} pages at a time.</value></data>
+  <data name="ImportErrorHeic" xml:space="preserve"><value>Couldn't open “{0}” (HEIC). The “HEIF Image Extensions” from the Microsoft Store are required. If they are installed, the file may be damaged. You can also convert iPhone photos to JPEG before importing.</value></data>
+  <data name="ImportErrorUnreadableFile" xml:space="preserve"><value>Couldn't read “{0}”. The file may be damaged or in an unsupported format.</value></data>
+  <data name="ImportErrorUnsupportedFile" xml:space="preserve"><value>“{0}” is in an unsupported format (supported: JPEG / PNG / BMP / TIFF / HEIC / PDF).</value></data>
+  <data name="ImportErrorFileGeneric" xml:space="preserve"><value>Couldn't import “{0}”.</value></data>
+</root>

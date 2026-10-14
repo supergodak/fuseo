@@ -7,9 +7,17 @@
     <RootNamespace>Fuseo.App</RootNamespace>
     <AssemblyName>Fuseo</AssemblyName>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <!-- Properties/Strings.resx（ニュートラル）は日本語。英語は W6 で Strings.en.resx を足す。 -->
+    <!-- Properties/Strings.resx（ニュートラル）は日本語。英語は Strings.en.resx（サテライト en\Fuseo.resources.dll）。
+         単一ファイル publish（W7）ではサテライトも exe に同梱される（IncludeAllContentForSelfExtract は不要）。 -->
     <NeutralLanguage>ja</NeutralLanguage>
+    <!-- 依存（WPF ランタイム等）のサテライトは ja/en だけ持つ（配布サイズを抑える。自前の en サテライトには影響しない）。 -->
+    <SatelliteResourceLanguages>ja;en</SatelliteResourceLanguages>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- バージョン情報に出すライセンス本文（W6）。 -->
+    <EmbeddedResource Include="..\..\..\LICENSE" LogicalName="Fuseo.LICENSE.txt" Link="Properties\LICENSE" />
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.txt" LogicalName="Fuseo.THIRD-PARTY-NOTICES.txt" Link="Properties\THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fuseo.Core\Fuseo.Core.csproj" />
     <ProjectReference Include="..\Fuseo.Input\Fuseo.Input.csproj" />

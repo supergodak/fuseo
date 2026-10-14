@@ -330,13 +330,19 @@ public partial class MainWindow : Window
     /// <summary>閉じる前に保留中の自動保存を確定する（書きかけで終わらない）。</summary>
     private bool _closeAfterFlush;
 
+    /// <summary>終了時の保存待ちがこれを超えたら「保存しています…」を出す。</summary>
+    private static readonly TimeSpan ClosingNoticeDelay = TimeSpan.FromSeconds(3);
+
     protected override async void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
         if (e.Cancel || _closeAfterFlush || _vm is not { HasPendingSave: true } vm) return;
         e.Cancel = true;
         IsEnabled = false;
-        try { await vm.FlushSaveAsync(); }
+        var flush = vm.FlushSaveAsync();
+        // 待ちが長いときだけ「保存しています…」を出す（タイムアウトはしない＝書きかけで終わらせない）。
+        if (await Task.WhenAny(flush, Task.Delay(ClosingNoticeDelay)) != flush) ClosingOverlay.Visibility = Visibility.Visible;
+        try { await flush; }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"終了時の保存に失敗: {ex.GetType().Name}"); }
         _closeAfterFlush = true;
         Close();

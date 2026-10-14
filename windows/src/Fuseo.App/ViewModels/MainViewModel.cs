@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Fuseo.App.Configuration;
 using Fuseo.App.Library;
 using Fuseo.App.Mvvm;
 using Fuseo.App.Properties;
@@ -40,6 +41,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly Dictionary<DocumentType, DocumentPreset> _presets;
     private readonly HashSet<DocumentType> _dismissedBanners = [];
     private readonly Func<DateTime> _now;
+    private readonly bool _english;
 
     private PageViewModel? _selectedPage;
     private EditorTool _tool = EditorTool.Rect;
@@ -51,8 +53,12 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(IPageSource source, IMaskRasterizer rasterizer, IExporter exporter,
                          IReadOnlyList<DocumentPreset> presets, IDialogService dialogs, Func<DateTime>? now = null,
                          IDetector? detector = null, FileWorkLibrary? library = null,
-                         Func<TimeSpan, CancellationToken, Task>? saveDelay = null)
+                         Func<TimeSpan, CancellationToken, Task>? saveDelay = null, bool? english = null,
+                         SettingsStore? settings = null)
     {
+        // プリセット由来の文言（種別名・チェックリスト・注意書き・候補）を英語にするか。既定は表示言語（Strings.Culture）に合わせる。
+        _english = english ?? Strings.IsEnglish;
+        _settings = settings;
         _detector = detector;
         _source = source;
         _rasterizer = rasterizer;
@@ -62,7 +68,7 @@ public sealed partial class MainViewModel : ObservableObject
         _presets = presets.ToDictionary(p => p.DocumentType);
         // 並びは DocumentType の定義順（generic が先頭）。
         DocumentTypes = presets.OrderBy(p => (int)p.DocumentType)
-            .Select(p => new PresetOption(p.DocumentType, p.DisplayName, p)).ToList();
+            .Select(p => new PresetOption(p.DocumentType, p.Name(_english), p)).ToList();
 
         OpenFilesCommand = new RelayCommand(() => _ = OpenFilesAsync(), () => !IsBusy);
         RemovePageCommand = new RelayCommand(RemoveSelectedPage, () => SelectedPage is not null && !IsBusy);
@@ -77,6 +83,8 @@ public sealed partial class MainViewModel : ObservableObject
         RotateRightCommand = new RelayCommand(() => Rotate(+1), () => SelectedPage is not null && !IsBusy);
         SetToolCommand = new RelayCommand(p => { if (p is EditorTool t) Tool = t; });
         SetBrushSizeCommand = new RelayCommand(p => { if (p is BrushSize s) BrushSize = s; });
+        OpenSettingsCommand = new RelayCommand(OpenSettings, () => !IsBusy);
+        OpenAboutCommand = new RelayCommand(() => _dialogs.ShowAbout());
         InitLibrary(library, saveDelay);
     }
 
@@ -98,6 +106,11 @@ public sealed partial class MainViewModel : ObservableObject
     public RelayCommand RotateRightCommand { get; }
     public RelayCommand SetToolCommand { get; }
     public RelayCommand SetBrushSizeCommand { get; }
+    public RelayCommand OpenSettingsCommand { get; }
+    public RelayCommand OpenAboutCommand { get; }
+
+    /// <summary>プリセット由来の文言を英語で出しているか。</summary>
+    public bool IsEnglish => _english;
 
     /// <summary>キャンバスの再描画が要るとき（マスク・選択・ページが変わった）。</summary>
     public event EventHandler? CanvasChanged;
@@ -126,7 +139,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (SelectedPage is not { } p || value is null || p.State.Type == value.Type) return;
             // 種別に合わせて候補（defaultOn）を作り直す。種別ごと 1 回の変更として Undo できる。
-            p.State.ChangeType(value.Type, _presets.GetValueOrDefault(value.Type));
+            p.State.ChangeType(value.Type, _presets.GetValueOrDefault(value.Type), _english);
             Selection = null;
             OnPropertyChanged();
             RebuildSidePane();
@@ -198,7 +211,7 @@ public sealed partial class MainViewModel : ObservableObject
     // ---- 注意書きバナー（§3.5: キャンバス上部・閉じられる。書き出しシートにも再掲＝2 か所ルール） ----
 
     public IReadOnlyList<string> BannerWarnings =>
-        SelectedPage is { } p && _presets.TryGetValue(p.State.Type, out var preset) ? preset.Warnings : [];
+        SelectedPage is { } p && _presets.TryGetValue(p.State.Type, out var preset) ? preset.LocalizedWarnings(_english) : [];
 
     public bool IsBannerVisible =>
         SelectedPage is { } p && BannerWarnings.Count > 0 && !_dismissedBanners.Contains(p.State.Type);
@@ -236,7 +249,7 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 var state = PageState.From(loaded[i]);
                 if (_detector is not null && detections[i] is { } boxes)
-                    state.InitializeDetections(_detector.Id, boxes, _presets.GetValueOrDefault(state.Type));
+                    state.InitializeDetections(_detector.Id, boxes, _presets.GetValueOrDefault(state.Type), _english);
                 var vm = new PageViewModel(state);
                 Pages.Add(vm);
                 first ??= vm;
@@ -422,7 +435,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Checklist.Clear();
         if (SelectedPage is { } p && _presets.TryGetValue(p.State.Type, out var preset))
-            foreach (var row in State.Checklist.Build(preset)) Checklist.Add(new ChecklistItemViewModel(row, p.State, NoteEdited));
+            foreach (var row in State.Checklist.Build(preset, _english)) Checklist.Add(new ChecklistItemViewModel(row, p.State, NoteEdited));
         RebuildCandidates();
         OnPropertyChanged(nameof(BannerWarnings));
         OnPropertyChanged(nameof(IsBannerVisible));
@@ -432,12 +445,26 @@ public sealed partial class MainViewModel : ObservableObject
     {
         CandidateItems.Clear();
         if (SelectedPage is { } p)
-            foreach (var c in p.State.Candidates) CandidateItems.Add(new CandidateViewModel(c, SetCandidateOn));
+        {
+            var preset = _presets.GetValueOrDefault(p.State.Type);
+            foreach (var c in p.State.Candidates)
+                CandidateItems.Add(new CandidateViewModel(c, SetCandidateOn, CandidateText(preset, c)));
+        }
         OnPropertyChanged(nameof(HasNoCandidates));
     }
 
+    /// <summary>
+    /// 候補の表示文言は、その時の表示言語でプリセットから引き直す（保存した作業を別の言語で開いたときも揃うように）。
+    /// 該当ルールが無ければ候補が持つ文言のまま。保存する値（MaskCandidate）は変えない。
+    /// </summary>
+    private (string Label, string Basis) CandidateText(DocumentPreset? preset, MaskCandidate c) =>
+        preset?.Rules.FirstOrDefault(r => r.Id == c.RuleId) is { } rule
+            ? (rule.LocalizedLabel(_english), rule.LocalizedBasis(_english))
+            : (c.Label, c.Basis);
+
     private void RefreshCommands()
     {
+        OpenSettingsCommand.RaiseCanExecuteChanged();
         OpenFilesCommand.RaiseCanExecuteChanged();
         RemovePageCommand.RaiseCanExecuteChanged();
         MovePageUpCommand.RaiseCanExecuteChanged();
@@ -455,7 +482,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>書き出しシート用の ViewModel を作る（ページ順は現在のレールの順）。</summary>
     public ExportViewModel CreateExportViewModel() =>
-        new(Pages.Select(p => p.State).ToList(), _presets, _rasterizer, _exporter, _dialogs, _now);
+        new(Pages.Select(p => p.State).ToList(), _presets, _rasterizer, _exporter, _dialogs, _now, _english);
 
     private void OpenExport()
     {

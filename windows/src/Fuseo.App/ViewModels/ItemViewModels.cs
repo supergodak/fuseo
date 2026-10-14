@@ -89,11 +89,12 @@ public sealed class ChecklistItemViewModel(ChecklistRow row, PageState page, Act
 }
 
 /// <summary>候補一覧の 1 行（ON/OFF）。変更は MainViewModel 経由でページに記録する（Undo 対象）。</summary>
-public sealed class CandidateViewModel(MaskCandidate candidate, Action<Guid, bool> setOn) : ObservableObject
+public sealed class CandidateViewModel(MaskCandidate candidate, Action<Guid, bool> setOn, (string Label, string Basis)? text = null)
+    : ObservableObject
 {
     public Guid Id => candidate.Id;
-    public string Label => candidate.Label;
-    public string Basis => candidate.Basis;
+    public string Label => text?.Label ?? candidate.Label;
+    public string Basis => text?.Basis ?? candidate.Basis;
     public string? ConfidenceText => candidate.Confidence is { } c ? $"{(int)Math.Round(c * 100)}%" : null;
 
     public bool IsOn

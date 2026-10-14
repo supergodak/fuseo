@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- UI 文言（日本語が既定・ニュートラル）。英語は W6 で Strings.en.resx を足す。キーを足したら Strings.cs にも足す（StringsTests が対応を検査）。 -->
+<!-- UI 文言（日本語が既定・ニュートラル）。英語は Strings.en.resx（全キー必須）。キーを足したら Strings.cs にも足す（StringsTests が対応を検査）。 -->
 <root>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
@@ -133,4 +133,45 @@
   <data name="StatusWorkOpened" xml:space="preserve"><value>「{0}」を開きました（{1} ページ）</value></data>
   <data name="StatusSaveFailed" xml:space="preserve"><value>自動保存に失敗しました: {0}</value></data>
   <data name="StatusLibraryFailed" xml:space="preserve"><value>作業の一覧を読めませんでした: {0}</value></data>
+  <data name="Settings" xml:space="preserve"><value>設定…</value></data>
+  <data name="SettingsTip" xml:space="preserve"><value>表示言語・作業の保存場所を設定します</value></data>
+  <data name="About" xml:space="preserve"><value>バージョン情報</value></data>
+  <data name="AboutTip" xml:space="preserve"><value>バージョン・ライセンスを表示します</value></data>
+  <data name="Close" xml:space="preserve"><value>閉じる</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>設定</value></data>
+  <data name="SettingsLanguageLabel" xml:space="preserve"><value>表示言語</value></data>
+  <data name="SettingsLanguageAuto" xml:space="preserve"><value>自動（Windows の表示言語が日本語なら日本語、それ以外は英語）</value></data>
+  <data name="SettingsLanguageJapanese" xml:space="preserve"><value>日本語</value></data>
+  <data name="SettingsLanguageEnglish" xml:space="preserve"><value>English</value></data>
+  <data name="SettingsRestartNote" xml:space="preserve"><value>表示言語の変更は、アプリを再起動すると反映されます。</value></data>
+  <data name="SettingsSaveFailed" xml:space="preserve"><value>設定を保存できませんでした。
+{0}</value></data>
+  <data name="SettingsStorageHeading" xml:space="preserve"><value>作業の保存場所</value></data>
+  <data name="SettingsStorageNote" xml:space="preserve"><value>作業中の書類（黒塗り前の画像を含む）は、このパソコンの次のフォルダにだけ保存されます。削除するまで残ります。</value></data>
+  <data name="SettingsOpenFolder" xml:space="preserve"><value>フォルダを開く</value></data>
+  <data name="SettingsOpenFolderFailed" xml:space="preserve"><value>フォルダを開けませんでした。
+{0}</value></data>
+  <data name="SettingsDeleteHeading" xml:space="preserve"><value>作業の削除</value></data>
+  <data name="SettingsDeleteAll" xml:space="preserve"><value>すべての作業を削除…</value></data>
+  <data name="SettingsDeleteAllNote" xml:space="preserve"><value>保存されている作業を、黒塗り前の画像も含めてすべてこのパソコンから消します。元に戻せません。</value></data>
+  <data name="SettingsDeleteAllBlocked" xml:space="preserve"><value>書類を開いている間は削除できません。「新しい書類」で閉じてから削除してください。</value></data>
+  <data name="SettingsNoWorks" xml:space="preserve"><value>保存されている作業はありません。</value></data>
+  <data name="SettingsWorkCount" xml:space="preserve"><value>保存されている作業: {0} 件</value></data>
+  <data name="AboutTitle" xml:space="preserve"><value>バージョン情報</value></data>
+  <data name="AboutVersion" xml:space="preserve"><value>バージョン {0}</value></data>
+  <data name="AboutCopyright" xml:space="preserve"><value>© 2026 ATI Inc.（ATI株式会社）</value></data>
+  <data name="AboutNoNetwork" xml:space="preserve"><value>このアプリは通信しません。ファイルはこのパソコンの中だけで処理します。</value></data>
+  <data name="AboutWebsite" xml:space="preserve"><value>Web サイト</value></data>
+  <data name="AboutSourceCode" xml:space="preserve"><value>ソースコード</value></data>
+  <data name="AboutCopy" xml:space="preserve"><value>コピー</value></data>
+  <data name="AboutCopied" xml:space="preserve"><value>コピーしました: {0}</value></data>
+  <data name="AboutUrlNote" xml:space="preserve"><value>このアプリからブラウザは開きません。アドレスをコピーしてブラウザに貼り付けてください。</value></data>
+  <data name="AboutLicenseHeading" xml:space="preserve"><value>ライセンス（MIT）</value></data>
+  <data name="AboutThirdPartyHeading" xml:space="preserve"><value>第三者のソフトウェアのライセンス</value></data>
+  <data name="ClosingSaving" xml:space="preserve"><value>作業を保存しています…保存が終わると閉じます。</value></data>
+  <data name="ImportErrorPageLimitFile" xml:space="preserve"><value>「{0}」は {1} ページあります。一度に取り込めるのは {2} ページまでです。</value></data>
+  <data name="ImportErrorHeic" xml:space="preserve"><value>「{0}」（HEIC）を開けませんでした。Microsoft Store の「HEIF 画像拡張機能」が必要です。入っている場合はファイルが壊れている可能性があります。iPhone の写真は JPEG に変換してから取り込むこともできます。</value></data>
+  <data name="ImportErrorUnreadableFile" xml:space="preserve"><value>「{0}」を読み込めませんでした。ファイルが壊れているか、対応していない形式の可能性があります。</value></data>
+  <data name="ImportErrorUnsupportedFile" xml:space="preserve"><value>「{0}」は対応していない形式です（JPEG / PNG / BMP / TIFF / HEIC / PDF に対応）。</value></data>
+  <data name="ImportErrorFileGeneric" xml:space="preserve"><value>「{0}」を読み込めませんでした。</value></data>
 </root>

@@ -4,7 +4,7 @@
         xmlns:p="clr-namespace:Fuseo.App.Properties"
         xmlns:v="clr-namespace:Fuseo.App.Views"
         xmlns:vm="clr-namespace:Fuseo.App.ViewModels"
-        Title="{x:Static p:Strings.AppTitle}" Width="1280" Height="820" MinWidth="900" MinHeight="560"
+        Title="{x:Static p:Strings.AppTitle}" Width="1280" Height="820" MinWidth="1024" MinHeight="700"
         AllowDrop="True" Background="#F3F3F3">
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenFilesCommand}"/>
@@ -22,54 +22,79 @@
         <KeyBinding Key="B" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}"/>
     </Window.InputBindings>
 
+    <Grid>
     <DockPanel>
-        <!-- ツールバー -->
-        <Border DockPanel.Dock="Top" Background="White" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="10,6">
-            <DockPanel LastChildFill="False">
-                <!-- 書き出しは先に右へ置く（幅が足りないときに左側の道具が切れても、書き出しボタンは必ず見える）。 -->
-                <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
-                        Padding="14,4" FontWeight="SemiBold" AutomationProperties.AutomationId="main.export"/>
+        <!-- ツールバー（W6: 最小幅 1024 で日本語・英語とも全ボタンが見えるよう、道具はグループ単位で折り返す）。 -->
+        <Border DockPanel.Dock="Top" Background="White" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="10,4">
+            <DockPanel>
+                <!-- 書き出し・設定・バージョン情報は右に固定（折り返しても書き出しボタンは常に右上に見える）。 -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="8,2,0,2">
+                    <Button Content="{x:Static p:Strings.Settings}" Command="{Binding OpenSettingsCommand}" Padding="8,4"
+                            ToolTip="{x:Static p:Strings.SettingsTip}" AutomationProperties.AutomationId="main.settings"/>
+                    <Button Content="{x:Static p:Strings.About}" Command="{Binding OpenAboutCommand}" Padding="8,4" Margin="4,0,8,0"
+                            ToolTip="{x:Static p:Strings.AboutTip}" AutomationProperties.AutomationId="main.about"/>
+                    <Button Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
+                            Padding="14,4" FontWeight="SemiBold" AutomationProperties.AutomationId="main.export"/>
+                </StackPanel>
 
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.NewDocument}" Command="{Binding NewDocumentCommand}"
-                        Padding="10,4" Margin="0,0,4,0" ToolTip="{x:Static p:Strings.NewDocumentTip}"
-                        AutomationProperties.AutomationId="main.newDocument"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.OpenFiles}" Command="{Binding OpenFilesCommand}"
-                        Padding="10,4" ToolTip="{x:Static p:Strings.OpenFilesTip}"/>
-                <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
-                <TextBlock DockPanel.Dock="Left" Text="{x:Static p:Strings.ToolLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <RadioButton DockPanel.Dock="Left" Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                             Content="{x:Static p:Strings.ToolSelect}" IsChecked="{Binding IsSelectTool}" Padding="10,4"
-                             ToolTip="{x:Static p:Strings.ToolSelectTip}" AutomationProperties.AutomationId="tool.select"/>
-                <RadioButton DockPanel.Dock="Left" Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                             Content="{x:Static p:Strings.ToolRect}" IsChecked="{Binding IsRectTool}" Padding="10,4" Margin="2,0"
-                             ToolTip="{x:Static p:Strings.ToolRectTip}" AutomationProperties.AutomationId="tool.rect"/>
-                <RadioButton DockPanel.Dock="Left" Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                             Content="{x:Static p:Strings.ToolBrush}" IsChecked="{Binding IsBrushTool}" Padding="10,4"
-                             ToolTip="{x:Static p:Strings.ToolBrushTip}" AutomationProperties.AutomationId="tool.brush"/>
-                <TextBlock DockPanel.Dock="Left" Text="{x:Static p:Strings.BrushSizeLabel}" VerticalAlignment="Center" Margin="12,0,6,0"/>
-                <RadioButton DockPanel.Dock="Left" Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
-                             Content="{x:Static p:Strings.BrushThin}" IsChecked="{Binding IsBrushThin}" Padding="8,4"/>
-                <RadioButton DockPanel.Dock="Left" Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
-                             Content="{x:Static p:Strings.BrushMedium}" IsChecked="{Binding IsBrushMedium}" Padding="8,4" Margin="2,0"/>
-                <RadioButton DockPanel.Dock="Left" Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
-                             Content="{x:Static p:Strings.BrushThick}" IsChecked="{Binding IsBrushThick}" Padding="8,4"/>
-                <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.Undo}" Command="{Binding UndoCommand}" Padding="8,4"
-                        ToolTip="{x:Static p:Strings.UndoTip}"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.Redo}" Command="{Binding RedoCommand}" Padding="8,4" Margin="2,0"
-                        ToolTip="{x:Static p:Strings.RedoTip}"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.DeleteSelection}" Command="{Binding DeleteSelectionCommand}"
-                        Padding="8,4" ToolTip="{x:Static p:Strings.DeleteSelectionTip}"/>
-                <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.RotateLeft}" Command="{Binding RotateLeftCommand}" Padding="8,4"
-                        ToolTip="{x:Static p:Strings.RotateLeftTip}" AutomationProperties.AutomationId="main.rotateLeft"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.RotateRight}" Command="{Binding RotateRightCommand}" Padding="8,4" Margin="2,0"
-                        ToolTip="{x:Static p:Strings.RotateRightTip}" AutomationProperties.AutomationId="main.rotateRight"/>
-                <Separator DockPanel.Dock="Left" Margin="10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.ZoomOut}" Click="OnZoomOut" Padding="8,4" MinWidth="30"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.ZoomIn}" Click="OnZoomIn" Padding="8,4" MinWidth="30" Margin="2,0"/>
-                <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.ZoomFit}" Click="OnZoomFit" Padding="8,4"
-                        ToolTip="{x:Static p:Strings.ZoomTip}"/>
+                <WrapPanel Orientation="Horizontal" AutomationProperties.AutomationId="main.toolbar">
+                    <WrapPanel.Resources>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Orientation" Value="Horizontal"/>
+                            <Setter Property="Margin" Value="0,2,14,2"/>
+                        </Style>
+                    </WrapPanel.Resources>
+                    <StackPanel>
+                        <Button Content="{x:Static p:Strings.NewDocument}" Command="{Binding NewDocumentCommand}"
+                                Padding="8,4" Margin="0,0,4,0" ToolTip="{x:Static p:Strings.NewDocumentTip}"
+                                AutomationProperties.AutomationId="main.newDocument"/>
+                        <Button Content="{x:Static p:Strings.OpenFiles}" Command="{Binding OpenFilesCommand}"
+                                Padding="8,4" ToolTip="{x:Static p:Strings.OpenFilesTip}" AutomationProperties.AutomationId="main.openFiles"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="{x:Static p:Strings.ToolLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolSelect}" IsChecked="{Binding IsSelectTool}" Padding="8,4"
+                                     ToolTip="{x:Static p:Strings.ToolSelectTip}" AutomationProperties.AutomationId="tool.select"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolRect}" IsChecked="{Binding IsRectTool}" Padding="8,4" Margin="2,0"
+                                     ToolTip="{x:Static p:Strings.ToolRectTip}" AutomationProperties.AutomationId="tool.rect"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolBrush}" IsChecked="{Binding IsBrushTool}" Padding="8,4"
+                                     ToolTip="{x:Static p:Strings.ToolBrushTip}" AutomationProperties.AutomationId="tool.brush"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="{x:Static p:Strings.BrushSizeLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
+                                     Content="{x:Static p:Strings.BrushThin}" IsChecked="{Binding IsBrushThin}" Padding="6,4"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
+                                     Content="{x:Static p:Strings.BrushMedium}" IsChecked="{Binding IsBrushMedium}" Padding="6,4" Margin="2,0"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
+                                     Content="{x:Static p:Strings.BrushThick}" IsChecked="{Binding IsBrushThick}" Padding="6,4"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="{x:Static p:Strings.Undo}" Command="{Binding UndoCommand}" Padding="8,4"
+                                ToolTip="{x:Static p:Strings.UndoTip}" AutomationProperties.AutomationId="main.undo"/>
+                        <Button Content="{x:Static p:Strings.Redo}" Command="{Binding RedoCommand}" Padding="8,4" Margin="2,0"
+                                ToolTip="{x:Static p:Strings.RedoTip}" AutomationProperties.AutomationId="main.redo"/>
+                        <Button Content="{x:Static p:Strings.DeleteSelection}" Command="{Binding DeleteSelectionCommand}"
+                                Padding="8,4" ToolTip="{x:Static p:Strings.DeleteSelectionTip}" AutomationProperties.AutomationId="main.deleteSelection"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="{x:Static p:Strings.RotateLeft}" Command="{Binding RotateLeftCommand}" Padding="8,4"
+                                ToolTip="{x:Static p:Strings.RotateLeftTip}" AutomationProperties.AutomationId="main.rotateLeft"/>
+                        <Button Content="{x:Static p:Strings.RotateRight}" Command="{Binding RotateRightCommand}" Padding="8,4" Margin="2,0,0,0"
+                                ToolTip="{x:Static p:Strings.RotateRightTip}" AutomationProperties.AutomationId="main.rotateRight"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="{x:Static p:Strings.ZoomOut}" Click="OnZoomOut" Padding="8,4" MinWidth="30"
+                                ToolTip="{x:Static p:Strings.ZoomTip}" AutomationProperties.AutomationId="main.zoomOut"/>
+                        <Button Content="{x:Static p:Strings.ZoomIn}" Click="OnZoomIn" Padding="8,4" MinWidth="30" Margin="2,0"
+                                ToolTip="{x:Static p:Strings.ZoomTip}" AutomationProperties.AutomationId="main.zoomIn"/>
+                        <Button Content="{x:Static p:Strings.ZoomFit}" Click="OnZoomFit" Padding="8,4"
+                                ToolTip="{x:Static p:Strings.ZoomTip}" AutomationProperties.AutomationId="main.zoomFit"/>
+                    </StackPanel>
+                </WrapPanel>
             </DockPanel>
         </Border>
 
@@ -264,4 +289,11 @@
             </Grid>
         </DockPanel>
     </DockPanel>
+    <!-- 終了時の保存待ち（3 秒を超えたら出す・W6）。 -->
+    <Border x:Name="ClosingOverlay" Visibility="Collapsed" Background="#99000000">
+        <Border Background="White" CornerRadius="6" Padding="24,16" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="{x:Static p:Strings.ClosingSaving}" FontSize="15" AutomationProperties.AutomationId="main.closingSaving"/>
+        </Border>
+    </Border>
+    </Grid>
 </Window>

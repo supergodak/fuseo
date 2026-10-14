@@ -29,8 +29,10 @@ public sealed class ExportViewModel : ObservableObject
     private bool _isSaving;
 
     public ExportViewModel(IReadOnlyList<PageState> pages, IReadOnlyDictionary<DocumentType, DocumentPreset> presets,
-                           IMaskRasterizer rasterizer, IExporter exporter, IDialogService dialogs, Func<DateTime> now)
+                           IMaskRasterizer rasterizer, IExporter exporter, IDialogService dialogs, Func<DateTime> now,
+                           bool? english = null)
     {
+        var useEnglish = english ?? Strings.IsEnglish;
         _pages = pages;
         _presets = presets;
         _rasterizer = rasterizer;
@@ -42,7 +44,7 @@ public sealed class ExportViewModel : ObservableObject
 
         // 種別の注意書き（書き出す全ページの種別の和・重複なし）。バナーを閉じていてもここには必ず出す。
         Warnings = pages.Select(p => p.Type).Distinct()
-            .SelectMany(t => _presets.TryGetValue(t, out var pr) ? pr.Warnings : [])
+            .SelectMany(t => _presets.TryGetValue(t, out var pr) ? pr.LocalizedWarnings(useEnglish) : [])
             .Distinct().ToList();
         HasZeroMaskPage = pages.Any(p => p.MaskCount == 0);
         var auto = pages.Sum(p => p.ActiveCandidateCount);
