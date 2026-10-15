@@ -13,7 +13,7 @@ public sealed class PageViewModel(PageState state) : ObservableObject
 {
     private int _number;
     private BitmapSource? _thumbnail;
-    private int _thumbnailRotation;
+    private Fuseo.Core.Imaging.PageBitmap? _thumbnailSource;
 
     public PageState State { get; } = state;
 
@@ -32,15 +32,16 @@ public sealed class PageViewModel(PageState state) : ObservableObject
         ? Strings.PageNoMask
         : string.Format(Strings.PageMaskCount, State.MaskCount);
 
-    /// <summary>縮小画像（初めて表示されたとき・回転が変わったときに作る）。</summary>
+    /// <summary>縮小画像（初めて表示されたとき・基準の画像が変わった＝回転・切り抜きが変わったときに作る）。</summary>
     public BitmapSource Thumbnail
     {
         get
         {
-            if (_thumbnail is null || _thumbnailRotation != State.Rotation)
+            var current = State.Base;
+            if (_thumbnail is null || !ReferenceEquals(_thumbnailSource, current))
             {
-                _thumbnail = BitmapConvert.Thumbnail(State.Base, 240);
-                _thumbnailRotation = State.Rotation;
+                _thumbnail = BitmapConvert.Thumbnail(current, 240);
+                _thumbnailSource = current;
             }
             return _thumbnail;
         }
@@ -49,7 +50,7 @@ public sealed class PageViewModel(PageState state) : ObservableObject
     public void Refresh()
     {
         OnPropertyChanged(nameof(MaskCountText));
-        if (_thumbnail is not null && _thumbnailRotation != State.Rotation) OnPropertyChanged(nameof(Thumbnail));
+        if (_thumbnail is not null && !ReferenceEquals(_thumbnailSource, State.Base)) OnPropertyChanged(nameof(Thumbnail));
     }
 }
 

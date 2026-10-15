@@ -190,4 +190,18 @@ public static class Strings
     public static string ImportErrorUnreadableFile => Get(nameof(ImportErrorUnreadableFile));
     public static string ImportErrorUnsupportedFile => Get(nameof(ImportErrorUnsupportedFile));
     public static string ImportErrorFileGeneric => Get(nameof(ImportErrorFileGeneric));
+    public static string Crop => Get(nameof(Crop));
+    public static string CropTip => Get(nameof(CropTip));
+    public static string CropTitle => Get(nameof(CropTitle));
+    public static string CropInstruction => Get(nameof(CropInstruction));
+    public static string CropFull => Get(nameof(CropFull));
+    public static string CropApply => Get(nameof(CropApply));
+    public static string CropInvalid => Get(nameof(CropInvalid));
+    public static string CropConfirmTitle => Get(nameof(CropConfirmTitle));
+    public static string CropConfirmMessage => Get(nameof(CropConfirmMessage));
+    public static string CropErrorTitle => Get(nameof(CropErrorTitle));
+    public static string StatusCropping => Get(nameof(StatusCropping));
+    public static string StatusCropped => Get(nameof(StatusCropped));
+    public static string StatusCropCleared => Get(nameof(StatusCropCleared));
+    public static string StatusCropDetectFailed => Get(nameof(StatusCropDetectFailed));
 }

@@ -11,10 +11,13 @@ namespace Fuseo.App.State;
 /// - <see cref="Rotation"/>: 元画像からの時計回り 90° の回数（0..3）。
 /// - 手動マスク・候補の座標は**常にこの Rotation で回した画像の上**の正規化座標（左上原点）。
 /// - <see cref="Type"/>: 書類種別。種別を変えると候補（defaultOn）が作り直されるので、候補と一緒に戻せるようここに持つ。
+/// - <see cref="Crop"/>: 手動 4 隅切り抜き（W4.5）。**元画像（回転 0）の上**の四隅。null = 切り抜きなし。
+/// - <see cref="RawDetections"/>: 自動検出の生の箱（padding 前・回転 0・**切り抜いた画像の上**）。切り抜きを変えると検出し直すので、
+///   切り抜きと一緒に戻せるようここに持つ（null = 空）。
 /// </summary>
 public sealed record EditSnapshot(
     ManualMask Manual, IReadOnlyList<MaskCandidate> Candidates, int Rotation = 0,
-    DocumentType Type = DocumentType.Generic)
+    DocumentType Type = DocumentType.Generic, Quad? Crop = null, IReadOnlyList<NormRect>? RawDetections = null)
 {
     public static readonly EditSnapshot Empty = new(new ManualMask(), []);
 }
@@ -23,11 +26,12 @@ public sealed record EditSnapshot(
 /// 1 ページの状態（docs/windows-design.md §3.4 の PageState 相当）。UI 非依存（WPF 型を持たない）で、
 /// 後で自動保存（W5・fuseo-win/1）の JSON にしやすいよう、値はすべて Core の型か基本型で持つ。
 /// - 取り込んだ画像 <see cref="Original"/> は不変（EXIF・PDF の回転は取り込み時に焼き込み済み・§3.3）。
-/// - <see cref="Base"/> は「現在の <see cref="Rotation"/> で回した画像」。表示・当たり判定・焼き込み・書き出しはすべてこれを使う。
+/// - <see cref="Base"/> は「<see cref="Original"/> を <see cref="Crop"/> で台形補正し（<see cref="Cropped"/>）、現在の <see cref="Rotation"/> で回した画像」。
+///   表示・当たり判定・焼き込み・書き出しはすべてこれを使う（切り抜いた外側は書き出しに入らない）。
 /// - マスク座標は <see cref="Base"/> 上の正規化座標・左上原点のみ。回転するときは画像と**同じ回数だけ**マスクも回す
 ///   （<see cref="QuarterTurn"/> 経由のみ）。
 /// - Undo/Redo はページごと（手動マスク・候補の ON/OFF・回転・種別を 1 つのスナップショットで持つ）。
-/// - 自動検出の生の箱 <see cref="RawDetections"/> は padding 前・回転 0（<see cref="Original"/> 基準）で持ち、
+/// - 自動検出の生の箱 <see cref="RawDetections"/> は padding 前・回転 0（<see cref="Cropped"/> 基準）で持ち、
 ///   種別を変えたら現在の回転まで回してから候補を作り直す。
 /// </summary>
 public sealed class PageState
@@ -39,7 +43,8 @@ public sealed class PageState
     private readonly Stack<EditSnapshot> _redo = new();
     private EditSnapshot _current = EditSnapshot.Empty;
     private readonly object _baseLock = new();
-    private (int Rotation, PageBitmap Bitmap)? _rotatedCache;
+    private (Quad Crop, PageBitmap Bitmap)? _croppedCache;
+    private (Quad? Crop, int Rotation, PageBitmap Bitmap)? _rotatedCache;
 
     public PageState(PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf, Guid? id = null)
     {
@@ -63,17 +68,15 @@ public sealed class PageState
     public static PageState Restore(
         Guid id, PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf,
         DocumentType type, int rotation, ManualMask manual, IReadOnlyList<MaskCandidate> candidates,
-        DetectorId? rawDetector, IReadOnlyList<NormRect> rawDetections, IEnumerable<string> checkedRuleIds)
+        DetectorId? rawDetector, IReadOnlyList<NormRect> rawDetections, IEnumerable<string> checkedRuleIds,
+        Quad? crop = null)
     {
         if (rotation is < 0 or > 3) throw new ArgumentOutOfRangeException(nameof(rotation), "回転は 0..3");
-        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id)
-        {
-            RawDetector = rawDetector,
-            RawDetections = rawDetections.ToList(),
-        };
+        if (crop is { } q && !q.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
+        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id) { RawDetector = rawDetector };
         state._current = new EditSnapshot(
             new ManualMask { Rects = [.. manual.Rects], Strokes = [.. manual.Strokes] },
-            candidates.ToList(), rotation, type);
+            candidates.ToList(), rotation, type, NormalizeCrop(crop), rawDetections.ToList());
         foreach (var r in checkedRuleIds) state.CheckedRuleIds.Add(r);
         return state;
     }
@@ -82,24 +85,46 @@ public sealed class PageState
     public PageBitmap Original { get; }
 
     /// <summary>
-    /// 現在の <see cref="Rotation"/> で回した画像（マスク座標の基準）。回転 0 なら <see cref="Original"/> そのもの。
+    /// <see cref="Original"/> を <see cref="Crop"/> で台形補正した画像（回転 0・検出の生の箱の基準）。切り抜きなしなら <see cref="Original"/> そのもの。
+    /// 直近の 1 つだけキャッシュする。**書き換え禁止**。
+    /// </summary>
+    public PageBitmap Cropped => CroppedFor(Crop);
+
+    private PageBitmap CroppedFor(Quad? crop)
+    {
+        if (crop is not { } q) return Original;
+        lock (_baseLock)
+        {
+            if (_croppedCache is { } c && c.Crop == q) return c.Bitmap;
+            var bmp = Perspective.Warp(Original, q);
+            _croppedCache = (q, bmp);
+            return bmp;
+        }
+    }
+
+    /// <summary>
+    /// 現在の切り抜き・<see cref="Rotation"/> の画像（マスク座標の基準）。切り抜きなし・回転 0 なら <see cref="Original"/> そのもの。
     /// 回転した画像は直近の 1 つだけキャッシュする（50 ページ × 4 向きを抱えない）。**書き換え禁止**。
     /// </summary>
     public PageBitmap Base
     {
         get
         {
-            var rotation = Rotation;
-            if (rotation == 0) return Original;
+            var (crop, rotation) = (Crop, Rotation);
+            var cropped = CroppedFor(crop);
+            if (rotation == 0) return cropped;
             lock (_baseLock)
             {
-                if (_rotatedCache is { } c && c.Rotation == rotation) return c.Bitmap;
-                var bmp = QuarterTurn.Rotate(Original, rotation);
-                _rotatedCache = (rotation, bmp);
+                if (_rotatedCache is { } c && c.Crop == crop && c.Rotation == rotation) return c.Bitmap;
+                var bmp = QuarterTurn.Rotate(cropped, rotation);
+                _rotatedCache = (crop, rotation, bmp);
                 return bmp;
             }
         }
     }
+
+    /// <summary>手動 4 隅切り抜き（元画像・回転 0 の上の四隅）。null = 切り抜きなし。W5 の JSON（manualQuad）の項目。</summary>
+    public Quad? Crop => _current.Crop;
     public string SourceName { get; }
     public int SourcePageIndex { get; }
     public bool FromPdf { get; }
@@ -113,8 +138,8 @@ public sealed class PageState
     /// <summary>手動回転（時計回り 90° の回数・0..3）。W5 の JSON（manualRotation）の項目。</summary>
     public int Rotation => _current.Rotation;
 
-    /// <summary>自動検出の生の箱（padding 前・回転 0 = <see cref="Original"/> 基準・左上原点）。</summary>
-    public IReadOnlyList<NormRect> RawDetections { get; private set; } = [];
+    /// <summary>自動検出の生の箱（padding 前・回転 0 = <see cref="Cropped"/> 基準・左上原点）。</summary>
+    public IReadOnlyList<NormRect> RawDetections => _current.RawDetections ?? [];
 
     /// <summary>生の箱を出した検出器（候補の Detector 欄に入れる）。</summary>
     public DetectorId? RawDetector { get; private set; }
@@ -172,9 +197,33 @@ public sealed class PageState
     public void InitializeDetections(DetectorId detector, IReadOnlyList<NormRect> rawBoxes, DocumentPreset? preset, bool english = false)
     {
         RawDetector = detector;
-        RawDetections = rawBoxes.ToList();
-        _current = _current with { Candidates = CandidateFactory.Build(preset, detector, RawDetections, Rotation, english) };
+        var raw = rawBoxes.ToList();
+        _current = _current with { RawDetections = raw, Candidates = CandidateFactory.Build(preset, detector, raw, Rotation, english) };
     }
+
+    /// <summary>
+    /// 4 隅切り抜きを変える（W4.5）。<paramref name="crop"/> は**元画像（回転 0）の上**の四隅（null・全体 = 切り抜きなし）。
+    /// 画像が変わるので**手動マスクは消し**、候補は新しい画像での検出結果 <paramref name="rawBoxes"/>（padding 前・回転 0・切り抜いた画像の上。
+    /// 検出しなかった・失敗したなら <paramref name="detector"/> = null・空）
+    /// から現在の種別の defaultOn で作り直す。回転・種別はそのまま。1 回の変更として Undo で戻せる（消したマスクも戻る）。
+    /// <paramref name="cropped"/> は呼び出し側が検出のために作った台形補正済みの画像（あればキャッシュに入れて作り直さない）。
+    /// </summary>
+    public void ApplyCrop(Quad? crop, DetectorId? detector, IReadOnlyList<NormRect> rawBoxes, DocumentPreset? preset,
+                          bool english = false, PageBitmap? cropped = null)
+    {
+        if (crop is { } c && !c.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
+        var next = NormalizeCrop(crop);
+        // 取り込み時に検出できなかったページでも、切り抜いた画像で検出できたら以後はその検出器の箱として扱う。
+        if (detector is { } id) RawDetector = id;
+        if (next is { } q && cropped is not null)
+            lock (_baseLock) _croppedCache = (q, cropped);
+        var raw = rawBoxes.ToList();
+        var candidates = RawDetector is { } d ? CandidateFactory.Build(preset, d, raw, Rotation, english) : [];
+        Commit(_current with { Crop = next, RawDetections = raw, Manual = new ManualMask(), Candidates = candidates });
+    }
+
+    /// <summary>全体と同じ四隅は「切り抜きなし」（null）にそろえる。</summary>
+    private static Quad? NormalizeCrop(Quad? crop) => crop is { IsFullImage: true } ? null : crop;
 
     /// <summary>
     /// 種別を変える。生の検出箱から新しい種別の候補（その種別の defaultOn）を作り直し、種別と一緒に 1 回の変更として Commit する。

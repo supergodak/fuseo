@@ -1,0 +1,35 @@
+<Window x:Class="Fuseo.App.Views.CropWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="clr-namespace:Fuseo.App.Properties"
+        xmlns:v="clr-namespace:Fuseo.App.Views"
+        Title="{x:Static p:Strings.CropTitle}"
+        Width="900" Height="760" MinWidth="560" MinHeight="480"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <!-- 4 隅切り抜き（W4.5）。画像は切り抜く前の元画像（いまの向き）。四隅は QuadEditor で動かす。 -->
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="{x:Static p:Strings.CropInstruction}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+        <Grid Grid.Row="1" Background="#2B2B2B">
+            <Image x:Name="Picture" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                   AutomationProperties.AutomationId="crop.image"/>
+            <v:QuadEditor x:Name="Editor" AutomationProperties.AutomationId="crop.editor"/>
+        </Grid>
+        <DockPanel Grid.Row="2" Margin="0,12,0,0" LastChildFill="True">
+            <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.CropFull}" Padding="10,4" Click="OnFull"
+                    AutomationProperties.AutomationId="crop.full"/>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button x:Name="ApplyButton" Content="{x:Static p:Strings.CropApply}" IsDefault="True" MinWidth="88" Margin="0,0,8,0"
+                        Click="OnApply" AutomationProperties.AutomationId="crop.apply"/>
+                <Button Content="{x:Static p:Strings.Cancel}" IsCancel="True" MinWidth="88"
+                        AutomationProperties.AutomationId="crop.cancel"/>
+            </StackPanel>
+            <TextBlock x:Name="InvalidText" Text="{x:Static p:Strings.CropInvalid}" Foreground="#C62828" TextWrapping="Wrap"
+                       VerticalAlignment="Center" Margin="12,0" Visibility="Collapsed"/>
+        </DockPanel>
+    </Grid>
+</Window>

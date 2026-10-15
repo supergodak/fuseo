@@ -42,6 +42,7 @@ public static class WorkDocumentJson
         o.Converters.Add(new UtcDateConverter());
         o.Converters.Add(new NormRectConverter());
         o.Converters.Add(new NormPointConverter());
+        o.Converters.Add(new QuadConverter());
         o.Converters.Add(new BrushStrokeConverter());
         o.Converters.Add(new ManualMaskConverter());
         o.Converters.Add(new MaskCandidateConverter());
@@ -149,6 +150,9 @@ public static class WorkDocumentJson
         foreach (var r in p.RawDetections!) Require(IsValidRect(r), $"{at}.rawDetections が範囲外");
         Require(p.CheckedRuleIds is not null && p.CheckedRuleIds.All(id => id is not null), $"{at}.checkedRuleIds が不正");
         Require(p.Ocr is not null, $"{at}.ocr が null");
+        if (p.ManualQuad is { } q)
+            Require(q.Corners.All(c => c.X >= -Epsilon && c.X <= 1 + Epsilon && c.Y >= -Epsilon && c.Y <= 1 + Epsilon) && q.IsConvex,
+                    $"{at}.manualQuad が範囲外か凸四角形でない");
     }
 
     private static bool IsValidRect(NormRect r) =>
@@ -233,6 +237,38 @@ public static class WorkDocumentJson
             writer.WriteNumberValue(value.X);
             writer.WriteNumberValue(value.Y);
             writer.WriteEndArray();
+        }
+    }
+
+    /// <summary>{"topLeft": [x,y], "topRight", "bottomRight", "bottomLeft"}（Mac の Quad と同じ名前。左上原点）。</summary>
+    private sealed class QuadConverter : JsonConverter<Quad>
+    {
+        private static readonly string[] Names = ["topLeft", "topRight", "bottomRight", "bottomLeft"];
+
+        public override Quad Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var pts = new NormPoint?[4];
+            BeginObject(ref reader);
+            while (NextProperty(ref reader, out var name))
+            {
+                var k = Array.IndexOf(Names, name);
+                if (k >= 0) pts[k] = JsonSerializer.Deserialize<NormPoint>(ref reader, options);
+                else reader.Skip();
+            }
+            if (pts.Any(p => p is null)) throw new JsonException("四隅が揃っていない");
+            return new Quad(pts[0]!.Value, pts[1]!.Value, pts[2]!.Value, pts[3]!.Value);
+        }
+
+        public override void Write(Utf8JsonWriter writer, Quad value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            var c = value.Corners;
+            for (var k = 0; k < 4; k++)
+            {
+                writer.WritePropertyName(Names[k]);
+                JsonSerializer.Serialize(writer, c[k], options);
+            }
+            writer.WriteEndObject();
         }
     }
 

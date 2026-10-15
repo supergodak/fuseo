@@ -77,6 +77,8 @@ public sealed class WpfDialogService(Window owner) : IDialogService
 
     public void OpenFolder(string path) => FolderLauncher.Open(path);
 
+    public Fuseo.Core.Geometry.Quad? AskCrop(CropRequest request) => CropWindow.Ask(owner, request);
+
     /// <summary>書き出しシート・設定が開いていればその上にメッセージを出す。</summary>
     private Window ActiveOwner() =>
         owner.OwnedWindows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? owner;

@@ -2,6 +2,7 @@ using System.IO;
 using Fuseo.App.Services;
 using Fuseo.App.ViewModels;
 using Fuseo.Core.Contracts;
+using Fuseo.Core.Geometry;
 using Fuseo.Core.Imaging;
 
 namespace Fuseo.App.Tests;
@@ -59,6 +60,15 @@ internal sealed class FakeDialogs : IDialogService
     public void ShowSettings(SettingsViewModel viewModel) => OnShowSettings?.Invoke(viewModel);
     public void ShowAbout() => AboutShown++;
     public void OpenFolder(string path) => OpenedFolders.Add(path);
+
+    public Quad? CropResult { get; set; }
+    public List<CropRequest> CropRequests { get; } = [];
+
+    public Quad? AskCrop(CropRequest request)
+    {
+        CropRequests.Add(request);
+        return CropResult;
+    }
 }
 
 /// <summary>受け取った焼き込み済みページを記録し、ページ番号を 1 バイト書く書き出し。</summary>

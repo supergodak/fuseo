@@ -81,6 +81,7 @@ public sealed partial class MainViewModel : ObservableObject
         DismissBannerCommand = new RelayCommand(DismissBanner);
         RotateLeftCommand = new RelayCommand(() => Rotate(-1), () => SelectedPage is not null && !IsBusy);
         RotateRightCommand = new RelayCommand(() => Rotate(+1), () => SelectedPage is not null && !IsBusy);
+        CropCommand = new RelayCommand(() => _ = CropSelectedPageAsync(), () => SelectedPage is not null && !IsBusy);
         SetToolCommand = new RelayCommand(p => { if (p is EditorTool t) Tool = t; });
         SetBrushSizeCommand = new RelayCommand(p => { if (p is BrushSize s) BrushSize = s; });
         OpenSettingsCommand = new RelayCommand(OpenSettings, () => !IsBusy);
@@ -475,6 +476,7 @@ public sealed partial class MainViewModel : ObservableObject
         ExportCommand.RaiseCanExecuteChanged();
         RotateLeftCommand.RaiseCanExecuteChanged();
         RotateRightCommand.RaiseCanExecuteChanged();
+        CropCommand.RaiseCanExecuteChanged();
         RefreshLibraryCommands();
     }
 

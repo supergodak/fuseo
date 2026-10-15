@@ -9,7 +9,7 @@ public sealed record WorkSnapshot(WorkDocument Document, IReadOnlyDictionary<str
 
 /// <summary>
 /// <see cref="PageState"/> ⇄ <see cref="WorkPage"/> の対応（W5）。
-/// - 画像は <see cref="PageState.Original"/>（取り込んだまま・回転 0）を保存し、座標は <see cref="PageState"/> の snapshot そのまま
+/// - 画像は <see cref="PageState.Original"/>（取り込んだまま・回転 0・切り抜き前）を保存し、切り抜きは四隅（manualQuad）で持つ。座標は <see cref="PageState"/> の snapshot そのまま
 ///   （現在の回転で回した画像の上）。
 /// - Undo 履歴は保存しない。
 /// </summary>
@@ -59,6 +59,7 @@ public static class WorkMapper
                 RawDetections = s.RawDetections.ToList(),
                 RawDetector = s.RawDetector,
                 CheckedRuleIds = s.CheckedRuleIds.OrderBy(r => r, StringComparer.Ordinal).ToList(),
+                ManualQuad = s.Crop,
             });
         }
         var doc = new WorkDocument
@@ -85,7 +86,7 @@ public static class WorkMapper
             var id = WorkPaths.PageIdFromImageFile(p.ImageFile) ?? Guid.NewGuid();
             result.Add(PageState.Restore(
                 id, work.Images[i], p.SourceName, p.SourcePageIndex, p.FromPdf, p.DocumentType, p.ManualRotation,
-                p.Manual, p.Candidates, p.RawDetector, p.RawDetections, p.CheckedRuleIds));
+                p.Manual, p.Candidates, p.RawDetector, p.RawDetections, p.CheckedRuleIds, p.ManualQuad));
         }
         return result;
     }

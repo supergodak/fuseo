@@ -85,6 +85,8 @@
                                 ToolTip="{x:Static p:Strings.RotateLeftTip}" AutomationProperties.AutomationId="main.rotateLeft"/>
                         <Button Content="{x:Static p:Strings.RotateRight}" Command="{Binding RotateRightCommand}" Padding="8,4" Margin="2,0,0,0"
                                 ToolTip="{x:Static p:Strings.RotateRightTip}" AutomationProperties.AutomationId="main.rotateRight"/>
+                        <Button Content="{x:Static p:Strings.Crop}" Command="{Binding CropCommand}" Padding="8,4" Margin="2,0,0,0"
+                                ToolTip="{x:Static p:Strings.CropTip}" AutomationProperties.AutomationId="main.crop"/>
                     </StackPanel>
                     <StackPanel>
                         <Button Content="{x:Static p:Strings.ZoomOut}" Click="OnZoomOut" Padding="8,4" MinWidth="30"

@@ -359,6 +359,37 @@ public class WorkDocumentJsonTests
     }
 
     [Fact]
+    public void ManualQuad_RoundTrips_AsMacShapedObject()
+    {
+        var quad = new Quad(new(0.125, 0.0625), new(0.875, 0.125), new(0.75, 0.9375), new(0.0625, 0.875));
+        var doc = Sample() with { Pages = [Sample().Pages[0] with { ManualQuad = quad }] };
+        var json = WorkDocumentJson.Serialize(doc);
+        using (var d = JsonDocument.Parse(json))
+        {
+            var q = d.RootElement.GetProperty("pages")[0].GetProperty("manualQuad");
+            Assert.Equal([0.125, 0.0625], q.GetProperty("topLeft").EnumerateArray().Select(e => e.GetDouble()).ToArray());
+            Assert.Equal(0.9375, q.GetProperty("bottomRight")[1].GetDouble());
+        }
+        Assert.Equal(quad, WorkDocumentJson.Parse(json).Pages[0].ManualQuad);
+    }
+
+    [Theory]
+    [InlineData("[1.5, 0.125]")]   // 範囲外
+    [InlineData("[0.75, 0.9375]")] // TR と BR が同じ点（つぶれ）
+    public void ManualQuad_RejectsOutOfRangeOrNonConvex(string topRight)
+    {
+        var quad = new Quad(new(0.125, 0.0625), new(0.875, 0.125), new(0.75, 0.9375), new(0.0625, 0.875));
+        var json = WorkDocumentJson.Serialize(Sample() with { Pages = [Sample().Pages[0] with { ManualQuad = quad }] });
+        var bad = System.Text.RegularExpressions.Regex.Replace(json, "\"topRight\": \\[[^\\]]*\\]", "\"topRight\": " + topRight);
+        Assert.NotEqual(json, bad);
+        Assert.Throws<WorkDocumentFormatException>(() => WorkDocumentJson.Parse(bad));
+        // 交差した四隅は書く前にも止める
+        var crossed = new Quad(quad.TopLeft, quad.BottomRight, quad.TopRight, quad.BottomLeft);
+        Assert.Throws<WorkDocumentFormatException>(() =>
+            WorkDocumentJson.Serialize(Sample() with { Pages = [Sample().Pages[0] with { ManualQuad = crossed }] }));
+    }
+
+    [Fact]
     public void Options_AreReadOnly() => Assert.True(WorkDocumentJson.Options.IsReadOnly);
 
     [Fact]

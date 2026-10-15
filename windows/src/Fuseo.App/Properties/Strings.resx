@@ -174,4 +174,19 @@
   <data name="ImportErrorUnreadableFile" xml:space="preserve"><value>「{0}」を読み込めませんでした。ファイルが壊れているか、対応していない形式の可能性があります。</value></data>
   <data name="ImportErrorUnsupportedFile" xml:space="preserve"><value>「{0}」は対応していない形式です（JPEG / PNG / BMP / TIFF / HEIC / PDF に対応）。</value></data>
   <data name="ImportErrorFileGeneric" xml:space="preserve"><value>「{0}」を読み込めませんでした。</value></data>
+  <data name="Crop" xml:space="preserve"><value>切り抜き</value></data>
+  <data name="CropTip" xml:space="preserve"><value>書類の四隅を指定して、その内側だけを使います。斜めに撮った写真もまっすぐに直します</value></data>
+  <data name="CropTitle" xml:space="preserve"><value>切り抜き</value></data>
+  <data name="CropInstruction" xml:space="preserve"><value>書類の四隅に丸いつまみを合わせてください。枠の外側は書き出しに入りません。</value></data>
+  <data name="CropFull" xml:space="preserve"><value>全体を使う</value></data>
+  <data name="CropApply" xml:space="preserve"><value>適用</value></data>
+  <data name="CropInvalid" xml:space="preserve"><value>四隅が交差しているか、内側にへこんでいます。つまみの位置を直してください。</value></data>
+  <data name="CropConfirmTitle" xml:space="preserve"><value>切り抜きを変更</value></data>
+  <data name="CropConfirmMessage" xml:space="preserve"><value>切り抜きを変えると、このページで手で塗った箇所は消えます。QR コードは切り抜いた画像で探し直します。
+「元に戻す」で切り抜く前に戻せます。</value></data>
+  <data name="CropErrorTitle" xml:space="preserve"><value>切り抜きできませんでした</value></data>
+  <data name="StatusCropping" xml:space="preserve"><value>切り抜いています…</value></data>
+  <data name="StatusCropped" xml:space="preserve"><value>切り抜きました。QR コードは切り抜いた画像で探し直しました。</value></data>
+  <data name="StatusCropCleared" xml:space="preserve"><value>切り抜きを解除しました。</value></data>
+  <data name="StatusCropDetectFailed" xml:space="preserve"><value>切り抜きました。QR コードの自動検出ができなかったので、必要な箇所は手で塗ってください。</value></data>
 </root>

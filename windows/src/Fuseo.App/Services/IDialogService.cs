@@ -1,5 +1,7 @@
 using Fuseo.App.ViewModels;
 using Fuseo.Core.Contracts;
+using Fuseo.Core.Geometry;
+using Fuseo.Core.Imaging;
 
 namespace Fuseo.App.Services;
 
@@ -7,6 +9,9 @@ namespace Fuseo.App.Services;
 /// ダイアログの抽象（ViewModel をウィンドウ無しで単体テストできるように）。
 /// 本物は <see cref="WpfDialogService"/>。
 /// </summary>
+/// <summary>切り抜き画面に渡すもの: 切り抜く前の画像（いまの向きに回したもの）と、その上の現在の四隅。</summary>
+public sealed record CropRequest(PageBitmap Image, Quad Initial);
+
 public interface IDialogService
 {
     /// <summary>「ファイルを開く」（複数選択・画像と PDF）。取り消しなら null。</summary>
@@ -33,6 +38,12 @@ public interface IDialogService
 
     /// <summary>バージョン情報をモーダルで開く（W6）。</summary>
     void ShowAbout();
+
+    /// <summary>
+    /// 4 隅切り抜きの画面をモーダルで開く（W4.5）。<see cref="CropRequest.Image"/> の上の四隅を返す
+    /// （凸四角形のときだけ返る。全体 = <see cref="Quad.FullImage"/>）。取り消しなら null。
+    /// </summary>
+    Quad? AskCrop(CropRequest request);
 
     /// <summary>ローカルのフォルダをエクスプローラーで開く（URL は渡さない・<see cref="FolderLauncher"/>）。</summary>
     void OpenFolder(string path);

@@ -174,4 +174,19 @@
   <data name="ImportErrorUnreadableFile" xml:space="preserve"><value>Couldn't read “{0}”. The file may be damaged or in an unsupported format.</value></data>
   <data name="ImportErrorUnsupportedFile" xml:space="preserve"><value>“{0}” is in an unsupported format (supported: JPEG / PNG / BMP / TIFF / HEIC / PDF).</value></data>
   <data name="ImportErrorFileGeneric" xml:space="preserve"><value>Couldn't import “{0}”.</value></data>
+  <data name="Crop" xml:space="preserve"><value>Crop</value></data>
+  <data name="CropTip" xml:space="preserve"><value>Pick the four corners of the document and keep only what is inside. Photos taken at an angle are straightened</value></data>
+  <data name="CropTitle" xml:space="preserve"><value>Crop</value></data>
+  <data name="CropInstruction" xml:space="preserve"><value>Drag the round handles onto the four corners of the document. Anything outside the frame is left out of the export.</value></data>
+  <data name="CropFull" xml:space="preserve"><value>Use whole image</value></data>
+  <data name="CropApply" xml:space="preserve"><value>Apply</value></data>
+  <data name="CropInvalid" xml:space="preserve"><value>The corners cross or bend inward. Move the handles to fix the shape.</value></data>
+  <data name="CropConfirmTitle" xml:space="preserve"><value>Change crop</value></data>
+  <data name="CropConfirmMessage" xml:space="preserve"><value>Changing the crop removes the areas you painted by hand on this page. QR codes are searched again on the cropped image.
+Use Undo to go back to before the crop.</value></data>
+  <data name="CropErrorTitle" xml:space="preserve"><value>Could not crop</value></data>
+  <data name="StatusCropping" xml:space="preserve"><value>Cropping…</value></data>
+  <data name="StatusCropped" xml:space="preserve"><value>Cropped. QR codes were searched again on the cropped image.</value></data>
+  <data name="StatusCropCleared" xml:space="preserve"><value>Crop removed.</value></data>
+  <data name="StatusCropDetectFailed" xml:space="preserve"><value>Cropped. QR code detection could not run. Paint over anything that needs hiding by hand.</value></data>
 </root>

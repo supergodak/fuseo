@@ -48,7 +48,9 @@ public sealed record WorkDocument
 /// - <see cref="ImageFile"/> は**取り込んだままの元画像**（回転 0）。<see cref="PixelWidth"/>/<see cref="PixelHeight"/> はその寸法。
 /// - 候補・手動マスクの座標は <see cref="ManualRotation"/> で回した画像の上の正規化座標・左上原点
 ///   （<see cref="CoordinateFrame"/> = "rotatedImage"）。
-/// - <see cref="RawDetections"/> は検出の生の箱（padding 前・回転 0 = 元画像基準）。
+/// - <see cref="ManualQuad"/> は手動 4 隅切り抜き（W4.5）。**元画像（回転 0）の上**の四隅・左上原点。null = 切り抜きなし。
+///   マスクの基準の画像 = 元画像を ManualQuad で台形補正し、ManualRotation で回したもの。
+/// - <see cref="RawDetections"/> は検出の生の箱（padding 前・回転 0・ManualQuad で切り抜いた画像の上）。
 /// </summary>
 public sealed record WorkPage
 {
@@ -77,9 +79,10 @@ public sealed record WorkPage
     /// <summary>チェックリストで「塗った」と印を付けたルール id（順序は保存時に整列）。</summary>
     [JsonRequired] public IReadOnlyList<string> CheckedRuleIds { get; init; } = [];
 
-    // ---- Mac 互換用（Windows では使わない・常に空で持つ） ----
+    // ---- Mac 互換用（ocr・analysisOptions は Windows では使わない・常に空で持つ） ----
     public IReadOnlyList<JsonElement> Ocr { get; init; } = [];
-    public JsonElement? ManualQuad { get; init; }
+    /// <summary>手動 4 隅切り抜き（W4.5・Mac と同じ項目名。座標は左上原点＝<see cref="WorkDocument.Origin"/>）。null = 切り抜きなし。</summary>
+    public Quad? ManualQuad { get; init; }
     public JsonElement? AnalysisOptions { get; init; }
 }
 
