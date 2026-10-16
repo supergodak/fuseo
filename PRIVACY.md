@@ -1,8 +1,8 @@
 # Privacy Policy / プライバシーポリシー
 
-_Fuseo — ID-document redaction tool for macOS and iPhone by ATI Inc. (ATI株式会社)_
+_Fuseo — ID-document redaction tool for macOS, iPhone and Windows by ATI Inc. (ATI株式会社)_
 
-**Last updated: 2026-09-15**
+**Last updated: 2026-10-16**
 
 > **Fuseo processes your documents entirely on your device. Nothing is ever sent off it.**
 > **Fuseo は書類の処理をすべてお使いの端末の中だけで行います。外部へ送信することは一切ありません。**
@@ -13,7 +13,7 @@ _Fuseo — ID-document redaction tool for macOS and iPhone by ATI Inc. (ATI株�
 
 ### 1. Summary
 
-Fuseo is a local-only tool for redacting ID documents. It opens your document photos, finds and blacks out sensitive areas, and exports a clean copy — all on your own device (Mac or iPhone). It never transmits your documents, images, or detection results anywhere. There are **no servers, no accounts, no analytics, no telemetry, and no crash reporting**. ATI Inc. cannot see your documents, because they never leave your device.
+Fuseo is a local-only tool for redacting ID documents. It opens your document photos, finds and blacks out sensitive areas, and exports a clean copy — all on your own device (Mac, iPhone or Windows PC). It never transmits your documents, images, or detection results anywhere. There are **no servers, no accounts, no analytics, no telemetry, and no crash reporting**. ATI Inc. cannot see your documents, because they never leave your device.
 
 ### 2. What data Fuseo handles
 
@@ -38,6 +38,8 @@ Fuseo contains **no analytics, telemetry, advertising, or identifiers**. It does
 
 Fuseo's document processing works **fully offline**. The only network activity (when enabled in a future release) is an optional **automatic update check** via Sparkle: the app contacts ATI's update feed to see whether a newer version exists. As with any download, this reveals your IP address and the app version to the update server — but **no document data, image data, personal data, or identifiers are ever sent**. You can disable automatic update checks.
 
+**Fuseo for Windows has no network features at all** — not even an update check. To get a new version, download it again from the website or a software library site.
+
 ### 7. Sensitive documents — your responsibility
 
 Fuseo is a tool that helps you redact, but it does not decide what is legal to submit. Automatic detection proposes candidates only; **you review and confirm every redaction before saving.** Some documents (for example those you must retain as originals) cannot be replaced by a redacted copy, and some — such as the back of a My Number Card — often cannot be submitted at all. Please confirm the requirements before you submit. See the [User Manual](docs/user-manual.md).
@@ -45,6 +47,8 @@ Fuseo is a tool that helps you redact, but it does not decide what is legal to s
 ### 8. Data retention and deletion
 
 Fuseo keeps your work only where you can see it. Documents you are working on are saved automatically in the app's "Documents in progress" list so you can resume them later; nothing else is retained. They stay on this device (excluded from iCloud backup), are never transmitted, and can be deleted one by one from the list or all at once from Settings. Removing the app deletes the library and its settings.
+
+**On Windows**, documents in progress (including the images before redaction) are stored only in `%LOCALAPPDATA%\Fuseo\Library` and settings in `%LOCALAPPDATA%\Fuseo\settings.json`. They stay there until you delete them from the list or in Settings. Fuseo for Windows has no installer and uses no registry entries, so deleting `Fuseo.exe` does not remove that folder — delete `%LOCALAPPDATA%\Fuseo` yourself to remove everything. The folder `%TEMP%\.net\Fuseo` contains only unpacked program files, never documents.
 
 ### 9. Children
 
@@ -68,7 +72,7 @@ ATI Inc. (ATI株式会社) — https://fuseo.ati-mirai.co.jp · security & priva
 
 ### 1. 概要
 
-Fuseo は完全ローカルの本人確認書類・黒塗りツールです。書類の写真を読み込み、見せる必要のない部分を見つけて黒く塗りつぶし、提出用のきれいなコピーを書き出します。これらの処理はすべてお使いの端末（Mac または iPhone）の中だけで行われ、書類・画像・検出結果をどこにも送信しません。**サーバー・アカウント・解析・テレメトリ・クラッシュレポートは一切ありません。** データは端末から出ないため、ATI株式会社があなたの書類を見ることはできません。
+Fuseo は完全ローカルの本人確認書類・黒塗りツールです。書類の写真を読み込み、見せる必要のない部分を見つけて黒く塗りつぶし、提出用のきれいなコピーを書き出します。これらの処理はすべてお使いの端末（Mac・iPhone・Windows パソコン）の中だけで行われ、書類・画像・検出結果をどこにも送信しません。**サーバー・アカウント・解析・テレメトリ・クラッシュレポートは一切ありません。** データは端末から出ないため、ATI株式会社があなたの書類を見ることはできません。
 
 ### 2. Fuseo が扱うデータ
 
@@ -93,6 +97,8 @@ Fuseo には**解析・テレメトリ・広告・識別子は一切含まれま
 
 書類の処理は**完全オフライン**で動作します。将来のリリースで有効化される唯一の通信は、任意の**自動アップデート確認**（Sparkle）です：ATI のアップデートフィードへ新バージョンの有無を確認します。一般的なダウンロードと同様 IP とバージョンが伝わりますが、**書類データ・画像データ・個人情報・識別子は一切送信しません**。自動確認は無効化できます。
 
+**Windows 版（Fuseo for Windows）には、アップデート確認を含めて通信機能が一切ありません。** 新しい版は Web サイトやソフトウェア紹介サイトから改めてダウンロードしてください。
+
 ### 7. 機微な書類 — ご自身の責任
 
 Fuseo は黒塗りを手伝う道具であり、何を提出してよいかを判断するものではありません。自動検出はあくまで候補の提示で、**保存前にすべての黒塗りをあなたが確認・確定します。** 原本の保存が義務づけられた書類は黒塗りコピーで代替できず、マイナンバーカードの裏面のようにそもそも提出できない場面が多い書類もあります。提出前に要件をご確認ください（[使い方ガイド](docs/user-manual.md)）。
@@ -100,6 +106,8 @@ Fuseo は黒塗りを手伝う道具であり、何を提出してよいかを�
 ### 8. 保持と削除
 
 Fuseo が書類を保持するのは、あなたに見える場所だけです。作業中の書類はあとから再開できるようアプリ内の「作業中の書類」一覧に自動保存され、それ以外は保持しません。保存先はこの端末の中だけ（iCloud バックアップ対象外）で、外部に送信されることはなく、一覧から1件ずつ、または設定から一括で削除できます。アプリを削除するとライブラリと設定も削除されます。
+
+**Windows 版**では、作業中の書類（黒塗り前の画像を含みます）は `%LOCALAPPDATA%\Fuseo\Library`、設定は `%LOCALAPPDATA%\Fuseo\settings.json` にだけ保存し、一覧や設定から削除するまで残ります。Windows 版はインストーラを使わずレジストリにも書き込まないため、`Fuseo.exe` を削除してもこのフォルダは残ります。すべて消すには `%LOCALAPPDATA%\Fuseo` フォルダを削除してください。`%TEMP%\.net\Fuseo` にはプログラムの部品だけが展開され、書類は入りません。
 
 ### 9. 子どもについて
 

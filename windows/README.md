@@ -15,3 +15,11 @@
 ```
 dotnet test Fuseo.Windows.sln
 ```
+
+## 配布物を作る（Windows 上で）
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish.ps1
+```
+`publish\Fuseo-win-<ver>-x64.zip` / `-arm64.zip` と `SHA256SUMS.txt` ができます。exe は自己完結の単一ファイル（pdfium.dll も同梱）で、
+zip の中身は `Fuseo.exe`・`README.txt`（`packaging/README.txt` に版番号を入れたもの）・`LICENSE.txt`・`THIRD-PARTY-NOTICES.txt` の 4 つだけです。
+署名はしていません（初回起動時に SmartScreen の警告が出ます。通し方は README.txt に書いてあります）。
