@@ -47,14 +47,21 @@ internal sealed class PdfiumDocument : IDisposable
 
     private IntPtr _buffer;
     private FpdfDocumentT? _doc;
+    // フォーム欄（Widget 注釈）を描くための環境。FPDF_RenderPageBitmap は FPDF_ANNOT を付けても Widget を描かない
+    // （PDFium の仕様: フォームは FPDF_FFLDraw で描く）。PDFium は FORMFILLINFO を指したまま使うので、
+    // 環境を閉じるまで参照を持ち続ける。Version 1 = XFA 無し。JavaScript は同梱の PDFium（V8 無し）では動かない。
+    private FPDF_FORMFILLINFO? _formInfo;
+    private FpdfFormHandleT? _form;
 
     public int PageCount { get; }
 
-    private PdfiumDocument(IntPtr buffer, FpdfDocumentT doc, int pageCount)
+    private PdfiumDocument(IntPtr buffer, FpdfDocumentT doc, int pageCount, FPDF_FORMFILLINFO? formInfo, FpdfFormHandleT? form)
     {
         _buffer = buffer;
         _doc = doc;
         PageCount = pageCount;
+        _formInfo = formInfo;
+        _form = form;
     }
 
     private static void EnsureInitialized()
@@ -67,6 +74,7 @@ internal sealed class PdfiumDocument : IDisposable
     private static bool IsNull(FpdfDocumentT? d) => d is null || d.__Instance == IntPtr.Zero;
     private static bool IsNull(FpdfPageT? p) => p is null || p.__Instance == IntPtr.Zero;
     private static bool IsNull(FpdfBitmapT? b) => b is null || b.__Instance == IntPtr.Zero;
+    private static bool IsNull(FpdfFormHandleT? f) => f is null || f.__Instance == IntPtr.Zero;
 
     /// <summary>
     /// 開く。失敗なら null と PDFium のエラーコード（<see cref="ErrPassword"/> ならパスワード違い／未入力）。
@@ -89,9 +97,12 @@ internal sealed class PdfiumDocument : IDisposable
                     return null;
                 }
                 var count = fpdfview.FPDF_GetPageCount(doc);
+                var formInfo = new FPDF_FORMFILLINFO { Version = 1 };
+                var form = fpdf_formfill.FPDFDOC_InitFormFillEnvironment(doc, formInfo);
+                if (IsNull(form)) { formInfo.Dispose(); formInfo = null; form = null; }
                 error = 0;
                 keep = true;
-                return new PdfiumDocument(buffer, doc, count);
+                return new PdfiumDocument(buffer, doc, count, formInfo, form);
             }
             finally
             {
@@ -105,6 +116,7 @@ internal sealed class PdfiumDocument : IDisposable
     /// 回転引数は 0（PDFium は /Rotate を適用した向きで描く。ここで回すと二重適用になる）。
     /// **注釈も描く**（FPDF_ANNOT）: 入力済みのフォーム欄・押印注釈など、利用者がビューアで見ている内容と一致させる
     /// （描かないと「提出したら記入内容が消えていた」事故になる）。全部を画素に焼くので漏れの経路は増えない。
+    /// フォーム欄（Widget）は FPDF_RenderPageBitmap では描かれないので、続けて FPDF_FFLDraw で重ねる（W8 で発見・2026-10-17）。
     /// 非表示フラグ付きの注釈は PDFium が描かない。決定 2026-10-11 Fable（Mac の drawPDFPage は注釈を描かない＝要追随検討）。
     /// 出力は不透明 BGRA。
     /// </summary>
@@ -115,6 +127,7 @@ internal sealed class PdfiumDocument : IDisposable
             if (IsNull(_doc)) throw new ObjectDisposedException(nameof(PdfiumDocument));
             var page = fpdfview.FPDF_LoadPage(_doc, index);
             if (IsNull(page)) throw new InvalidDataException($"ページ {index} を読めない");
+            if (!IsNull(_form)) fpdf_formfill.FORM_OnAfterLoadPage(page, _form);
             try
             {
                 // FPDF_GetPageWidthF/HeightF は /Rotate（90/270 なら縦横入れ替え）を反映した表示サイズ（pt）。
@@ -128,6 +141,7 @@ internal sealed class PdfiumDocument : IDisposable
                 {
                     fpdfview.FPDFBitmapFillRect(bitmap, 0, 0, w, h, 0xFFFFFFFFUL); // 白下地（透明ページ対策）
                     fpdfview.FPDF_RenderPageBitmap(bitmap, page, 0, 0, w, h, 0, RenderFlagAnnot);
+                    if (!IsNull(_form)) fpdf_formfill.FPDF_FFLDraw(_form, bitmap, page, 0, 0, w, h, 0, RenderFlagAnnot);
 
                     if (fpdfview.FPDFBitmapGetFormat(bitmap) != BitmapFormatBgrx) throw new InvalidDataException("描画バッファの形式が想定外");
                     var stride = fpdfview.FPDFBitmapGetStride(bitmap);
@@ -147,6 +161,7 @@ internal sealed class PdfiumDocument : IDisposable
             }
             finally
             {
+                if (!IsNull(_form)) fpdf_formfill.FORM_OnBeforeClosePage(page, _form);
                 fpdfview.FPDF_ClosePage(page);
             }
         }
@@ -156,6 +171,10 @@ internal sealed class PdfiumDocument : IDisposable
     {
         lock (Gate)
         {
+            if (!IsNull(_form)) fpdf_formfill.FPDFDOC_ExitFormFillEnvironment(_form);
+            _form = null;
+            _formInfo?.Dispose();
+            _formInfo = null;
             if (!IsNull(_doc)) fpdfview.FPDF_CloseDocument(_doc);
             _doc = null;
             if (_buffer != IntPtr.Zero) Marshal.FreeHGlobal(_buffer);

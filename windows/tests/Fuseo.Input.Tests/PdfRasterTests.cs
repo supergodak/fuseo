@@ -120,6 +120,15 @@ public class PdfRasterTests
     }
 
     [Fact]
+    public async Task FilledFormFields_AreDrawn()
+    {
+        // 記入済みのフォーム欄（Widget）は FPDF_RenderPageBitmap だけでは描かれない（PDFium はフォームを FPDF_FFLDraw で描く）。
+        // 控除証明書ふうの合成 PDF で記入値が出力から消えていた（W8・2026-10-17）。
+        var b = await RenderSingle(new(200, 100, "", AnnotAppearance: "0 g 0 0 200 100 re f", AnnotAsWidget: true));
+        AssertContentSpans(b);
+    }
+
+    [Fact]
     public async Task LargePage_LongSideClampedTo4000_KeepsAspect()
     {
         const double w = 2000, h = 1000; // 300dpi なら 8333×4167

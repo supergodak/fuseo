@@ -9,7 +9,9 @@ namespace Fuseo.Input.Tests;
 /// <summary>テスト内で最小 PDF を組み立てる（外部ライブラリ無し・xref のオフセットも正しく書く）。</summary>
 internal static class MiniPdf
 {
-    public sealed record Page(double Width, double Height, string Content, int Rotate = 0, string? AnnotAppearance = null);
+    /// <param name="AnnotAsWidget">注釈を記入済みのフォーム欄（/Widget・/FT /Tx・カタログに /AcroForm）として置く。</param>
+    public sealed record Page(double Width, double Height, string Content, int Rotate = 0, string? AnnotAppearance = null,
+                              bool AnnotAsWidget = false);
 
     public static byte[] Build(IReadOnlyList<Page> pages)
     {
@@ -17,6 +19,7 @@ internal static class MiniPdf
         var kids = new List<int>();
         var next = 3;
         var bodies = new SortedDictionary<int, string>();
+        var fields = new List<int>();
         foreach (var p in pages)
         {
             int pageNo = next++, contentNo = next++;
@@ -28,8 +31,11 @@ internal static class MiniPdf
             if (p.AnnotAppearance is not null)
             {
                 int annotNo = next++, apNo = next++;
-                bodies[annotNo] =
-                    $"<< /Type /Annot /Subtype /Square /Rect [0 0 {F(p.Width)} {F(p.Height)}] /F 4 /AP << /N {apNo} 0 R >> >>";
+                bodies[annotNo] = p.AnnotAsWidget
+                    ? $"<< /Type /Annot /Subtype /Widget /FT /Tx /T (field{annotNo}) /V (filled) /P {pageNo} 0 R " +
+                      $"/Rect [0 0 {F(p.Width)} {F(p.Height)}] /F 4 /AP << /N {apNo} 0 R >> >>"
+                    : $"<< /Type /Annot /Subtype /Square /Rect [0 0 {F(p.Width)} {F(p.Height)}] /F 4 /AP << /N {apNo} 0 R >> >>";
+                if (p.AnnotAsWidget) fields.Add(annotNo);
                 bodies[apNo] = Stream(p.AnnotAppearance,
                     $"/Type /XObject /Subtype /Form /BBox [0 0 {F(p.Width)} {F(p.Height)}] ");
                 extra += $" /Annots [{annotNo} 0 R]";
@@ -37,7 +43,9 @@ internal static class MiniPdf
             bodies[pageNo] =
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {F(p.Width)} {F(p.Height)}] /Contents {contentNo} 0 R /Resources << >>{extra} >>";
         }
-        bodies[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+        bodies[1] = fields.Count == 0
+            ? "<< /Type /Catalog /Pages 2 0 R >>"
+            : $"<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [{string.Join(" ", fields.Select(f => $"{f} 0 R"))}] >> >>";
         bodies[2] = $"<< /Type /Pages /Kids [{string.Join(" ", kids.Select(k => $"{k} 0 R"))}] /Count {kids.Count} >>";
 
         var sb = new StringBuilder();
