@@ -73,7 +73,7 @@
 {0}</value></data>
   <data name="ImportErrorGeneric" xml:space="preserve"><value>Import failed.
 {0}</value></data>
-  <data name="ImportErrorPageLimit" xml:space="preserve"><value>You can import up to {1} pages at a time when PDFs are included (this time: {0} pages). Please reduce the number of pages and try again.</value></data>
+  <data name="ImportErrorPageLimit" xml:space="preserve"><value>You can have up to {1} pages open at a time (this would make {0} pages, including the ones already open). Import fewer pages, or close the current work with “New document” first.</value></data>
   <data name="TempSourcePdfUnsupported" xml:space="preserve"><value>“{0}”: this development build can't read PDFs yet (images only).</value></data>
   <data name="PasswordTitle" xml:space="preserve"><value>Password</value></data>
   <data name="PasswordMessage" xml:space="preserve"><value>“{0}” is password-protected. Enter its password.</value></data>

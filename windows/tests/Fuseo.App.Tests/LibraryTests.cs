@@ -761,7 +761,7 @@ public class AutoSaveViewModelTests
     private sealed class BlockingSource(Task<IReadOnlyList<SourcePage>> result) : IPageSource
     {
         public Task<IReadOnlyList<SourcePage>> LoadAsync(IReadOnlyList<string> paths,
-            Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct) => result;
+            Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct, int pagesAlreadyOpen = 0) => result;
     }
 
     [Fact]

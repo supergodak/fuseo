@@ -17,20 +17,23 @@ public abstract class PageImportException : Exception
 /// <summary>
 /// ページ数の上限超過（**ラスタライズ前**に数えて拒否する・§4.4）。
 /// 1 ファイル単独で上限を超えた場合は <see cref="PageImportException.FileName"/> にそのファイル名、
-/// 合計で超えた場合は null。<see cref="PageCount"/> は数えたページ数（画像 1 枚＝1 ページを含む合計）。
+/// 合計で超えた場合は null。<see cref="PageCount"/> は数えたページ数（画像 1 枚＝1 ページ・開いているページを含む合計）。
 /// </summary>
 public sealed class PageLimitExceededException : PageImportException
 {
     public int PageCount { get; }
     public int Limit { get; }
+    /// <summary>取り込む前から開いていたページ数（<see cref="PageCount"/> に含まれる）。</summary>
+    public int PagesAlreadyOpen { get; }
 
-    public PageLimitExceededException(int pageCount, int limit, string? fileName)
+    public PageLimitExceededException(int pageCount, int limit, string? fileName, int pagesAlreadyOpen = 0)
         : base(fileName, fileName is null
-            ? $"選んだファイルは合計 {pageCount} ページあります。PDF を含む取り込みは一度に {limit} ページまでです。"
+            ? $"開いているページと合わせて {pageCount} ページになります。一度に開けるのは合計 {limit} ページまでです。"
             : $"「{fileName}」は {pageCount} ページあります。一度に取り込めるのは {limit} ページまでです。")
     {
         PageCount = pageCount;
         Limit = limit;
+        PagesAlreadyOpen = pagesAlreadyOpen;
     }
 }
 

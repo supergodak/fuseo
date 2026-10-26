@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Fuseo.Input.Tests;
 
-/// <summary>画像入力（WIC）: EXIF Orientation の焼き込み・α の白合成・長辺 8000 の縮小・マルチページ TIFF。</summary>
+/// <summary>画像入力（WIC）: EXIF Orientation の焼き込み・α の白合成・長辺 4000 の縮小・マルチページ TIFF。</summary>
 public class ImageInputTests
 {
     private static readonly Func<PasswordRequest, Task<string?>> NoPassword =
@@ -81,24 +81,25 @@ public class ImageInputTests
     }
 
     [Fact]
-    public async Task HugeImage_LongSideScaledTo8000()
+    public async Task HugeImage_LongSideScaledTo4000()
     {
-        var src = Img.WhiteWithBlackSquare(9000, 100, 0, 0, 50);
+        Assert.Equal(4000, PageSource.MaxImageLongSidePx); // PDF と同じ（W8 でメモリ保護のため 8000→4000）
+        var src = Img.WhiteWithBlackSquare(4500, 100, 0, 0, 50);
         using var dir = new TempDir();
         var b = Assert.Single(await Load(dir.Write("wide.png", Img.EncodePng(src)))).Bitmap;
         Assert.Equal(PageSource.MaxImageLongSidePx, b.Width);
-        Assert.Equal(89, b.Height); // 100 × 8000/9000 = 88.9
+        Assert.Equal(89, b.Height); // 100 × 4000/4500 = 88.9
         Assert.True(Img.IsDark(b, 10, 10));
-        Assert.True(Img.IsLight(b, 4000, 50));
+        Assert.True(Img.IsLight(b, 2000, 50));
     }
 
     [Fact]
-    public async Task ImageAtExactly8000_IsNotScaled()
+    public async Task ImageAtExactly4000_IsNotScaled()
     {
-        var src = Img.WhiteWithBlackSquare(8000, 10, 0, 0, 5);
+        var src = Img.WhiteWithBlackSquare(4000, 10, 0, 0, 5);
         using var dir = new TempDir();
         var b = Assert.Single(await Load(dir.Write("edge.png", Img.EncodePng(src)))).Bitmap;
-        Assert.Equal(8000, b.Width);
+        Assert.Equal(4000, b.Width);
         Assert.Equal(10, b.Height);
     }
 

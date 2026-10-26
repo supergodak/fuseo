@@ -76,13 +76,39 @@ public class ImportPolicyTests
     }
 
     [Fact]
-    public async Task ImagesOnly_60_AreNotLimited()
+    public async Task ImagesOnly_Over50_RejectedBeforeDecoding()
+    {
+        // W8: 画像だけの取り込みも合計 50 ページまで（Mac は無制限だが、Windows は大量の写真でメモリ不足になりうる）。
+        using var dir = new TempDir();
+        var png = TinyPng();
+        var paths = Enumerable.Range(0, 51).Select(i => dir.Write($"img{i:D2}.png", png)).ToList();
+        var source = new PageSource();
+        var ex = await Assert.ThrowsAsync<PageLimitExceededException>(
+            () => source.LoadAsync(paths, NoPassword, CancellationToken.None));
+        Assert.Equal(51, ex.PageCount);
+        Assert.Null(ex.FileName);
+        Assert.Equal(0, source.RasterizedPageCount);
+
+        paths.RemoveAt(paths.Count - 1);
+        Assert.Equal(50, (await new PageSource().LoadAsync(paths, NoPassword, CancellationToken.None)).Count);
+    }
+
+    [Fact]
+    public async Task PagesAlreadyOpen_CountTowardTheLimit()
     {
         using var dir = new TempDir();
         var png = TinyPng();
-        var paths = Enumerable.Range(0, 60).Select(i => dir.Write($"img{i:D2}.png", png)).ToList();
-        var pages = await new PageSource().LoadAsync(paths, NoPassword, CancellationToken.None);
-        Assert.Equal(60, pages.Count);
+        var paths = Enumerable.Range(0, 3).Select(i => dir.Write($"img{i}.png", png)).ToList();
+        var source = new PageSource();
+        var ex = await Assert.ThrowsAsync<PageLimitExceededException>(
+            () => source.LoadAsync(paths, NoPassword, CancellationToken.None, pagesAlreadyOpen: 48));
+        Assert.Equal(51, ex.PageCount);
+        Assert.Equal(48, ex.PagesAlreadyOpen);
+        Assert.Equal(0, source.RasterizedPageCount);
+
+        Assert.Equal(2, (await new PageSource().LoadAsync(paths.Take(2).ToList(), NoPassword, CancellationToken.None, pagesAlreadyOpen: 48)).Count);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => new PageSource().LoadAsync(paths, NoPassword, CancellationToken.None, pagesAlreadyOpen: -1));
     }
 
     [Fact]

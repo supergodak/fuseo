@@ -242,7 +242,7 @@ public sealed partial class MainViewModel : ObservableObject
         StatusMessage = Strings.StatusImporting;
         try
         {
-            var loaded = await _source.LoadAsync(paths, _dialogs.AskPasswordAsync, CancellationToken.None);
+            var loaded = await _source.LoadAsync(paths, _dialogs.AskPasswordAsync, CancellationToken.None, Pages.Count);
             // 検出は取り込みの一部として済ませる（後から非同期に届いて編集履歴と競合しないように）。
             var (detections, failed) = await DetectAsync(loaded);
             PageViewModel? first = null;

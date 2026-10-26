@@ -73,7 +73,7 @@
 {0}</value></data>
   <data name="ImportErrorGeneric" xml:space="preserve"><value>読み込みに失敗しました。
 {0}</value></data>
-  <data name="ImportErrorPageLimit" xml:space="preserve"><value>PDF を含む取り込みは合計 {1} ページまでです（今回は {0} ページ）。ページ数を減らしてから取り込んでください。</value></data>
+  <data name="ImportErrorPageLimit" xml:space="preserve"><value>一度に開けるのは合計 {1} ページまでです（開いているページと合わせて {0} ページになります）。ページ数を減らすか、「新しい書類」で今の作業を閉じてから取り込んでください。</value></data>
   <data name="TempSourcePdfUnsupported" xml:space="preserve"><value>「{0}」: この開発版では PDF はまだ読み込めません（画像のみ）。</value></data>
   <data name="PasswordTitle" xml:space="preserve"><value>パスワード</value></data>
   <data name="PasswordMessage" xml:space="preserve"><value>「{0}」はパスワードで保護されています。パスワードを入力してください。</value></data>

@@ -10,7 +10,8 @@ public sealed record SourcePage(PageBitmap Bitmap, string SourceName, int PageIn
 /// <summary>
 /// ファイル → ページ群（WIC デコード・PDF ラスタライズ・回転の焼き込み・上限判定）。実装は W2。
 /// 契約（§4.4）: PDF は白下地→描画、/Rotate 後の pt サイズから px = pt×300/72・長辺 4000 でクランプ、
-/// パスワードはメモリ内のみ、PDF を含む取り込みは合計 50 ページまで（取り込み前に数えて拒否）。
+/// パスワードはメモリ内のみ、開いているページと合わせて合計 50 ページまで（画像だけの取り込みも含む・取り込み前に数えて拒否）。
+/// 画像も長辺 4000 に縮小する（W8: 画像だけなら無制限・長辺 8000 だと 24MP×100 枚で約 10GB を使い落ちうるため）。
 /// </summary>
 /// <summary>パスワードの問い合わせ。IsRetry=true は直前の入力が違っていた（UI が「パスワードが違います」を出す）。</summary>
 public sealed record PasswordRequest(string FileName, bool IsRetry);
@@ -21,8 +22,10 @@ public interface IPageSource
     const double RasterDpi = 300;
     const int MaxLongSidePx = 4000;
 
+    /// <param name="pagesAlreadyOpen">いま開いているページ数（合計上限の判定に含める）。</param>
     Task<IReadOnlyList<SourcePage>> LoadAsync(
-        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct);
+        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct,
+        int pagesAlreadyOpen = 0);
 }
 
 /// <summary>動的検出（v0.1 は QR／バーコードのみ・W4）。</summary>

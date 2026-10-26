@@ -16,8 +16,8 @@ namespace Fuseo.Input;
 /// </summary>
 public sealed class PageSource : IPageSource
 {
-    /// <summary>画像（PDF 以外）の長辺上限。超える画像は縮小する（メモリ保護）。</summary>
-    public const int MaxImageLongSidePx = 8000;
+    /// <summary>画像（PDF 以外）の長辺上限。超える画像は縮小する（メモリ保護・PDF と同じ値）。</summary>
+    public const int MaxImageLongSidePx = IPageSource.MaxLongSidePx;
 
     private static readonly HashSet<string> ImageExtensions =
         new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".jpe", ".png", ".bmp", ".tif", ".tiff" };
@@ -55,16 +55,17 @@ public sealed class PageSource : IPageSource
     }
 
     public async Task<IReadOnlyList<SourcePage>> LoadAsync(
-        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct)
+        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct,
+        int pagesAlreadyOpen = 0)
     {
         ArgumentNullException.ThrowIfNull(paths);
+        ArgumentOutOfRangeException.ThrowIfNegative(pagesAlreadyOpen);
         ArgumentNullException.ThrowIfNull(askPassword);
         var entries = new List<Entry>(paths.Count);
         try
         {
             // ---- 1) 分類・解錠・ページ数（描画はしない） ----
             var total = 0;
-            var limited = false; // PDF またはマルチページ TIFF を含むか
             foreach (var path in paths)
             {
                 ct.ThrowIfCancellationRequested();
@@ -79,11 +80,9 @@ public sealed class PageSource : IPageSource
                         entry.Pdf = await OpenPdfAsync(path, name, askPassword, ct);
                         count = entry.Pdf.PageCount;
                         if (count <= 0) throw new UnreadableFileException(name);
-                        limited = true;
                         break;
                     case Kind.Tiff:
                         count = await Task.Run(() => CountTiffFrames(path, name), ct);
-                        if (count > 1) limited = true;
                         break;
                     default:
                         count = 1;
@@ -93,9 +92,10 @@ public sealed class PageSource : IPageSource
                     throw new PageLimitExceededException(count, _maxPagesPerImport, name);
                 total += count;
             }
-            // 合計上限（黙って切り捨てない）。画像だけの一括取り込みは無制限（Mac と同じ）。
-            if (limited && total > _maxPagesPerImport)
-                throw new PageLimitExceededException(total, _maxPagesPerImport, null);
+            // 合計上限（黙って切り捨てない）。開いているページも数える。画像だけの取り込みも対象
+            // （Mac は画像だけなら無制限だが、Windows は W8 の実測でメモリ不足になりうるため制限する）。
+            if (pagesAlreadyOpen + total > _maxPagesPerImport)
+                throw new PageLimitExceededException(pagesAlreadyOpen + total, _maxPagesPerImport, null, pagesAlreadyOpen);
 
             // ---- 2) 1 ページずつ描く ----
             var result = new List<SourcePage>(total);

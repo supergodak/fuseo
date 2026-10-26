@@ -35,6 +35,8 @@ public class MainViewModelTests
         Assert.Same(vm.Pages[2], vm.SelectedPage);
         Assert.True(vm.HasPages);
         Assert.False(vm.IsBusy);
+        // 合計 50 ページの上限は開いているページも数える（取り込み側に今のページ数を渡す）
+        Assert.Equal([0, 2], _source.PagesAlreadyOpen);
     }
 
     [Fact]

@@ -13,11 +13,14 @@ internal sealed class FakePageSource : IPageSource
     public Func<IReadOnlyList<string>, IReadOnlyList<SourcePage>>? Handler { get; set; }
     public Exception? Throw { get; set; }
     public List<IReadOnlyList<string>> Calls { get; } = [];
+    public List<int> PagesAlreadyOpen { get; } = [];
 
     public Task<IReadOnlyList<SourcePage>> LoadAsync(
-        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct)
+        IReadOnlyList<string> paths, Func<PasswordRequest, Task<string?>> askPassword, CancellationToken ct,
+        int pagesAlreadyOpen = 0)
     {
         Calls.Add(paths);
+        PagesAlreadyOpen.Add(pagesAlreadyOpen);
         if (Throw is not null) return Task.FromException<IReadOnlyList<SourcePage>>(Throw);
         var result = Handler?.Invoke(paths)
             ?? paths.Select((p, i) => new SourcePage(PageBitmap.Solid(40, 20, 200, 200, 200), p, 0, false)).ToList();

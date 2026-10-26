@@ -185,14 +185,15 @@ foreach (var (file, locked) in new[] { ("kojo-sample.pdf", false), ("kojo-locked
     await vm.ImportAsync([Path.Combine(dir, "card-photo.jpg")]);
     var page = vm.Pages.Single();
     var b = page.State.Base;
-    Check(b.Width == 4032 && b.Height == 3024, $"EXIF の向き（6）を反映して横長 {b.Width}x{b.Height}");
+    // 表示上 4032×3024 の写真は、長辺 4000 に縮小されて 4000×3000 になる（PageSource.MaxImageLongSidePx）。
+    Check(b.Width == 4000 && b.Height == 3000, $"EXIF の向き（6）を反映して横長・長辺 4000 に縮小 {b.Width}x{b.Height}");
     var q = ph.GetProperty("quad");
     var quad = new Quad(new(q[0][0].GetDouble(), q[0][1].GetDouble()), new(q[1][0].GetDouble(), q[1][1].GetDouble()),
                         new(q[2][0].GetDouble(), q[2][1].GetDouble()), new(q[3][0].GetDouble(), q[3][1].GetDouble()));
     vm.SelectedPage = page;
     await vm.ApplyCropAsync(page, quad);
     var c = page.State.Base;
-    var (ow, oh) = Perspective.OutputSize(quad, 4032, 3024);
+    var (ow, oh) = Perspective.OutputSize(quad, b.Width, b.Height);
     Check(c.Width == ow && c.Height == oh, $"切り抜き後 {c.Width}x{c.Height}（縦横比 {(double)c.Width / c.Height:F3}・カード 1.585）");
     var card = ph.GetProperty("card");
     var qrc = R(card.GetProperty("qr"));
