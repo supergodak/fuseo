@@ -125,13 +125,11 @@ public class ImportTests(ITestOutputHelper output) : E2ETest(output)
     });
 
     /// <summary>
-    /// 既知の不具合（2026-10-31 E2E で発見・未修正）: 対応外・壊れたファイルをドロップすると、ドロップの処理
-    /// （MainWindow.OnDrop → ImportAsync）が最初の await より前に失敗し、Drop の処理の中でエラーのメッセージボックスを出す。
-    /// 閉じるまでドラッグ元（エクスプローラー等）の DoDragDrop が戻らない＝ドラッグ元のウィンドウが固まる
-    /// （パスワード付き PDF のパスワード入力は await の後なので固まらない＝DragAndDrop_EncryptedPdf_AsksPassword_AndImports で確認）。
-    /// 直すかは判断待ち（例: Drop では受け取るだけにして、取り込みは Dispatcher.BeginInvoke で Drop が戻った後に始める）。
+    /// 回帰（2026-10-31 E2E で発見・修正済み）: 以前は対応外・壊れたファイルをドロップすると、Drop の処理の中で
+    /// エラーのメッセージボックスを出していたため、閉じるまでドラッグ元（エクスプローラー等）の DoDragDrop が戻らず固まった。
+    /// 今は MainWindow.OnDrop が受け取るだけにして、取り込みは Drop が戻った後に Dispatcher.BeginInvoke で始める。
     /// </summary>
-    [Fact(Skip = "既知の不具合: ドロップした対応外のファイルのエラーを閉じるまでドラッグ元が固まる（COVERAGE.md 参照・判断待ち）")]
+    [Fact]
     public void DragAndDrop_ErrorDialog_DoesNotBlockTheDragSource() => Run(s =>
     {
         var txt = s.InPath("note.txt");

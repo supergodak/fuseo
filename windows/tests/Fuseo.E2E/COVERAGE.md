@@ -81,11 +81,11 @@ PDF は `%PDF-1.4`・`/Producer (Fuseo for Windows)` があり `/Font`・`Tj`・
 | 設定: 言語の変更・再起動後の反映（英語 → 日本語に戻す） | SettingsAndAboutTests.Settings_Language_English_AppliesAfterRestart_AndBack |
 | バージョン情報: 版・ライセンス・コピー 2 つ・閉じる | SettingsAndAboutTests.About_ShowsVersion_CopiesBothAddresses_AndCloses |
 
-## 既知の不具合（E2E で発見・未修正・Skip）
+## E2E で見つけて直した不具合
 
 | テスト | 内容 |
 |---|---|
-| ImportTests.DragAndDrop_ErrorDialog_DoesNotBlockTheDragSource | 対応外・壊れたファイルをドロップすると、エラーのメッセージボックスを Drop の処理の中で出すため、閉じるまでドラッグ元（エクスプローラー等）が固まる。パスワード付き PDF のパスワード入力は固まらない。直すかは判断待ち |
+| ImportTests.DragAndDrop_ErrorDialog_DoesNotBlockTheDragSource | 対応外・壊れたファイルをドロップすると、エラーのメッセージボックスを Drop の処理の中で出していたため、閉じるまでドラッグ元（エクスプローラー等）が固まった。2026-10-31 修正（取り込みを Drop が戻った後に始める） |
 
 ## 時間の上限（止まったまま残らないように）
 

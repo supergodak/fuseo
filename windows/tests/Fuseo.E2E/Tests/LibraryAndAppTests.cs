@@ -171,7 +171,10 @@ public class SettingsAndAboutTests(ITestOutputHelper output) : E2ETest(output)
         }
         finally
         {
+            // 閉じ終わる前に「閉じる」を押すと、上に重なったエクスプローラーをクリックしてしまう（2026-10-31 に一度失敗）。
+            var handle = explorer.Current.NativeWindowHandle;
             ((WindowPattern)explorer.GetCurrentPattern(WindowPattern.Pattern)).Close();
+            Wait.Until(() => !Handles().Contains(handle), "エクスプローラーが閉じる");
         }
         w.Get("settings.close").Click();
         app.WaitWindowClosed(Ja.SettingsWindow);

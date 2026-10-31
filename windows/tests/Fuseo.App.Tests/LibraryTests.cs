@@ -112,6 +112,27 @@ public class FileWorkLibraryTests
     private static string[] Temps(string root) => Directory.GetFiles(root, "*" + FileWorkLibrary.TempSuffix, SearchOption.AllDirectories);
 
     [Fact]
+    public async Task Save_WhileAnotherProcessBrieflyHoldsDocument_RetriesAndSucceeds()
+    {
+        // ウイルス対策などが document.json を一瞬開いていると置き換えが拒まれる。少し待ってやり直し、最後の編集を失わない。
+        using var dir = new TempDir();
+        var pages = new[] { EditedPage("a.png") };
+        var id = Guid.NewGuid();
+        var lib = new FileWorkLibrary(dir.Path);
+        Save(lib, Capture(id, pages, WorkStatus.InProgress));
+        var json = Path.Combine(dir.Path, id.ToString("D"), FileWorkLibrary.DocumentFileName);
+        Assert.True(File.Exists(json));
+
+        var holder = new FileStream(json, FileMode.Open, FileAccess.Read, FileShare.Read); // File.ReadAllBytes と同じ開き方
+        var release = Task.Run(async () => { await Task.Delay(300); holder.Dispose(); });
+        Save(lib, Capture(id, pages, WorkStatus.Exported));
+        await release;
+
+        Assert.Equal(WorkStatus.Exported, new FileWorkLibrary(dir.Path).Load(id).Document.Status);
+        Assert.Empty(Temps(dir.Path));
+    }
+
+    [Fact]
     public void SaveThenLoad_InNewInstance_RestoresEverything()
     {
         using var dir = new TempDir();

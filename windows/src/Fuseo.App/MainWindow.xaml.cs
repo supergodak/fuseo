@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Threading;
 using System.Windows.Input;
 using System.Windows.Media;
 using Fuseo.App.Services;
@@ -348,10 +349,13 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private async void OnDrop(object sender, DragEventArgs e)
+    private void OnDrop(object sender, DragEventArgs e)
     {
         if (_vm is null || e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } paths) return;
         e.Handled = true;
-        await _vm.ImportAsync(paths);
+        // 取り込みは Drop が戻ってから始める。Drop の中でエラーやパスワードのダイアログを出すと、閉じるまで
+        // ドラッグ元（エクスプローラー）の DoDragDrop が戻らず固まる（E2E で発見）。ImportAsync は例外を中で表示する。
+        var vm = _vm;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () => vm.ImportAsync(paths));
     }
 }

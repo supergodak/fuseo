@@ -118,7 +118,32 @@ public sealed class FileWorkLibrary
             write(fs);
             fs.Flush(flushToDisk: true);
         }
-        File.Move(tmp, finalPath, overwrite);
+        if (overwrite) ReplaceWithRetry(tmp, finalPath);
+        else File.Move(tmp, finalPath, overwrite: false);
+    }
+
+    /// <summary>置き換えのやり直しの間隔（合計約 3 秒）。</summary>
+    private static readonly int[] ReplaceRetryDelaysMs = [50, 100, 200, 400, 800, 1600];
+
+    /// <summary>
+    /// 置き換え先を他のプロセス（ウイルス対策・バックアップ・検索インデックスなど）が一瞬開いていると、Windows は置き換えを
+    /// 拒む（Access denied）。黙って最後の編集を失わないよう、少し待って数回やり直す（2026-10-31 E2E で発見）。
+    /// 呼び出しは保存の列（UI スレッドではない）なので待ってよい。
+    /// </summary>
+    private static void ReplaceWithRetry(string tmp, string finalPath)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                File.Move(tmp, finalPath, overwrite: true);
+                return;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && attempt < ReplaceRetryDelaysMs.Length)
+            {
+                Thread.Sleep(ReplaceRetryDelaysMs[attempt]);
+            }
+        }
     }
 
     /// <summary>document.json が参照しないページ画像・サムネイル（と一時ファイル）を消す。失敗しても保存は成功扱い。</summary>
