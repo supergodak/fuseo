@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 画面操作の E2E テスト。配布物と同じ publish 済みの Fuseo.exe を起動し、UI オートメーション（System.Windows.Automation）と
+       user32 の SendInput でボタン・キー・マウス・ダイアログを操作して、書き出したファイルの中身まで確かめる。
+       ソリューションには入れない（ログオン中のデスクトップが要る・ssh からは動かない）。実行は ./scripts/vm-win.sh e2e。
+       依存の方針は製品と同じ: 追加の NuGet パッケージは入れない（FlaUI 等は使わない）。入力ファイルはテスト内で合成する
+       （実物の書類・fixtures-private は使わない）。 -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Fuseo.E2E</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 入力の合成（PageBitmap・QR の符号化）と、書き出したファイルの読み戻し（PDFium・WIC）に使う。アプリ本体は参照しない（exe を起動する）。 -->
+    <ProjectReference Include="..\..\src\Fuseo.Input\Fuseo.Input.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- パスワード付き PDF は Fuseo.Input.Tests の合成フィクスチャを流用する（中身は黒い四角だけ）。 -->
+    <None Include="..\Fuseo.Input.Tests\Fixtures\encrypted-aes256.pdf" Link="Fixtures\encrypted-aes256.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

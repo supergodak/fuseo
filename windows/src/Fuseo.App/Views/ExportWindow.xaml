@@ -35,7 +35,7 @@
         <StackPanel Grid.Row="1" Margin="0,16,0,6">
             <TextBlock Text="{x:Static p:Strings.ExportPreviewHeading}" FontWeight="SemiBold"/>
             <TextBlock Text="{x:Static p:Strings.ExportPreviewNote}" TextWrapping="Wrap" FontSize="12" Foreground="#555"/>
-            <TextBlock Text="{Binding SummaryText}" Margin="0,6,0,0"/>
+            <TextBlock Text="{Binding SummaryText}" Margin="0,6,0,0" AutomationProperties.AutomationId="export.summary"/>
         </StackPanel>
 
         <Border Grid.Row="2" BorderBrush="#CCC" BorderThickness="1" Background="#E8E8E8">
@@ -69,6 +69,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <TextBlock Text="{x:Static p:Strings.ExportPreparing}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="export.preparing"
                            Visibility="{Binding IsPreparing, Converter={StaticResource BoolToVis}}"/>
             </Grid>
         </Border>
@@ -97,7 +98,7 @@
             <Button DockPanel.Dock="Right" Content="{Binding SaveButtonText}" Command="{Binding SaveCommand}"
                     IsDefault="True" MinWidth="120" Padding="12,4" AutomationProperties.AutomationId="export.confirmButton"/>
             <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.Cancel}" Command="{Binding CancelCommand}"
-                    IsCancel="True" MinWidth="88" Padding="12,4" Margin="0,0,8,0"/>
+                    IsCancel="True" MinWidth="88" Padding="12,4" Margin="0,0,8,0" AutomationProperties.AutomationId="export.cancel"/>
         </DockPanel>
     </Grid>
 </Window>

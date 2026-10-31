@@ -48,9 +48,8 @@ public sealed class SettingsStore(string? path = null)
     public const string FileName = "settings.json";
     private const int SchemaVersion = 1;
 
-    /// <summary>既定の保存先 <c>%LOCALAPPDATA%\Fuseo\settings.json</c>。</summary>
-    public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fuseo", FileName);
+    /// <summary>既定の保存先 <c>%LOCALAPPDATA%\Fuseo\settings.json</c>（<see cref="AppDataLocation"/>・FUSEO_DATA_DIR があればその下）。</summary>
+    public static string DefaultPath => Path.Combine(AppDataLocation.Root, FileName);
 
     public string FilePath { get; } = Path.GetFullPath(path ?? DefaultPath);
 

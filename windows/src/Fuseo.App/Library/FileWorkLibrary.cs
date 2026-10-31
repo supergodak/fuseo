@@ -41,9 +41,8 @@ public sealed class FileWorkLibrary
         _codec = codec ?? new WicPageImageCodec();
     }
 
-    /// <summary>既定の保存先 <c>%LOCALAPPDATA%\Fuseo\Library</c>。</summary>
-    public static string DefaultRoot =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fuseo", "Library");
+    /// <summary>既定の保存先 <c>%LOCALAPPDATA%\Fuseo\Library</c>（<see cref="Configuration.AppDataLocation"/>・FUSEO_DATA_DIR があればその下）。</summary>
+    public static string DefaultRoot => Path.Combine(Configuration.AppDataLocation.Root, "Library");
 
     public string Root { get; }
 

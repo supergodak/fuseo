@@ -36,3 +36,6 @@ docs/windows-design.md
 
 # サブエージェントの作業用 worktree
 .claude/worktrees/
+
+# 社内向けの作業状況（公開リポジトリに出さない）
+PROJECT_STATUS.md

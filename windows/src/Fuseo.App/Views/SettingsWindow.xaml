@@ -29,7 +29,7 @@
             <Button DockPanel.Dock="Left" Content="{x:Static p:Strings.SettingsDeleteAll}" Command="{Binding DeleteAllCommand}"
                     Padding="10,3" AutomationProperties.AutomationId="settings.deleteAll"/>
             <TextBlock Text="{Binding DeleteAllStatus}" TextWrapping="Wrap" FontSize="12" Foreground="#555" VerticalAlignment="Center"
-                       Margin="10,0,0,0"/>
+                       Margin="10,0,0,0" AutomationProperties.AutomationId="settings.deleteAllStatus"/>
         </DockPanel>
 
         <Button Content="{x:Static p:Strings.Close}" IsCancel="True" HorizontalAlignment="Right" MinWidth="88"

@@ -24,7 +24,7 @@ public partial class App : Application
 
         // 表示言語は起動時に 1 回だけ決める（設定の変更は再起動後に反映・W6）。画面を作る前に決めること
         // （XAML の {x:Static p:Strings.*} は生成時に読まれる）。
-        var settingsStore = new SettingsStore(); // %LOCALAPPDATA%\Fuseo\settings.json
+        var settingsStore = new SettingsStore(); // %LOCALAPPDATA%\Fuseo\settings.json（FUSEO_DATA_DIR があればその下・AppDataLocation）
         var culture = UiLanguage.Resolve(settingsStore.Load().Language, CultureInfo.CurrentUICulture);
         Strings.Culture = culture;
         CultureInfo.CurrentUICulture = culture;
@@ -40,7 +40,7 @@ public partial class App : Application
             presets,
             dialogs,
             detector: new QrDetector(),
-            library: new FileWorkLibrary(), // %LOCALAPPDATA%\Fuseo\Library（このパソコンの中だけ）
+            library: new FileWorkLibrary(), // %LOCALAPPDATA%\Fuseo\Library（このパソコンの中だけ・FUSEO_DATA_DIR があればその下）
             settings: settingsStore);
         window.DataContext = vm;
         MainWindow = window;

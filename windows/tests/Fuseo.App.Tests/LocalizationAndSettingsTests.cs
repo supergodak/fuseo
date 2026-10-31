@@ -308,6 +308,35 @@ public class SettingsTests
         Assert.Equal(Path.Combine(local, "Fuseo", "settings.json"), SettingsStore.DefaultPath);
         Assert.Equal(Path.Combine(local, "Fuseo", "Library"), FileWorkLibrary.DefaultRoot);
     }
+
+    // FUSEO_DATA_DIR（E2E テストの隔離用）。プロセスの環境変数は他のテストと共有なので書き換えず、純粋関数で確かめる。
+
+    [Fact]
+    public void DataDir_NotSet_IsLocalAppDataFuseo()
+    {
+        Assert.Null(Environment.GetEnvironmentVariable(AppDataLocation.EnvironmentVariable)); // 通常のテスト実行では設定しない
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        Assert.Equal(Path.Combine(local, "Fuseo"), AppDataLocation.Root);
+        Assert.Equal(Path.Combine(@"C:\Users\u\AppData\Local", "Fuseo"), AppDataLocation.Resolve(null, @"C:\Users\u\AppData\Local"));
+    }
+
+    [Fact]
+    public void DataDir_AbsolutePath_ReplacesLocalAppDataFuseo()
+    {
+        Assert.Equal(@"C:\fuseo-e2e\run1\data", AppDataLocation.Resolve(@"C:\fuseo-e2e\run1\data", @"C:\Users\u\AppData\Local"));
+        Assert.Equal(@"C:\fuseo-e2e\data", AppDataLocation.Resolve(@"C:\fuseo-e2e\x\..\data", @"C:\Users\u\AppData\Local"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("data")]
+    [InlineData(@"..\data")]
+    [InlineData(@"C:data")]
+    public void DataDir_EmptyOrRelative_IsIgnored(string value)
+    {
+        Assert.Equal(Path.Combine(@"C:\Users\u\AppData\Local", "Fuseo"), AppDataLocation.Resolve(value, @"C:\Users\u\AppData\Local"));
+    }
 }
 
 /// <summary>W6: 設定ウィンドウ・バージョン情報の ViewModel 側。</summary>

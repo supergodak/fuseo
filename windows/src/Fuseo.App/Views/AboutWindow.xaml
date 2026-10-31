@@ -41,7 +41,7 @@
                         Tag="{x:Static s:AboutInfo.SourceCodeAddress}" Click="OnCopy" AutomationProperties.AutomationId="about.copySource"/>
             </Grid>
             <TextBlock Text="{x:Static p:Strings.AboutUrlNote}" TextWrapping="Wrap" FontSize="11" Foreground="#666" Margin="0,4,0,0"/>
-            <TextBlock x:Name="CopiedText" FontSize="11" Foreground="#15803D" Margin="0,2,0,0"/>
+            <TextBlock x:Name="CopiedText" FontSize="11" Foreground="#15803D" Margin="0,2,0,0" AutomationProperties.AutomationId="about.copied"/>
         </StackPanel>
 
         <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" LastChildFill="False">

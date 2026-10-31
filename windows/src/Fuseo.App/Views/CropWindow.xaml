@@ -29,7 +29,8 @@
                         AutomationProperties.AutomationId="crop.cancel"/>
             </StackPanel>
             <TextBlock x:Name="InvalidText" Text="{x:Static p:Strings.CropInvalid}" Foreground="#C62828" TextWrapping="Wrap"
-                       VerticalAlignment="Center" Margin="12,0" Visibility="Collapsed"/>
+                       VerticalAlignment="Center" Margin="12,0" Visibility="Collapsed"
+                       AutomationProperties.AutomationId="crop.invalid"/>
         </DockPanel>
     </Grid>
 </Window>
