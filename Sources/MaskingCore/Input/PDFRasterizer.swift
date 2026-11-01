@@ -86,12 +86,12 @@ public struct PDFRasterizer {
         MaskingLog.pipeline.info("PDF入力: \(count, privacy: .public)ページを画像化（dpi=\(self.dpi, privacy: .public)）")
 
         for index in 0..<count {
-            guard let page = doc.page(at: index), let cgPage = page.pageRef else {
+            guard let page = doc.page(at: index) else {
                 throw Failure.unreadable
             }
             // ページごとにプールを閉じ、次ページ生成前にビットマップを解放する。
             try autoreleasepool {
-                let rendered = try render(cgPage)
+                let rendered = try render(page)
                 try handler(Page(index: index, cgImage: rendered.image, pointSize: rendered.pointSize))
             }
         }
@@ -99,17 +99,19 @@ public struct PDFRasterizer {
 
     // MARK: - 描画
 
-    /// `/Rotate` を適用した実サイズで 1 ページを描画する。
+    /// ビューアで見えるとおり（CropBox の範囲・`/Rotate` 適用後の向き・**注釈とフォームの記入値を含む**）に 1 ページを描画する。
     ///
-    /// PDF もビットマップコンテキストも**左下原点**なので上下反転は不要。回転とスケールは
-    /// `CGPDFPage.getDrawingTransform` に任せる（この関数はページの `/Rotate` を考慮する）。
-    /// 自前で回転行列を組むと `/Rotate` と二重適用になり、逆さ・潰れの典型バグを生む。
-    private func render(_ cgPage: CGPDFPage) throws -> (image: CGImage, pointSize: CGSize) {
-        let box = cgPage.getBoxRect(.mediaBox)
+    /// 2026-10-31 修正: 以前は `CGContext.drawPDFPage` で MediaBox を描いていたため、
+    /// (1) 記入済みのフォーム欄・押印などの注釈が描かれず書き出しから消えた（控除証明書の記入欄が空になる）、
+    /// (2) CropBox の外（ビューアでは見えない部分）まで画像に入った。PDFKit の `PDFPage.draw(with:to:)` は
+    /// 注釈（Widget の外観を含む）も描き、CropBox の原点と `/Rotate` も扱う。
+    /// PDF もビットマップコンテキストも**左下原点**なので上下反転は不要。自前で回転行列を組まないこと（二重適用になる）。
+    private func render(_ page: PDFPage) throws -> (image: CGImage, pointSize: CGSize) {
+        let box = page.bounds(for: .cropBox) // MediaBox との共通部分（PDFKit が補正済み）
         guard box.width > 0, box.height > 0 else { throw Failure.unreadable }
 
         // /Rotate は 90 の倍数（負値・360超も正規化する）。
-        let rotation = ((Int(cgPage.rotationAngle) % 360) + 360) % 360
+        let rotation = ((page.rotation % 360) + 360) % 360
         let quarterTurned = (rotation == 90 || rotation == 270)
         let pointSize = quarterTurned
             ? CGSize(width: box.height, height: box.width)
@@ -135,15 +137,10 @@ public struct PDFRasterizer {
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: pxWidth, height: pxHeight))
 
-        // 座標系: まず pt→px の拡大を CTM に載せ、その上で **pt 単位の矩形**（/Rotate 適用後のページサイズ）へ
-        // getDrawingTransform でフィットさせる。ピクセル矩形を直接 getDrawingTransform に渡すと内容が
-        // 約 57% に縮小して中央に描かれる（2026-09-17 実測: 0.21..0.74 / 正しくは 0.10..0.90）。
-        // /Rotate はこの関数が考慮する（自前で回転行列を組むと二重適用になる）。
+        // 座標系: pt→px の拡大だけを CTM に載せる。CropBox の原点と /Rotate への変換は `draw(with:to:)` が中で行う
+        // （`transform(_:for:)` を重ねると二重適用で 90° のページが縮む。2026-10-31 テストで確認）。
         ctx.scaleBy(x: CGFloat(scale), y: CGFloat(scale))
-        let pointRect = CGRect(origin: .zero, size: pointSize)
-        ctx.concatenate(cgPage.getDrawingTransform(.mediaBox, rect: pointRect,
-                                                   rotate: 0, preserveAspectRatio: true))
-        ctx.drawPDFPage(cgPage)
+        page.draw(with: .cropBox, to: ctx)
 
         guard let image = ctx.makeImage() else { throw Failure.unreadable }
         return (image, pointSize)

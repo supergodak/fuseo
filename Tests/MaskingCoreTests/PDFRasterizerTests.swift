@@ -184,6 +184,112 @@ final class PDFRasterizerTests: XCTestCase {
                 Double(minY) / Double(h), Double(maxY + 1) / Double(h))
     }
 
+    // MARK: - 2c. フォームの記入値・注釈・CropBox（2026-10-31 Windows 版との比較で発見）
+
+    /// 記入済みのフォーム欄（Widget）と注釈（Square）は外観ストリームにだけ描かれている。
+    /// drawPDFPage はこれらを描かないため、以前は書き出しから記入値が消えていた（控除証明書の記入欄が空になる事故）。
+    func test_rasterize_drawsFilledFormFieldsAndAnnotations() throws {
+        // 200×100pt のページ。左半分に記入済みのフォーム欄、右半分に塗りつぶしの四角い注釈（どちらも外観は黒の塗り）。
+        let url = try Self.writeRawPDF(media: "0 0 200 100", crop: nil, content: "", annots: [
+            (subtype: "/Widget", rect: "10 10 90 90", extra: "/FT /Tx /T (writer) /V (filled)"),
+            (subtype: "/Square", rect: "110 10 190 90", extra: ""),
+        ])
+        defer { removeFile(url) }
+        var page: PDFRasterizer.Page?
+        try PDFRasterizer(dpi: 72).rasterize(url: url) { page = $0 }
+        let img = try XCTUnwrap(page).cgImage
+        XCTAssertEqual(img.width, 200); XCTAssertEqual(img.height, 100)
+        XCTAssertTrue(Self.isDark(img, x: 50, y: 50), "フォーム欄の記入値（外観）が描かれていない")
+        XCTAssertTrue(Self.isDark(img, x: 150, y: 50), "注釈が描かれていない")
+        XCTAssertFalse(Self.isDark(img, x: 100, y: 50), "注釈の外まで黒い")
+    }
+
+    /// ビューアと同じく CropBox の内側だけを画像にする（MediaBox で描くと、見えていない部分まで書き出しに入る）。
+    func test_rasterize_usesCropBox() throws {
+        // MediaBox 300×200・CropBox はその内側 (100,50)-(300,200)。CropBox の外（左下）に黒、内側の左下隅にも黒。
+        let content = "0 g 0 0 50 40 re f 100 50 20 20 re f"
+        let url = try Self.writeRawPDF(media: "0 0 300 200", crop: "100 50 300 200", content: content, annots: [])
+        defer { removeFile(url) }
+        var page: PDFRasterizer.Page?
+        try PDFRasterizer(dpi: 72).rasterize(url: url) { page = $0 }
+        let p = try XCTUnwrap(page)
+        XCTAssertEqual(p.pointSize, CGSize(width: 200, height: 150))
+        XCTAssertEqual(p.cgImage.width, 200); XCTAssertEqual(p.cgImage.height, 150)
+        // 画像は左上原点: CropBox 内側の左下隅の黒は画像の左下（x 10, y 140 付近）。
+        XCTAssertTrue(Self.isDark(p.cgImage, x: 10, y: 140), "CropBox の左下隅の内容が左下に来ていない")
+        let bbox = Self.darkBounds(of: p.cgImage)
+        XCTAssertLessThan(bbox.maxX, 0.2, "CropBox の外の内容が入っている (\(bbox))")
+    }
+
+    /// CropBox と /Rotate 90 を併せ持つページも、ビューアで見える向き・範囲で描く。
+    func test_rasterize_usesCropBox_withRotation() throws {
+        let content = "0 g 100 50 20 20 re f"
+        let url = try Self.writeRawPDF(media: "0 0 300 200", crop: "100 50 300 200", content: content, annots: [],
+                                       rotate: 90)
+        defer { removeFile(url) }
+        var page: PDFRasterizer.Page?
+        try PDFRasterizer(dpi: 72).rasterize(url: url) { page = $0 }
+        let p = try XCTUnwrap(page)
+        XCTAssertEqual(p.pointSize, CGSize(width: 150, height: 200))
+        // 時計回り 90°: 元の左下隅は表示で左上に来る。
+        XCTAssertTrue(Self.isDark(p.cgImage, x: 10, y: 10), "回転後の位置がずれている")
+        XCTAssertFalse(Self.isDark(p.cgImage, x: 140, y: 190))
+    }
+
+    /// 最小の PDF を手で書く（注釈の外観ストリーム＝黒の塗り・AcroForm を正しく持つ）。
+    private static func writeRawPDF(media: String, crop: String?, content: String,
+                                    annots: [(subtype: String, rect: String, extra: String)],
+                                    rotate: Int = 0) throws -> URL {
+        var objects: [String] = []
+        let annotBase = 5
+        var annotRefs: [String] = []
+        var appearanceObjects: [String] = []
+        for (i, a) in annots.enumerated() {
+            let annotNum = annotBase + i * 2, apNum = annotNum + 1
+            annotRefs.append("\(annotNum) 0 R")
+            let r = a.rect.split(separator: " ").compactMap { Double($0) }
+            let w = r[2] - r[0], h = r[3] - r[1]
+            let ap = "0 g 0 0 \(w) \(h) re f"
+            appearanceObjects.append("<< /Type /Annot /Subtype \(a.subtype) /Rect [\(a.rect)] /F 4 \(a.extra) /AP << /N \(apNum) 0 R >> >>")
+            appearanceObjects.append("<< /Type /XObject /Subtype /Form /BBox [0 0 \(w) \(h)] /Length \(ap.utf8.count) >>\nstream\n\(ap)\nendstream")
+        }
+        let widgets = annots.enumerated().filter { $0.element.subtype == "/Widget" }.map { "\(annotBase + $0.offset * 2) 0 R" }
+        let acro = widgets.isEmpty ? "" : " /AcroForm << /Fields [\(widgets.joined(separator: " "))] >>"
+        objects.append("<< /Type /Catalog /Pages 2 0 R\(acro) >>")
+        objects.append("<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+        let cropEntry = crop.map { " /CropBox [\($0)]" } ?? ""
+        let annotsEntry = annotRefs.isEmpty ? "" : " /Annots [\(annotRefs.joined(separator: " "))]"
+        objects.append("<< /Type /Page /Parent 2 0 R /MediaBox [\(media)]\(cropEntry) /Rotate \(rotate) /Contents 4 0 R /Resources << >>\(annotsEntry) >>")
+        objects.append("<< /Length \(content.utf8.count) >>\nstream\n\(content)\nendstream")
+        objects.append(contentsOf: appearanceObjects)
+
+        var pdf = "%PDF-1.4\n"
+        var offsets: [Int] = []
+        for (i, o) in objects.enumerated() {
+            offsets.append(pdf.utf8.count)
+            pdf += "\(i + 1) 0 obj\n\(o)\nendobj\n"
+        }
+        let xref = pdf.utf8.count
+        pdf += "xref\n0 \(objects.count + 1)\n0000000000 65535 f \n"
+        for off in offsets { pdf += String(format: "%010d 00000 n \n", off) }
+        pdf += "trailer\n<< /Size \(objects.count + 1) /Root 1 0 R >>\nstartxref\n\(xref)\n%%EOF\n"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("pdfrast-raw-\(UUID().uuidString).pdf")
+        try Data(pdf.utf8).write(to: url)
+        return url
+    }
+
+    /// (x, y)（左上原点の画素）が暗いか。
+    private static func isDark(_ image: CGImage, x: Int, y: Int) -> Bool {
+        let w = image.width, h = image.height
+        var data = [UInt8](repeating: 0, count: w * h * 4)
+        let ctx = CGContext(data: &data, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        let i = (y * w + x) * 4
+        return data[i] < 128 && data[i + 1] < 128 && data[i + 2] < 128
+    }
+
     // MARK: - 3. パスワード
 
     func test_lockedPDF_requiresCorrectPassword() throws {
