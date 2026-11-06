@@ -46,7 +46,8 @@ public class DistributionFilesTests
     public void NoticesListEveryBundledComponent()
     {
         var text = File.ReadAllText(Path.Combine(WindowsRoot(), "THIRD-PARTY-NOTICES.txt"), Strict);
-        foreach (var name in new[] { "PDFiumCore", "pdfium-binaries", "PDFium", "ZXing.Net", ".NET Runtime", "Windows Presentation Foundation" })
+        foreach (var name in new[] { "PDFiumCore", "pdfium-binaries", "PDFium", "ZXing.Net", ".NET Runtime", "Windows Presentation Foundation",
+                                   "Microsoft.Windows.SDK.NET", "WinRT.Runtime" })
             Assert.Contains(name, text);
     }
 }

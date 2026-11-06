@@ -2,7 +2,8 @@
   <!-- WPF シェル（画面・ViewModel・入力配線）。量産は W3（Opus）。通信機能は持たない（生命線）。 -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <RootNamespace>Fuseo.App</RootNamespace>
     <AssemblyName>Fuseo</AssemblyName>

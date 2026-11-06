@@ -2,9 +2,12 @@
   <!-- 取り込み（W2）: ファイル → SourcePage[]。WIC（WPF の System.Windows.Media.Imaging）と PDFium を使う。
        Core に WPF 型を持ち込まないため、別アセンブリにしている（docs/windows-design.md §3.2）。
        通信機能は持たない（生命線）。依存は PDFiumCore（ネイティブ pdfium.dll は bblanchon.PDFium.* が運ぶ）と
-       ZXing.Net（QR／バーコード検出・W4。System.Drawing 系のバインディングは入れない）のみ。 -->
+       ZXing.Net（QR／バーコード検出・W4。System.Drawing 系のバインディングは入れない）のみ。
+       v0.2（W9-2）で TFM を 10.0.17763.0 に上げ、組み込みの WinRT 投影（Microsoft.Windows.SDK.NET・NuGet の追加なし）で
+       Windows.Media.Ocr と Windows.Media.FaceAnalysis（どちらも端末内）を呼ぶ（§10.2・§10.13）。 -->
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Fuseo.Input</RootNamespace>

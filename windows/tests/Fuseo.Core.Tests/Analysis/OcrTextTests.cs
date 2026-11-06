@@ -22,6 +22,8 @@ public class OcrTextTests
         Assert.Equal("保険者番号", OcrText.ForKeywords("保 険　者\t番号"));
         Assert.Equal("AB12", OcrText.ForKeywords("ＡＢ１２"));
         Assert.Equal("在留カード", OcrText.ForKeywords("在留ｶｰﾄﾞ"));   // 半角カナも揃う
+        Assert.Equal("在留カード", OcrText.ForKeywords("在留カ-ド"));    // OCR が長音を ASCII のハイフンと読む
+        Assert.Equal("コールセンター", OcrText.ForKeywords("コ−ルセンタ―")); // マイナス記号・水平線も長音に
     }
 
     [Fact]

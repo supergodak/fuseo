@@ -3650,3 +3650,19 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
+7. Windows SDK for .NET 8 — C#/WinRT projection of the Windows Runtime APIs
+   (NuGet: Microsoft.Windows.SDK.NET.Ref 10.0.17763.56) — bundled inside
+   Fuseo.exe:
+     - Microsoft.Windows.SDK.NET.dll 10.0.17763.55 ("Windows SDK for .NET 8")
+     - WinRT.Runtime.dll 2.2.0.48161 ("C#/WinRT")
+   Copyright (c) Microsoft Corporation. All rights reserved.
+   License: Microsoft's license terms for the Windows SDK. The package
+   metadata requires license acceptance and gives the license location as
+   https://aka.ms/WinSDKLicenseURL ; the package itself does not contain a
+   license file, so no license text is reproduced here.
+   Used only to call Windows built-in, on-device features (text recognition
+   Windows.Media.Ocr and face detection Windows.Media.FaceAnalysis). They do
+   not send anything over the network.
+================================================================================

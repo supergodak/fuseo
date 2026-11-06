@@ -26,15 +26,25 @@ public static class OcrText
         return sb.ToString();
     }
 
-    /// <summary>キーワード照合用: NFKC → 空白（全種）を除去。分類・キーワード近接の照合だけに使う。</summary>
+    /// <summary>
+    /// キーワード照合用: NFKC → 空白（全種）を除去 → ハイフン・ダッシュ類を長音「ー」に揃える。分類・キーワード近接の照合だけに使う。
+    /// 長音を揃えるのは Windows OCR が「在留カード」の「ー」を ASCII の「-」と読むため（W9-2 の合成カードで毎回発生・メイン決定）。
+    /// キーワード側も同じ関数を通すので、プリセットの表記はそのままでよい。
+    /// </summary>
     public static string ForKeywords(string text)
     {
         var n = text.Normalize(NormalizationForm.FormKC);
         var sb = new StringBuilder(n.Length);
         foreach (var ch in n)
-            if (!char.IsWhiteSpace(ch)) sb.Append(ch);
+        {
+            if (char.IsWhiteSpace(ch)) continue;
+            sb.Append(IsDashLike(ch) ? 'ー' : ch);
+        }
         return sb.ToString();
     }
+
+    /// <summary>長音と取り違えやすい横棒（- ‐ ‑ ‒ – — ― −）。NFKC 後なので全角の「－」は「-」になっている。</summary>
+    private static bool IsDashLike(char c) => c is '-' or '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014' or '\u2015' or '\u2212';
 
     /// <summary>
     /// 数字処理用: 全角英数（U+FF10–FF19・FF21–FF3A・FF41–FF5A）を半角に、全角空白を半角に。
