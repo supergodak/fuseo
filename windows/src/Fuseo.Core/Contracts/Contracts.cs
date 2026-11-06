@@ -1,3 +1,4 @@
+using Fuseo.Core.Analysis;
 using Fuseo.Core.Geometry;
 using Fuseo.Core.Imaging;
 using Fuseo.Core.Model;
@@ -33,6 +34,16 @@ public interface IDetector
 {
     DetectorId Id { get; }
     IReadOnlyList<NormRect> Detect(PageBitmap page);
+}
+
+/// <summary>
+/// 文字認識（v0.2・§10.2）。1 行 = 1 観測、座標は左上原点の正規化。Core は OCR の実装を知らない
+/// （Windows.Media.Ocr のアダプタは W9-2 で Fuseo.Input に置く・テストはフィクスチャで回す）。
+/// 結果はディスクに保存しない（書類の文字列を残さない）。
+/// </summary>
+public interface ITextRecognizer
+{
+    Task<IReadOnlyList<OcrItem>> RecognizeAsync(PageBitmap page, CancellationToken ct);
 }
 
 /// <summary>確定したマスク一式（ON の候補＋手動）。</summary>
