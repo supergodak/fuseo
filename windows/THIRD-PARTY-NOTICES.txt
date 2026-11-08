@@ -3661,7 +3661,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
    License: Microsoft's license terms for the Windows SDK. The package
    metadata requires license acceptance and gives the license location as
    https://aka.ms/WinSDKLicenseURL ; the package itself does not contain a
-   license file, so no license text is reproduced here.
+   license file, so no license text is reproduced here. These Microsoft
+   components are NOT covered by Fuseo's MIT License; anyone who uses or
+   redistributes Fuseo.exe must also comply with Microsoft's terms.
    Used only to call Windows built-in, on-device features (text recognition
    Windows.Media.Ocr and face detection Windows.Media.FaceAnalysis). They do
    not send anything over the network.
