@@ -204,4 +204,17 @@ public static class Strings
     public static string StatusCropped => Get(nameof(StatusCropped));
     public static string StatusCropCleared => Get(nameof(StatusCropCleared));
     public static string StatusCropDetectFailed => Get(nameof(StatusCropDetectFailed));
+
+    // ---- W9-3: 文字認識・自動判定 ----
+    public static string AutoTypeBadge => Get(nameof(AutoTypeBadge));
+    public static string AutoTypeBadgeTip => Get(nameof(AutoTypeBadgeTip));
+    public static string OcrUnavailableNotice => Get(nameof(OcrUnavailableNotice));
+    public static string CropHint => Get(nameof(CropHint));
+    public static string RereadText => Get(nameof(RereadText));
+    public static string RereadTextTip => Get(nameof(RereadTextTip));
+    public static string StatusReadingText => Get(nameof(StatusReadingText));
+    public static string StatusReadingTextOnce => Get(nameof(StatusReadingTextOnce));
+    public static string StatusRereading => Get(nameof(StatusRereading));
+    public static string StatusReread => Get(nameof(StatusReread));
+    public static string StatusRereadFailed => Get(nameof(StatusRereadFailed));
 }

@@ -142,11 +142,41 @@
 
         <!-- 右ペイン -->
         <Border DockPanel.Dock="Right" Width="320" Background="White" BorderBrush="#DDD" BorderThickness="1,0,0,0">
+          <DockPanel>
+            <!-- 日本語の文字認識が無い環境の案内（W9-3・閉じられる・書類が無くても出す）。 -->
+            <Border DockPanel.Dock="Top" Background="#FFF4E5" BorderBrush="#F0B35A" BorderThickness="0,0,0,1" Padding="10,8"
+                    Visibility="{Binding IsOcrUnavailableNoticeVisible, Converter={StaticResource BoolToVis}}"
+                    AutomationProperties.AutomationId="side.ocrUnavailableNotice">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="&#xE711;" FontFamily="Segoe MDL2 Assets" Command="{Binding DismissOcrNoticeCommand}"
+                            Background="Transparent" BorderThickness="0" Padding="6,2" VerticalAlignment="Top"
+                            ToolTip="{x:Static p:Strings.BannerClose}" AutomationProperties.Name="{x:Static p:Strings.BannerClose}"
+                            AutomationProperties.AutomationId="side.ocrUnavailableNoticeClose"/>
+                    <TextBlock Text="{x:Static p:Strings.OcrUnavailableNotice}" TextWrapping="Wrap" FontSize="12"/>
+                </DockPanel>
+            </Border>
             <ScrollViewer VerticalScrollBarVisibility="Auto" IsEnabled="{Binding HasPages}">
                 <StackPanel Margin="12">
                     <TextBlock Text="{x:Static p:Strings.DocumentTypeLabel}" FontWeight="SemiBold"/>
-                    <ComboBox ItemsSource="{Binding DocumentTypes}" SelectedItem="{Binding SelectedDocumentType}"
-                              DisplayMemberPath="DisplayName" Margin="0,4,0,0" AutomationProperties.AutomationId="main.documentType"/>
+                    <DockPanel Margin="0,4,0,0">
+                        <!-- 自動判定の種類のまま（利用者が選んでいない）なら「自動」 -->
+                        <Border DockPanel.Dock="Right" Background="#E0F2FE" CornerRadius="3" Padding="6,1" Margin="6,0,0,0"
+                                VerticalAlignment="Center" ToolTip="{x:Static p:Strings.AutoTypeBadgeTip}"
+                                Visibility="{Binding IsAutoTypeVisible, Converter={StaticResource BoolToVis}}"
+                                AutomationProperties.AutomationId="side.autoTypeBadge"
+                                AutomationProperties.Name="{x:Static p:Strings.AutoTypeBadge}">
+                            <TextBlock Text="{x:Static p:Strings.AutoTypeBadge}" FontSize="11" Foreground="#075985"/>
+                        </Border>
+                        <ComboBox ItemsSource="{Binding DocumentTypes}" SelectedItem="{Binding SelectedDocumentType}"
+                                  IsEnabled="{Binding IsIdle}"
+                                  DisplayMemberPath="DisplayName" AutomationProperties.AutomationId="main.documentType"/>
+                    </DockPanel>
+                    <TextBlock Text="{x:Static p:Strings.CropHint}" TextWrapping="Wrap" FontSize="12" Foreground="#B45309" Margin="0,6,0,0"
+                               Visibility="{Binding IsCropHintVisible, Converter={StaticResource BoolToVis}}"
+                               AutomationProperties.AutomationId="side.cropHint"/>
+                    <Button Content="{x:Static p:Strings.RereadText}" Command="{Binding RereadTextCommand}" HorizontalAlignment="Left"
+                            Padding="10,3" Margin="0,8,0,0" ToolTip="{x:Static p:Strings.RereadTextTip}"
+                            ToolTipService.ShowOnDisabled="True" AutomationProperties.AutomationId="side.rereadText"/>
 
                     <TextBlock Text="{x:Static p:Strings.ChecklistHeading}" FontWeight="SemiBold" Margin="0,16,0,0"/>
                     <TextBlock Text="{x:Static p:Strings.ChecklistNote}" TextWrapping="Wrap" FontSize="11" Foreground="#666" Margin="0,2,0,6"/>
@@ -188,6 +218,7 @@
                     </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
+          </DockPanel>
         </Border>
 
         <!-- 中央: 注意書きバナー＋キャンバス -->

@@ -1,3 +1,4 @@
+using Fuseo.Core.Analysis;
 using Fuseo.Core.Contracts;
 using Fuseo.Core.Geometry;
 using Fuseo.Core.Imaging;
@@ -12,12 +13,13 @@ namespace Fuseo.App.State;
 /// - 手動マスク・候補の座標は**常にこの Rotation で回した画像の上**の正規化座標（左上原点）。
 /// - <see cref="Type"/>: 書類種別。種別を変えると候補（defaultOn）が作り直されるので、候補と一緒に戻せるようここに持つ。
 /// - <see cref="Crop"/>: 手動 4 隅切り抜き（W4.5）。**元画像（回転 0）の上**の四隅。null = 切り抜きなし。
-/// - <see cref="RawDetections"/>: 自動検出の生の箱（padding 前・回転 0・**切り抜いた画像の上**）。切り抜きを変えると検出し直すので、
-///   切り抜きと一緒に戻せるようここに持つ（null = 空）。
+/// - <see cref="Findings"/>: 自動検出の材料（QR・顔の生の箱は R0 = 切り抜いた画像の回転 0、OCR は OcrTurns の向き。§10.15）。
+///   切り抜き・読み直しで変わるので、それらと一緒に戻せるようここに持つ（null = 空）。
+/// - <see cref="TypeIsManual"/>: 利用者が種別を選んだか（true なら以後の再解析で自動判定に戻さない＝Mac の forcedType）。
 /// </summary>
 public sealed record EditSnapshot(
     ManualMask Manual, IReadOnlyList<MaskCandidate> Candidates, int Rotation = 0,
-    DocumentType Type = DocumentType.Generic, Quad? Crop = null, IReadOnlyList<NormRect>? RawDetections = null)
+    DocumentType Type = DocumentType.Generic, Quad? Crop = null, PageFindings? Findings = null, bool TypeIsManual = false)
 {
     public static readonly EditSnapshot Empty = new(new ManualMask(), []);
 }
@@ -31,8 +33,8 @@ public sealed record EditSnapshot(
 /// - マスク座標は <see cref="Base"/> 上の正規化座標・左上原点のみ。回転するときは画像と**同じ回数だけ**マスクも回す
 ///   （<see cref="QuarterTurn"/> 経由のみ）。
 /// - Undo/Redo はページごと（手動マスク・候補の ON/OFF・回転・種別を 1 つのスナップショットで持つ）。
-/// - 自動検出の生の箱 <see cref="RawDetections"/> は padding 前・回転 0（<see cref="Cropped"/> 基準）で持ち、
-///   種別を変えたら現在の回転まで回してから候補を作り直す。
+/// - 自動検出の材料 <see cref="Findings"/>（§10.15）から <see cref="CandidateBuilder"/> で候補を作る。
+///   取り込み時の解析は Undo 履歴に積まない。切り抜き・読み直し・種別の変更はそれぞれ 1 回の変更。回転では読み直さない。
 /// </summary>
 public sealed class PageState
 {
@@ -64,19 +66,21 @@ public sealed class PageState
     /// <summary>
     /// 自動保存（W5）から復元する。検出は走らせない（保存した候補・生の箱をそのまま戻す）。
     /// **Undo 履歴は空**（履歴は保存しない）。座標は保存時と同じ「<paramref name="rotation"/> で回した画像の上」。
+    /// OCR の結果は保存しないので、復元後は Ocr = null・OcrTurns = 0（種別を変えたときに必要なら読み直す・§10.15）。
     /// </summary>
     public static PageState Restore(
         Guid id, PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf,
         DocumentType type, int rotation, ManualMask manual, IReadOnlyList<MaskCandidate> candidates,
-        DetectorId? rawDetector, IReadOnlyList<NormRect> rawDetections, IEnumerable<string> checkedRuleIds,
-        Quad? crop = null)
+        IReadOnlyList<NormRect> rawQr, IEnumerable<string> checkedRuleIds,
+        Quad? crop = null, IReadOnlyList<NormRect>? rawFaces = null, bool typeIsManual = false)
     {
         if (rotation is < 0 or > 3) throw new ArgumentOutOfRangeException(nameof(rotation), "回転は 0..3");
         if (crop is { } q && !q.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
-        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id) { RawDetector = rawDetector };
+        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id);
         state._current = new EditSnapshot(
             new ManualMask { Rects = [.. manual.Rects], Strokes = [.. manual.Strokes] },
-            candidates.ToList(), rotation, type, NormalizeCrop(crop), rawDetections.ToList());
+            candidates.ToList(), rotation, type, NormalizeCrop(crop),
+            new PageFindings(0, null, rawQr.ToList(), (rawFaces ?? []).ToList()), typeIsManual);
         foreach (var r in checkedRuleIds) state.CheckedRuleIds.Add(r);
         return state;
     }
@@ -138,11 +142,19 @@ public sealed class PageState
     /// <summary>手動回転（時計回り 90° の回数・0..3）。W5 の JSON（manualRotation）の項目。</summary>
     public int Rotation => _current.Rotation;
 
-    /// <summary>自動検出の生の箱（padding 前・回転 0 = <see cref="Cropped"/> 基準・左上原点）。</summary>
-    public IReadOnlyList<NormRect> RawDetections => _current.RawDetections ?? [];
+    /// <summary>自動検出の材料（§10.15）。</summary>
+    public PageFindings Findings => _current.Findings ?? PageFindings.Empty;
 
-    /// <summary>生の箱を出した検出器（候補の Detector 欄に入れる）。</summary>
-    public DetectorId? RawDetector { get; private set; }
+    /// <summary>QR／バーコードの生の箱（padding 前・R0 = <see cref="Cropped"/> の回転 0・左上原点）。= <see cref="Findings"/>.Qr。</summary>
+    public IReadOnlyList<NormRect> RawDetections => Findings.Qr;
+
+    /// <summary>利用者が種別を選んだか（true なら切り抜き・読み直しで自動判定に戻さない）。</summary>
+    public bool TypeIsManual => _current.TypeIsManual;
+
+    /// <summary>
+    /// ページ＝カード 1 枚か（固定領域・位置推定を候補にする条件・§10.15）: 4 隅切り抜き済み、または切り抜き後の画像の縦横比がカード。
+    /// </summary>
+    public bool CardFramed => CardFramedFor(Crop);
 
     public ManualMask Manual => _current.Manual;
     public IReadOnlyList<MaskCandidate> Candidates => _current.Candidates;
@@ -191,52 +203,74 @@ public sealed class PageState
         Commit(_current with { Candidates = candidates.ToList() });
 
     /// <summary>
-    /// 取り込み時の検出結果を入れ、現在の種別のプリセットから初期候補を作る。
-    /// **Undo 履歴に積まない**（Undo で初期候補が消えないように）。取り込み直後（編集前）に 1 回だけ呼ぶ想定。
+    /// 取り込み時の解析結果を入れ、初期の向き・種別（自動判定）と候補を決める（§10.15）。
+    /// **Undo 履歴に積まない**（Undo で初期候補・自動の回転が消えないように）。取り込み直後（編集前）に 1 回だけ呼ぶ想定。
+    /// <paramref name="preset"/> は <paramref name="autoType"/> のプリセット。種別は自動扱い（TypeIsManual = false）。
     /// </summary>
-    public void InitializeDetections(DetectorId detector, IReadOnlyList<NormRect> rawBoxes, DocumentPreset? preset, bool english = false)
+    public void InitializeAnalysis(PageFindings findings, int initialRotation, DocumentType autoType, DocumentPreset? preset,
+                                   bool english = false)
     {
-        RawDetector = detector;
-        var raw = rawBoxes.ToList();
-        _current = _current with { RawDetections = raw, Candidates = CandidateFactory.Build(preset, detector, raw, Rotation, english) };
+        ArgumentNullException.ThrowIfNull(findings);
+        var rotation = QuarterTurn.Normalize(initialRotation);
+        var turns = rotation - Rotation;
+        _current = _current with
+        {
+            Rotation = rotation,
+            Manual = QuarterTurn.Rotate(Manual, turns),
+            Type = autoType,
+            TypeIsManual = false,
+            Findings = findings,
+            Candidates = CandidateBuilder.Build(preset, findings, rotation, CardFramedFor(Crop), english),
+        };
     }
 
     /// <summary>
-    /// 4 隅切り抜きを変える（W4.5）。<paramref name="crop"/> は**元画像（回転 0）の上**の四隅（null・全体 = 切り抜きなし）。
-    /// 画像が変わるので**手動マスクは消し**、候補は新しい画像での検出結果 <paramref name="rawBoxes"/>（padding 前・回転 0・切り抜いた画像の上。
-    /// 検出しなかった・失敗したなら <paramref name="detector"/> = null・空）
-    /// から現在の種別の defaultOn で作り直す。回転・種別はそのまま。1 回の変更として Undo で戻せる（消したマスクも戻る）。
+    /// 4 隅切り抜きを変える（W4.5・§10.15）。<paramref name="crop"/> は**元画像（回転 0）の上**の四隅（null・全体 = 切り抜きなし）。
+    /// 画像が変わるので**手動マスクは消し**、候補は新しい画像での検出の材料 <paramref name="findings"/> から
+    /// <paramref name="type"/>（呼び出し側が決める: 手動なら今の種別、自動なら判定結果）の defaultOn で作り直す。
+    /// 回転はそのまま。1 回の変更として Undo で戻せる（消したマスクも戻る）。
     /// <paramref name="cropped"/> は呼び出し側が検出のために作った台形補正済みの画像（あればキャッシュに入れて作り直さない）。
     /// </summary>
-    public void ApplyCrop(Quad? crop, DetectorId? detector, IReadOnlyList<NormRect> rawBoxes, DocumentPreset? preset,
+    public void ApplyCrop(Quad? crop, PageFindings findings, DocumentType type, DocumentPreset? preset,
                           bool english = false, PageBitmap? cropped = null)
     {
         if (crop is { } c && !c.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
+        ArgumentNullException.ThrowIfNull(findings);
         var next = NormalizeCrop(crop);
-        // 取り込み時に検出できなかったページでも、切り抜いた画像で検出できたら以後はその検出器の箱として扱う。
-        if (detector is { } id) RawDetector = id;
         if (next is { } q && cropped is not null)
             lock (_baseLock) _croppedCache = (q, cropped);
-        var raw = rawBoxes.ToList();
-        var candidates = RawDetector is { } d ? CandidateFactory.Build(preset, d, raw, Rotation, english) : [];
-        Commit(_current with { Crop = next, RawDetections = raw, Manual = new ManualMask(), Candidates = candidates });
+        var candidates = CandidateBuilder.Build(preset, findings, Rotation, CardFramedFor(next), english);
+        Commit(_current with { Crop = next, Findings = findings, Type = type, Manual = new ManualMask(), Candidates = candidates });
     }
+
+    /// <summary>
+    /// 文字を読み直した結果を入れる（§10.15「文字を読み直す」）。<paramref name="type"/> は呼び出し側が決める
+    /// （手動なら今の種別、自動なら判定結果）。手動マスク・回転・切り抜きはそのまま。1 回の変更として Undo で戻せる。
+    /// </summary>
+    public void ApplyReread(PageFindings findings, DocumentType type, DocumentPreset? preset, bool english = false)
+    {
+        ArgumentNullException.ThrowIfNull(findings);
+        var candidates = CandidateBuilder.Build(preset, findings, Rotation, CardFramed, english);
+        Commit(_current with { Findings = findings, Type = type, Candidates = candidates });
+    }
+
+    /// <summary>切り抜きなしなら <see cref="Cropped"/> = <see cref="Original"/> なので、その縦横比で判定する。</summary>
+    private bool CardFramedFor(Quad? crop) => crop is not null || CardFrame.IsCardAspect(Original.Width, Original.Height);
 
     /// <summary>全体と同じ四隅は「切り抜きなし」（null）にそろえる。</summary>
     private static Quad? NormalizeCrop(Quad? crop) => crop is { IsFullImage: true } ? null : crop;
 
     /// <summary>
-    /// 種別を変える。生の検出箱から新しい種別の候補（その種別の defaultOn）を作り直し、種別と一緒に 1 回の変更として Commit する。
+    /// 種別を変える（利用者の選択＝以後は手動扱い・§10.15）。検出の材料から新しい種別の候補（その種別の defaultOn）を作り直し、
+    /// 種別と一緒に 1 回の変更として Commit する。<paramref name="findings"/> を渡したら（種別を変える前に読み直した OCR）材料も差し替える。
     /// 手動マスク・回転はそのまま。同じ種別なら何もしない。
     /// </summary>
-    public void ChangeType(DocumentType type, DocumentPreset? preset, bool english = false)
+    public void ChangeType(DocumentType type, DocumentPreset? preset, bool english = false, PageFindings? findings = null)
     {
         if (type == Type) return;
-        // 検出していないページ（検出器なし・検出失敗）は候補に触らない。
-        var candidates = RawDetector is { } d
-            ? CandidateFactory.Build(preset, d, RawDetections, Rotation, english)
-            : Candidates;
-        Commit(_current with { Type = type, Candidates = candidates });
+        var f = findings ?? Findings;
+        var candidates = CandidateBuilder.Build(preset, f, Rotation, CardFramed, english);
+        Commit(_current with { Type = type, TypeIsManual = true, Findings = f, Candidates = candidates });
     }
 
     /// <summary>時計回りに 90° 回す（画像・手動マスク・候補を同じ回数だけ回す）。Undo で戻せる。</summary>

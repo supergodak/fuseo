@@ -92,7 +92,7 @@ public class FileWorkLibraryTests
     internal static PageState EditedPage(string name = "card.png", int w = 60, int h = 40, int seed = 1)
     {
         var p = new PageState(Synthetic(w, h, seed), name, 2, fromPdf: true);
-        p.InitializeDetections(DetectorId.QrBarcode, [new NormRect(0.6, 0.5, 0.2, 0.3)], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([new NormRect(0.6, 0.5, 0.2, 0.3)]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         p.ChangeType(DocumentType.MyNumberCardBack, Presets[DocumentType.MyNumberCardBack]);
         p.AddRect(new NormRect(0.1, 0.1, 0.3, 0.2));
         p.RotateClockwise();
@@ -166,7 +166,9 @@ public class FileWorkLibraryTests
             }
             Assert.Equal(a.Candidates, b.Candidates);
             Assert.Equal(a.RawDetections, b.RawDetections);
-            Assert.Equal(a.RawDetector, b.RawDetector);
+            Assert.Equal(a.Findings.Faces, b.Findings.Faces);
+            Assert.Equal(a.TypeIsManual, b.TypeIsManual);
+            Assert.Null(b.Findings.Ocr); // OCR の結果は保存しない
             Assert.Equal(a.CheckedRuleIds.OrderBy(x => x), b.CheckedRuleIds.OrderBy(x => x));
             Assert.False(b.CanUndo); // 履歴は保存しない
             Assert.False(b.CanRedo);

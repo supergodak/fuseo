@@ -59,7 +59,7 @@
   <data name="StatusImporting" xml:space="preserve"><value>読み込んでいます…</value></data>
   <data name="StatusImported" xml:space="preserve"><value>{0} ページを読み込みました</value></data>
   <data name="StatusDetecting" xml:space="preserve"><value>QR コード・バーコードを探しています…</value></data>
-  <data name="StatusDetectFailed" xml:space="preserve"><value>{0} ページを読み込みました。うち {1} ページで QR コードの自動検出ができませんでした。必要な箇所は手で塗ってください。</value></data>
+  <data name="StatusDetectFailed" xml:space="preserve"><value>{0} ページを読み込みました。うち {1} ページで自動検出の一部ができませんでした。必要な箇所は手で塗ってください。</value></data>
   <data name="StatusExportedOne" xml:space="preserve"><value>書き出しました: {0}</value></data>
   <data name="StatusExportedMany" xml:space="preserve"><value>{0} ファイルを書き出しました: {1} ほか</value></data>
   <data name="OpenFilesTitle" xml:space="preserve"><value>画像か PDF を開く</value></data>
@@ -186,7 +186,18 @@
 「元に戻す」で切り抜く前に戻せます。</value></data>
   <data name="CropErrorTitle" xml:space="preserve"><value>切り抜きできませんでした</value></data>
   <data name="StatusCropping" xml:space="preserve"><value>切り抜いています…</value></data>
-  <data name="StatusCropped" xml:space="preserve"><value>切り抜きました。QR コードは切り抜いた画像で探し直しました。</value></data>
+  <data name="StatusCropped" xml:space="preserve"><value>切り抜きました。自動検出は切り抜いた画像でやり直しました。</value></data>
   <data name="StatusCropCleared" xml:space="preserve"><value>切り抜きを解除しました。</value></data>
-  <data name="StatusCropDetectFailed" xml:space="preserve"><value>切り抜きました。QR コードの自動検出ができなかったので、必要な箇所は手で塗ってください。</value></data>
+  <data name="StatusCropDetectFailed" xml:space="preserve"><value>切り抜きました。自動検出の一部ができなかったので、必要な箇所は手で塗ってください。</value></data>
+  <data name="AutoTypeBadge" xml:space="preserve"><value>自動</value></data>
+  <data name="AutoTypeBadgeTip" xml:space="preserve"><value>文字を読んで自動で判定した種類です。違うときは選び直してください。</value></data>
+  <data name="OcrUnavailableNotice" xml:space="preserve"><value>日本語の文字認識が入っていないため、番号の自動検出は使えません（設定 › 時刻と言語 › 言語 › 日本語 › オプション）</value></data>
+  <data name="CropHint" xml:space="preserve"><value>切り抜くと、性別などの欄も位置で候補になります</value></data>
+  <data name="RereadText" xml:space="preserve"><value>文字を読み直す</value></data>
+  <data name="RereadTextTip" xml:space="preserve"><value>いまの向きで文字を読み直し、候補を作り直します（手で塗った箇所はそのまま）。向きが違っていたときは、回してから使ってください。</value></data>
+  <data name="StatusReadingText" xml:space="preserve"><value>文字を読んでいます… ({0}/{1})</value></data>
+  <data name="StatusReadingTextOnce" xml:space="preserve"><value>文字を読んでいます…</value></data>
+  <data name="StatusRereading" xml:space="preserve"><value>文字を読み直しています…</value></data>
+  <data name="StatusReread" xml:space="preserve"><value>文字を読み直し、候補を作り直しました。</value></data>
+  <data name="StatusRereadFailed" xml:space="preserve"><value>文字を読み取れませんでした。必要な箇所は手で塗ってください。</value></data>
 </root>

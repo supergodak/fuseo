@@ -151,6 +151,114 @@ public class WorkDocumentJsonTests
       "checkedRuleIds": [
         "mynumB.name"
       ],
+      "rawFaces": [],
+      "typeIsManual": false,
+      "ocr": [],
+      "manualQuad": null,
+      "analysisOptions": null
+    }
+  ]
+}
+""";
+
+    /// <summary>W9-3 より前の形（rawFaces・typeIsManual が無い）。既存の作業がそのまま読めることの確認に使う。</summary>
+    private const string GoldenBeforeW93 = """
+{
+  "schemaVersion": "fuseo-win/1",
+  "origin": "topLeft",
+  "id": "11111111-2222-3333-4444-555555555555",
+  "title": "免許証.jpg ほか 1 件",
+  "createdAt": "2026-10-13T01:02:03.004Z",
+  "updatedAt": "2026-10-13T01:20:30.500Z",
+  "status": "exported",
+  "lastExportedName": "提出用.pdf",
+  "pages": [
+    {
+      "index": 0,
+      "imageFile": "pages/aaaaaaaa-0000-0000-0000-000000000001.png",
+      "thumbnailFile": "thumbs/aaaaaaaa-0000-0000-0000-000000000001.jpg",
+      "sourceName": "免許証.jpg",
+      "documentType": "myNumberCardBack",
+      "manualRotation": 1,
+      "coordinateFrame": "rotatedImage",
+      "candidates": [
+        {
+          "id": "bbbbbbbb-0000-0000-0000-000000000001",
+          "ruleID": "mynumB.qr",
+          "label": "QRコード",
+          "box": {
+            "x": 0.5,
+            "y": 0.25,
+            "w": 0.25,
+            "h": 0.125
+          },
+          "source": {
+            "kind": "detector",
+            "detector": "qrBarcode"
+          },
+          "confidence": null,
+          "isOn": true,
+          "basis": "番号法"
+        },
+        {
+          "id": "bbbbbbbb-0000-0000-0000-000000000002",
+          "ruleID": "x.fixed",
+          "label": "固定",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 0.5
+          },
+          "source": {
+            "kind": "fixedRegion"
+          },
+          "confidence": 0.75,
+          "isOn": false,
+          "basis": "根拠"
+        }
+      ],
+      "manual": {
+        "rects": [
+          {
+            "x": 0.125,
+            "y": 0.25,
+            "w": 0.5,
+            "h": 0.0625
+          }
+        ],
+        "strokes": [
+          {
+            "points": [
+              [
+                0.1,
+                0.2
+              ],
+              [
+                0.3,
+                0.4
+              ]
+            ],
+            "width": 0.03
+          }
+        ]
+      },
+      "pixelWidth": 400,
+      "pixelHeight": 300,
+      "fromPdf": true,
+      "sourcePageIndex": 2,
+      "rawDetections": [
+        {
+          "x": 0.25,
+          "y": 0.5,
+          "w": 0.125,
+          "h": 0.25
+        }
+      ],
+      "rawDetector": "qrBarcode",
+      "checkedRuleIds": [
+        "mynumB.name"
+      ],
       "ocr": [],
       "manualQuad": null,
       "analysisOptions": null
@@ -224,6 +332,8 @@ public class WorkDocumentJsonTests
             Assert.Equal(p.RawDetections, q.RawDetections);
             Assert.Equal(p.RawDetector, q.RawDetector);
             Assert.Equal(p.CheckedRuleIds, q.CheckedRuleIds);
+            Assert.Equal(p.RawFaces, q.RawFaces);
+            Assert.Equal(p.TypeIsManual, q.TypeIsManual);
             Assert.Empty(q.Ocr);
             Assert.Null(q.ManualQuad);
             Assert.Null(q.AnalysisOptions);
@@ -388,6 +498,39 @@ public class WorkDocumentJsonTests
         Assert.Throws<WorkDocumentFormatException>(() =>
             WorkDocumentJson.Serialize(Sample() with { Pages = [Sample().Pages[0] with { ManualQuad = crossed }] }));
     }
+
+    // ---- W9-3: 任意項目（rawFaces・typeIsManual）。OCR の結果は保存しない ----
+
+    [Fact]
+    public void OldDocument_WithoutW93Fields_StillLoads()
+    {
+        var doc = WorkDocumentJson.Parse(GoldenBeforeW93);
+        AssertEquivalent(Sample(), doc);
+        Assert.Empty(doc.Pages[0].RawFaces);
+        Assert.False(doc.Pages[0].TypeIsManual);
+        Assert.Equal([new NormRect(0.25, 0.5, 0.125, 0.25)], doc.Pages[0].RawDetections); // QR の箱はそのまま読める
+    }
+
+    [Fact]
+    public void W93Fields_RoundTrip()
+    {
+        var doc = Sample() with
+        {
+            Pages = [Sample().Pages[0] with { RawFaces = [new NormRect(0.1, 0.2, 0.3, 0.4)], TypeIsManual = true }],
+        };
+        var json = WorkDocumentJson.Serialize(doc);
+        Assert.Contains("\"typeIsManual\": true", json);
+        var back = WorkDocumentJson.Parse(json);
+        AssertEquivalent(doc, back);
+        Assert.Equal(json, WorkDocumentJson.Serialize(back));
+    }
+
+    [Theory]
+    [InlineData("\"rawFaces\": []", "\"rawFaces\": [{\"x\": 0.9, \"y\": 0, \"w\": 0.5, \"h\": 0.1}]")] // 1 を超える箱
+    [InlineData("\"rawFaces\": []", "\"rawFaces\": null")]
+    [InlineData("\"typeIsManual\": false", "\"typeIsManual\": \"yes\"")]
+    public void W93Fields_RejectInvalid(string from, string to) =>
+        Assert.Throws<WorkDocumentFormatException>(() => WorkDocumentJson.Parse(Mutate(from, to)));
 
     [Fact]
     public void Options_AreReadOnly() => Assert.True(WorkDocumentJson.Options.IsReadOnly);

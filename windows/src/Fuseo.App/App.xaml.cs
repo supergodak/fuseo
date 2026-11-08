@@ -11,6 +11,7 @@ using Fuseo.Core.Model;
 using Fuseo.Core.Rendering;
 using Fuseo.Input;
 using Fuseo.Input.Detection;
+using Fuseo.Input.Ocr;
 
 namespace Fuseo.App;
 
@@ -41,7 +42,11 @@ public partial class App : Application
             dialogs,
             detector: new QrDetector(),
             library: new FileWorkLibrary(), // %LOCALAPPDATA%\Fuseo\Library（このパソコンの中だけ・FUSEO_DATA_DIR があればその下）
-            settings: settingsStore);
+            settings: settingsStore,
+            // 日本語の文字認識（Windows 標準・端末内）。入っていなければ null（QR・顔だけで続け、右ペインで案内する・§10.15）。
+            recognizer: WindowsOcrRecognizer.TryCreate(),
+            // 顔（Windows 標準・端末内）。同期 API なので ViewModel は必ず Task.Run の中で呼ぶ。
+            faceDetector: new WindowsFaceDetector());
         window.DataContext = vm;
         MainWindow = window;
         window.Show();

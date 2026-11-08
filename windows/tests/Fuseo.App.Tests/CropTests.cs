@@ -213,12 +213,14 @@ public class CropTests
         var p = new PageState(PhotoWithRedOutside(), "a.jpg", 0, false);
         var before = new NormRect(0.7, 0.7, 0.2, 0.2);
         var after = new NormRect(0.1, 0.1, 0.3, 0.3);
-        p.InitializeDetections(DetectorId.QrBarcode, [before], Presets[DocumentType.Generic]);
-        p.ApplyCrop(Card, DetectorId.QrBarcode, [after], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([before]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
+        p.ApplyCrop(Card, PageFindings.FromQr([after]), DocumentType.Generic, Presets[DocumentType.Generic]);
         Assert.Equal([after], p.RawDetections);
         p.ChangeType(DocumentType.MyNumberCardBack, Presets[DocumentType.MyNumberCardBack]);
         Assert.Equal(after.Padded(Presets[DocumentType.MyNumberCardBack].Rules.First(r => r.Detector == DetectorId.QrBarcode).Padding ?? 0.01),
-                     p.Candidates.Single().Box);
+                     p.Candidates.Single(c => c.Detector == DetectorId.QrBarcode).Box);
+        // W9-3: 切り抜いた（＝カード 1 枚の）ページなので、番号は読めていなくても位置推定の候補が出る（§10.15 の cardFramed）。
+        Assert.Contains(p.Candidates, c => c.RuleId == "mynumB.number" && c.Source == CandidateSource.FixedRegion);
         p.Undo(); // 種別
         p.Undo(); // 切り抜き
         Assert.Null(p.Crop);
@@ -230,7 +232,7 @@ public class CropTests
     {
         var p = new PageState(PhotoWithRedOutside(), "a.jpg", 0, false);
         var crossed = new Quad(Card.TopLeft, Card.BottomRight, Card.TopRight, Card.BottomLeft);
-        Assert.Throws<ArgumentException>(() => p.ApplyCrop(crossed, null, [], null));
+        Assert.Throws<ArgumentException>(() => p.ApplyCrop(crossed, PageFindings.Empty, DocumentType.Generic, null));
         Assert.Null(p.Crop);
     }
 
@@ -239,7 +241,7 @@ public class CropTests
     {
         using var dir = new TempDir();
         var p = new PageState(PhotoWithRedOutside(), "a.jpg", 0, false);
-        p.ApplyCrop(Card, DetectorId.QrBarcode, [new NormRect(0.1, 0.1, 0.2, 0.2)], Presets[DocumentType.Generic]);
+        p.ApplyCrop(Card, PageFindings.FromQr([new NormRect(0.1, 0.1, 0.2, 0.2)]), DocumentType.Generic, Presets[DocumentType.Generic]);
         p.RotateClockwise();
         p.AddRect(new NormRect(0.3, 0.3, 0.2, 0.2));
 

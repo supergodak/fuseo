@@ -59,7 +59,7 @@
   <data name="StatusImporting" xml:space="preserve"><value>Loading…</value></data>
   <data name="StatusImported" xml:space="preserve"><value>Pages loaded: {0}</value></data>
   <data name="StatusDetecting" xml:space="preserve"><value>Looking for QR codes and barcodes…</value></data>
-  <data name="StatusDetectFailed" xml:space="preserve"><value>Pages loaded: {0}. QR code detection could not run on {1} of them. Paint over anything that needs hiding by hand.</value></data>
+  <data name="StatusDetectFailed" xml:space="preserve"><value>Pages loaded: {0}. Some automatic detection could not run on {1} of them. Paint over anything that needs hiding by hand.</value></data>
   <data name="StatusExportedOne" xml:space="preserve"><value>Exported: {0}</value></data>
   <data name="StatusExportedMany" xml:space="preserve"><value>Exported {0} files: {1} and others</value></data>
   <data name="OpenFilesTitle" xml:space="preserve"><value>Open images or PDFs</value></data>
@@ -186,7 +186,18 @@
 Use Undo to go back to before the crop.</value></data>
   <data name="CropErrorTitle" xml:space="preserve"><value>Could not crop</value></data>
   <data name="StatusCropping" xml:space="preserve"><value>Cropping…</value></data>
-  <data name="StatusCropped" xml:space="preserve"><value>Cropped. QR codes were searched again on the cropped image.</value></data>
+  <data name="StatusCropped" xml:space="preserve"><value>Cropped. Automatic detection was run again on the cropped image.</value></data>
   <data name="StatusCropCleared" xml:space="preserve"><value>Crop removed.</value></data>
-  <data name="StatusCropDetectFailed" xml:space="preserve"><value>Cropped. QR code detection could not run. Paint over anything that needs hiding by hand.</value></data>
+  <data name="StatusCropDetectFailed" xml:space="preserve"><value>Cropped. Some automatic detection could not run. Paint over anything that needs hiding by hand.</value></data>
+  <data name="AutoTypeBadge" xml:space="preserve"><value>Auto</value></data>
+  <data name="AutoTypeBadgeTip" xml:space="preserve"><value>Detected automatically from the text. Choose another type if it is wrong.</value></data>
+  <data name="OcrUnavailableNotice" xml:space="preserve"><value>Japanese text recognition is not installed, so numbers cannot be detected automatically (Settings › Time &amp; language › Language &amp; region › Japanese › Language options).</value></data>
+  <data name="CropHint" xml:space="preserve"><value>Crop to the card and fields such as gender also become candidates by position.</value></data>
+  <data name="RereadText" xml:space="preserve"><value>Read text again</value></data>
+  <data name="RereadTextTip" xml:space="preserve"><value>Reads the text again in the current orientation and rebuilds the candidates (your own masks stay). If the orientation was wrong, rotate the page first.</value></data>
+  <data name="StatusReadingText" xml:space="preserve"><value>Reading text… ({0}/{1})</value></data>
+  <data name="StatusReadingTextOnce" xml:space="preserve"><value>Reading text…</value></data>
+  <data name="StatusRereading" xml:space="preserve"><value>Reading text again…</value></data>
+  <data name="StatusReread" xml:space="preserve"><value>Text read again and candidates rebuilt.</value></data>
+  <data name="StatusRereadFailed" xml:space="preserve"><value>Could not read the text. Paint over anything that needs hiding by hand.</value></data>
 </root>

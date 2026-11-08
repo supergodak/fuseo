@@ -235,9 +235,9 @@ public class LocalizationTests
         // 日本語で保存した候補を英語 UI で開いても、表示は英語（保存値は変えない）。
         var back = PresetStore.LoadAll().Single(p => p.DocumentType == DocumentType.MyNumberCardBack);
         var rule = back.Rules.Single(r => r.Detector == DetectorId.QrBarcode);
-        var saved = CandidateFactory.Build(back, DetectorId.QrBarcode, [RawQr], 0, english: false).Single();
+        var saved = CandidateBuilder.Build(back, PageFindings.FromQr([RawQr]), 0, cardFramed: false, english: false).Single();
         Assert.Equal(rule.Label, saved.Label);
-        var vmItem = new CandidateViewModel(saved, (_, _) => { }, (rule.LocalizedLabel(true), rule.LocalizedBasis(true)));
+        var vmItem = new CandidateViewModel(saved, (_, _) => { }, CandidateBuilder.DisplayText(back, saved, english: true));
         Assert.Equal(rule.LabelEn, vmItem.Label);
         Assert.Equal(rule.Label, saved.Label);
     }

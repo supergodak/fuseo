@@ -1,6 +1,7 @@
 using Fuseo.App.State;
 using Fuseo.Core.Imaging;
 using Fuseo.Core.Library;
+using Fuseo.Core.Model;
 
 namespace Fuseo.App.Library;
 
@@ -56,9 +57,12 @@ public static class WorkMapper
                 PixelHeight = s.Original.Height,
                 FromPdf = s.FromPdf,
                 SourcePageIndex = s.SourcePageIndex,
-                RawDetections = s.RawDetections.ToList(),
-                RawDetector = s.RawDetector,
+                // QR の生の箱は rawDetections（v0.1 と同じ項目）。OCR の結果は保存しない（§10.15・書類の文字列を残さない）。
+                RawDetections = s.Findings.Qr.ToList(),
+                RawDetector = s.Findings.Qr.Count > 0 ? DetectorId.QrBarcode : null,
                 CheckedRuleIds = s.CheckedRuleIds.OrderBy(r => r, StringComparer.Ordinal).ToList(),
+                RawFaces = s.Findings.Faces.ToList(),
+                TypeIsManual = s.TypeIsManual,
                 ManualQuad = s.Crop,
             });
         }
@@ -86,10 +90,17 @@ public static class WorkMapper
             var id = WorkPaths.PageIdFromImageFile(p.ImageFile) ?? Guid.NewGuid();
             result.Add(PageState.Restore(
                 id, work.Images[i], p.SourceName, p.SourcePageIndex, p.FromPdf, p.DocumentType, p.ManualRotation,
-                p.Manual, p.Candidates, p.RawDetector, p.RawDetections, p.CheckedRuleIds, p.ManualQuad));
+                p.Manual, p.Candidates, QrBoxes(p), p.CheckedRuleIds, p.ManualQuad, p.RawFaces, p.TypeIsManual));
         }
         return result;
     }
+
+    /// <summary>
+    /// 保存された QR の箱。v0.1 の rawDetections は rawDetector の箱（v0.1 の検出器は QR だけ。検出しなかった・失敗したページは
+    /// rawDetector = null で箱も空）なので、QR 以外の検出器の印が付いていたら使わない。
+    /// </summary>
+    private static IReadOnlyList<Fuseo.Core.Geometry.NormRect> QrBoxes(WorkPage p) =>
+        p.RawDetector is null or DetectorId.QrBarcode ? p.RawDetections : [];
 
     /// <summary>JSON はミリ秒までなので、メモリ上の値も揃える（往復で値が変わらないように）。</summary>
     public static DateTimeOffset TruncateToMs(DateTimeOffset t)

@@ -4,6 +4,7 @@ using Fuseo.App.ViewModels;
 using Fuseo.Core.Contracts;
 using Fuseo.Core.Geometry;
 using Fuseo.Core.Imaging;
+using Fuseo.Core.Model;
 
 namespace Fuseo.App.Tests;
 
@@ -103,5 +104,45 @@ internal sealed class TempDir : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(Path, true); } catch (IOException) { }
+    }
+}
+
+/// <summary>
+/// テスト用の文字認識（W9-3）。<see cref="Handler"/> が画像ごとに OCR 結果を返す（向き・寸法で変えられる）。
+/// <see cref="Gate"/> を入れると、それが完了するまで結果を返さない（解析中の操作を確かめる）。
+/// </summary>
+internal sealed class FakeTextRecognizer : Fuseo.Core.Contracts.ITextRecognizer
+{
+    private int _calls;
+    public Func<PageBitmap, IReadOnlyList<Fuseo.Core.Analysis.OcrItem>> Handler { get; set; } = _ => [];
+    public int Calls => Volatile.Read(ref _calls);
+    public bool Throw { get; set; }
+    public TaskCompletionSource? Gate { get; set; }
+    /// <summary>呼ばれたスレッドが UI（テスト本体）のスレッドだったか。</summary>
+    public int? LastThreadId { get; private set; }
+
+    public async Task<IReadOnlyList<Fuseo.Core.Analysis.OcrItem>> RecognizeAsync(PageBitmap page, CancellationToken ct)
+    {
+        Interlocked.Increment(ref _calls);
+        LastThreadId = Environment.CurrentManagedThreadId;
+        if (Gate is { } g) await g.Task.ConfigureAwait(false);
+        if (Throw) throw new InvalidOperationException("文字認識に失敗");
+        return Handler(page);
+    }
+}
+
+/// <summary>決まった箱を返す顔の検出器（W9-3）。</summary>
+internal sealed class FakeFaceDetector(params NormRect[] boxes) : IDetector
+{
+    private int _calls;
+    public DetectorId Id => DetectorId.Face;
+    public int Calls => Volatile.Read(ref _calls);
+    public int? LastThreadId { get; private set; }
+
+    public IReadOnlyList<NormRect> Detect(PageBitmap page)
+    {
+        Interlocked.Increment(ref _calls);
+        LastThreadId = Environment.CurrentManagedThreadId;
+        return boxes;
     }
 }

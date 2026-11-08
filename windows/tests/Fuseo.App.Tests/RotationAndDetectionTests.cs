@@ -59,7 +59,7 @@ public class RotationAndDetectionTests
     private static PageState PageWithMasks(int w = 120, int h = 70)
     {
         var p = NewPage(w, h);
-        p.InitializeDetections(DetectorId.QrBarcode, [RawQr], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([RawQr]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         p.ChangeType(DocumentType.MyNumberCardBack, Presets[DocumentType.MyNumberCardBack]);
         p.AddRect(RectA);
         p.AddStroke(StrokeA);
@@ -214,7 +214,7 @@ public class RotationAndDetectionTests
     public void InitialCandidates_UsePresetDefaultOn_AndAreNotInUndoHistory()
     {
         var p = NewPage();
-        p.InitializeDetections(DetectorId.QrBarcode, [RawQr], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([RawQr]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         var c = Assert.Single(p.Candidates);
         var rule = Presets[DocumentType.Generic].Rules.Single(r => r.Detector == DetectorId.QrBarcode);
         Assert.Equal(rule.Id, c.RuleId);
@@ -234,7 +234,7 @@ public class RotationAndDetectionTests
     public void TypeWithoutQrRule_HasNoCandidates()
     {
         var p = NewPage();
-        p.InitializeDetections(DetectorId.QrBarcode, [RawQr], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([RawQr]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         p.ChangeType(DocumentType.MenkyoshoFront, Presets[DocumentType.MenkyoshoFront]);
         Assert.DoesNotContain(Presets[DocumentType.MenkyoshoFront].Rules, r => r.Detector == DetectorId.QrBarcode);
         Assert.Empty(p.Candidates);
@@ -245,7 +245,7 @@ public class RotationAndDetectionTests
     public void ChangeType_RebuildsWithNewDefaultOn_AndUndoRestoresTypeAndCandidates()
     {
         var p = NewPage();
-        p.InitializeDetections(DetectorId.QrBarcode, [RawQr], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([RawQr]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         p.AddRect(RectA);
         var genericCandidates = p.Candidates;
 
@@ -268,7 +268,7 @@ public class RotationAndDetectionTests
     public void ChangeType_AfterRotation_RotatesRawBoxesBeforePadding()
     {
         var p = NewPage();
-        p.InitializeDetections(DetectorId.QrBarcode, [RawQr], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([RawQr]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         p.RotateClockwise();
         p.ChangeType(DocumentType.Hokensho, Presets[DocumentType.Hokensho]);
         var rule = Presets[DocumentType.Hokensho].Rules.Single(r => r.Detector == DetectorId.QrBarcode);
@@ -280,7 +280,7 @@ public class RotationAndDetectionTests
     public void CandidateOnOff_IsReflectedInBurnIn()
     {
         var p = NewPage(200, 100);
-        p.InitializeDetections(DetectorId.QrBarcode, [RawQr], Presets[DocumentType.Generic]);
+        p.InitializeAnalysis(PageFindings.FromQr([RawQr]), 0, DocumentType.Generic, Presets[DocumentType.Generic]);
         var center = CoordinateSpace.ToPixel(RawQr, 200, 100);
         int cx = center.X + center.Width / 2, cy = center.Y + center.Height / 2;
 

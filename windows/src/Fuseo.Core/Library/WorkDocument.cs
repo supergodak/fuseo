@@ -7,7 +7,7 @@ namespace Fuseo.Core.Library;
 
 // W5「自動保存ライブラリ」のデータモデル（docs/windows-design.md §3.6・スキーマ fuseo-win/1）。
 // 項目名は Mac 版の WorkDocument（Sources/MaskingCore/Library/WorkDocument.swift）に合わせ、Windows で足す項目
-// （origin・coordinateFrame・fromPdf・sourcePageIndex・rawDetections・rawDetector・checkedRuleIds）を加える。
+// （origin・coordinateFrame・fromPdf・sourcePageIndex・rawDetections・rawDetector・checkedRuleIds、W9-3 で rawFaces・typeIsManual）を加える。
 // 保存されるのは**黒塗り前の画像**を含むデータ。このパソコンの中だけ・通信なし。
 // ここは純粋なモデルと JSON だけ（ファイル I/O は Fuseo.App の FileWorkLibrary）。
 
@@ -78,6 +78,12 @@ public sealed record WorkPage
     public DetectorId? RawDetector { get; init; }
     /// <summary>チェックリストで「塗った」と印を付けたルール id（順序は保存時に整列）。</summary>
     [JsonRequired] public IReadOnlyList<string> CheckedRuleIds { get; init; } = [];
+    /// <summary>
+    /// 顔の検出の生の箱（W9-3・padding 前・回転 0・ManualQuad で切り抜いた画像の上）。任意項目（W9-3 より前の作業には無い＝空）。
+    /// </summary>
+    public IReadOnlyList<NormRect> RawFaces { get; init; } = [];
+    /// <summary>利用者が種別を選んだか（W9-3・任意項目。無ければ false＝自動扱い）。OCR の結果そのものは保存しない。</summary>
+    public bool TypeIsManual { get; init; }
 
     // ---- Mac 互換用（ocr・analysisOptions は Windows では使わない・常に空で持つ） ----
     public IReadOnlyList<JsonElement> Ocr { get; init; } = [];
