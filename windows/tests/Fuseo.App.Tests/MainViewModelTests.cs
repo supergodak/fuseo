@@ -193,8 +193,8 @@ public class MainViewModelTests
         Assert.Equal(DocumentType.MyNumberCardBack, vm.SelectedPage!.State.Type);
         Assert.True(vm.IsBannerVisible);
         Assert.NotEmpty(vm.BannerWarnings);
-        Assert.Contains(vm.Checklist, c => c.IsQrCandidate);
-        Assert.Contains(vm.Checklist, c => c.IsManualGuide && !c.HasCheckBox);
+        Assert.Contains(vm.Checklist, c => c.Row.Kind == ChecklistRowKind.ImageDetector && c.Note == "自動で探します");
+        Assert.Contains(vm.Checklist, c => c.Row.Kind == ChecklistRowKind.PositionFallback && !c.HasCheckBox && c.HasNote);
 
         vm.DismissBannerCommand.Execute(null);
         Assert.False(vm.IsBannerVisible);

@@ -165,10 +165,10 @@
                         <!-- 自動判定の種類のまま（利用者が選んでいない）なら「自動」 -->
                         <Border DockPanel.Dock="Right" Background="#E0F2FE" CornerRadius="3" Padding="6,1" Margin="6,0,0,0"
                                 VerticalAlignment="Center" ToolTip="{x:Static p:Strings.AutoTypeBadgeTip}"
-                                Visibility="{Binding IsAutoTypeVisible, Converter={StaticResource BoolToVis}}"
-                                AutomationProperties.AutomationId="side.autoTypeBadge"
-                                AutomationProperties.Name="{x:Static p:Strings.AutoTypeBadge}">
-                            <TextBlock Text="{x:Static p:Strings.AutoTypeBadge}" FontSize="11" Foreground="#075985"/>
+                                Visibility="{Binding IsAutoTypeVisible, Converter={StaticResource BoolToVis}}">
+                            <!-- AutomationId は TextBlock に付ける（Border は UI オートメーションの木に出ない・W9-5 の E2E で判明） -->
+                            <TextBlock Text="{x:Static p:Strings.AutoTypeBadge}" FontSize="11" Foreground="#075985"
+                                       AutomationProperties.AutomationId="side.autoTypeBadge"/>
                         </Border>
                         <ComboBox ItemsSource="{Binding DocumentTypes}" SelectedItem="{Binding SelectedDocumentType}"
                                   IsEnabled="{Binding IsIdle}"
@@ -196,7 +196,8 @@
                                         <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap"
                                                    Visibility="{Binding HasCheckBox, Converter={StaticResource InverseBoolToVis}}"/>
                                         <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="12" Foreground="#B45309"
-                                                   Visibility="{Binding HasCheckBox, Converter={StaticResource InverseBoolToVis}}"/>
+                                                   Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"
+                                                   AutomationProperties.AutomationId="checklist.note"/>
                                         <TextBlock Text="{Binding Basis}" TextWrapping="Wrap" FontSize="11" Foreground="#666" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>

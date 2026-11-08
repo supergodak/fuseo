@@ -79,7 +79,12 @@ public static class Strings
     public static string ChecklistHeading => Get(nameof(ChecklistHeading));
     public static string ChecklistNote => Get(nameof(ChecklistNote));
     public static string ChecklistManualGuide => Get(nameof(ChecklistManualGuide));
-    public static string ChecklistQrNote => Get(nameof(ChecklistQrNote));
+    public static string ChecklistAutoDetect => Get(nameof(ChecklistAutoDetect));
+    public static string ChecklistTextDetect => Get(nameof(ChecklistTextDetect));
+    public static string ChecklistPositioned => Get(nameof(ChecklistPositioned));
+    public static string ChecklistCropForPosition => Get(nameof(ChecklistCropForPosition));
+    public static string ChecklistTextThenPosition => Get(nameof(ChecklistTextThenPosition));
+    public static string ChecklistTextThenCrop => Get(nameof(ChecklistTextThenCrop));
     public static string CandidatesHeading => Get(nameof(CandidatesHeading));
     public static string CandidatesEmpty => Get(nameof(CandidatesEmpty));
     public static string BannerClose => Get(nameof(BannerClose));

@@ -45,6 +45,29 @@ UI オートメーション（System.Windows.Automation）で行い、結果は�
 | ウィンドウを閉じる（保留中の自動保存を確定してから終わる） | LifecycleTests.CloseRightAfterEditing_FlushesThePendingSave |
 | 再起動後に自動保存から再開（一覧 → 開く → 同じ結果を書き出せる・書き出し済みの表示） | LifecycleTests.Restart_ResumesFromAutosave_AndExportsTheSameResult |
 
+## 文字認識による自動検出（W9-3・受け入れ W9-5）
+
+入力は実行時に WPF で描く合成カード（`Support/SynthCards.cs`・Yu Gothic UI か Meiryo・番号は見るからに合成の本体＋検査用数字。
+ファイルには描いた画像だけを VM ローカルに書く）。日本語の文字認識が入っている Windows が前提。
+
+| 操作 | テスト |
+|---|---|
+| 取り込み時の種類の自動判定・「自動」の表示・伏せた番号の候補・自動判定は元に戻す対象外 | AutoDetectTests.MyNumberBack_AutoType_Badge_MaskedNumber_RawNumberNowhereInUi |
+| 生の番号が画面のどこにも出ない（メイン画面と書き出しシートの UIA の文字を全部集めて確認）・書き出しで番号が塗られる | AutoDetectTests.MyNumberBack_AutoType_Badge_MaskedNumber_RawNumberNowhereInUi |
+| チェックリストの案内文（自動で探します・位置で候補にしています・切り抜くと位置で候補になります・自動で探します（見つからなければ位置で候補にします）） | AutoDetectTests.MyNumberBack_AutoType_Badge_MaskedNumber_RawNumberNowhereInUi、AutoDetectTests.CardOnDesk_ShowsCropHint_CropMakesFixedRegionCandidates |
+| 逆さの写真の自動正立（目印の位置・書き出し・保存された向き・元に戻す対象外） | AutoDetectTests.UpsideDownCard_IsTurnedUprightAutomatically_NotAnUndoStep |
+| 「文字を読み直す」（回してから読み直す → 候補の作り直し → 元に戻す 1 回で戻る・回転は別の 1 回） | AutoDetectTests.Reread_AfterRotating_RebuildsCandidates_OneUndoRestores |
+| 切り抜きの案内（机の上の小さなカード）→ 切り抜くと案内が消えて固定領域（性別・臓器提供）の候補・元に戻す | AutoDetectTests.CardOnDesk_ShowsCropHint_CropMakesFixedRegionCandidates |
+
+## フォルダ一括処理・一覧（W9-4・受け入れ W9-5）
+
+| 操作 | テスト |
+|---|---|
+| フォルダのドロップ（新しい作業として開く・前の作業が一覧に残る・対応外の件数・サブフォルダは見ない・論理順） | FolderAndGridTests.FolderDrop_OpensAsNewWork_PreviousWorkStaysInList_SkipsUnsupported |
+| 「フォルダを開く」（フォルダの選択ダイアログ＝OpenFolderDialog・キャンセル・選んで開く） | FolderAndGridTests.OpenFolderButton_CancelDoesNothing_ThenPicksFolder |
+| 一覧表示（セル数・「ファイル名（p/n）」・マスクなしの赤字・マスク数・セルのクリックで 1 枚ずつに戻る） | FolderAndGridTests.GridView_CellsNoMaskMarks_ClickOpensSinglePage |
+| 書き出しの「書類ごとに分ける」（保存先フォルダの選択・既存の X-masked.pdf の横で -2・既存の Y-masked_1.jpg の横で -2_1/-2_2・既存と元のファイルが 1 バイトも変わらない・マスクなし書類の列挙・完了表示と閉じる） | FolderAndGridTests.ExportSeparate_NextToExistingFiles_AddsSuffix_LeavesExistingAndOriginalsUntouched |
+
 ## 切り抜き
 
 | 操作 | テスト |
@@ -63,6 +86,8 @@ UI オートメーション（System.Windows.Automation）で行い、結果は�
 | マスク 0 件の警告・ボタンの文言 | ExportTests.ZeroMask_WarnsAndRenamesSaveButton_OnlyWhileAPageHasNoMask、SidePaneTests.QrCandidate_ToggleOnOff_TypeDefault_AndSelectDelete |
 | 種類の注意書きの再掲 | SidePaneTests.DocumentType_ShowsBannerAndChecklist_BannerCloses_ExportStillWarns |
 | シートのキャンセル・保存ダイアログのキャンセル（シートに戻る）・Esc で閉じる | ExportTests.CancelSheet_CancelSaveDialog_AndEscape_WriteNothing |
+
+書類ごとに分けた書き出しの出力も同じ検査（形式・目印・画素）を通す（FolderAndGridTests）。
 
 書いたファイルの検査（`Support/OutputCheck.cs`）: JPEG は SOI・APP0・DQT・SOF0・DHT・SOS・EOI だけ、PNG は IHDR・IDAT・IEND だけ、
 PDF は `%PDF-1.4`・`/Producer (Fuseo for Windows)` があり `/Font`・`Tj`・`/Annots`・`/Metadata`・`/Title` 等が無い。入力に
@@ -105,3 +130,6 @@ PDF は `%PDF-1.4`・`/Producer (Fuseo for Windows)` があり `/Font`・`Tj`・
 | HEIC の取り込み・HEIF 拡張が無いときのエラー | VM に入っている拡張に依存する | Fuseo.Input.Tests: ImportPolicyTests.UndecodableHeic_ReportsHeicSpecificError／手動 |
 | 予期しないエラーのダイアログ（DispatcherUnhandledException） | 製品に故意に例外を起こす入口が無い | 手動では確認できない（コードレビュー） |
 | 開くダイアログの「ファイルの種類」での絞り込み | Windows 標準のダイアログの機能 | 手動 |
+| 日本語の文字認識が入っていない Windows での案内（右ペイン上部） | VM は日本語版で文字認識が入っている（外すと他の E2E が前提を失う） | Fuseo.App.Tests: AnalysisWiringTests.WithoutRecognizer_BehavesAsBefore_AndShowsDismissableNotice |
+| 顔写真の自動検出 | 合成の画像では顔検出が働かない（実写をテストに入れない） | Fuseo.Input.Tests の顔検出の空振り確認と、W9-2 の実物での確認（docs/windows-design.md §10.14） |
+| 実物に近い書類での検出精度（斜めの写真・幅 800px・A4） | 画面操作で回すと時間がかかる | `tests/Acceptance` の cards モード（make_cards.py の合成コーパス 22 枚を本番の部品で解析） |

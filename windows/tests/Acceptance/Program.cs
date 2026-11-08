@@ -5,6 +5,7 @@
 //      `python -I make_corpus.py <dir>` で合成書類（すべて「見本」）と expected.json を作る
 //   2. <dir> を VM へ送り、VM で `dotnet run -c Release -- <dir>` → 最後に ALL PASS
 // 実物の書類（fixtures-private）は使わない・VM に持ち込まない。
+// W9-5: `dotnet run -c Release -- cards <dir>` は文字認識の回帰コーパス（make_cards.py・CardsMode.cs）。
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -18,6 +19,8 @@ using Fuseo.Core.Model;
 using Fuseo.Core.Rendering;
 using Fuseo.Input;
 using Fuseo.Input.Detection;
+
+if (args is ["cards", var cardsDir]) return await CardsMode.RunAsync(cardsDir);
 
 var dir = args[0];
 var outDir = Path.Combine(dir, "out"); Directory.CreateDirectory(outDir);

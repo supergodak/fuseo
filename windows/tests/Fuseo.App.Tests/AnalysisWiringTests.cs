@@ -452,6 +452,35 @@ public class AnalysisWiringTests
     }
 
     [Fact]
+    public async Task Checklist_Notes_FollowRecognizerAndCrop_AndUndo()
+    {
+        string NoteOf(MainViewModel vm, string ruleId) => vm.Checklist.Single(c => c.Row.RuleId == ruleId).Note!;
+
+        var (vm, _, _) = Vm(_ => MyNumberFrontOcr());
+        await vm.ImportAsync(["a.png"]); // カードの縦横比ではない
+        Assert.Equal(DocumentType.MyNumberCardFront, vm.SelectedPage!.State.Type);
+        Assert.Equal("切り抜くと位置で候補になります", NoteOf(vm, "mynumF.gender"));
+        Assert.Equal("自動で探します", NoteOf(vm, "mynumF.face"));
+        Assert.True(vm.Checklist.Single(c => c.Row.RuleId == "mynumF.gender").HasCheckBox); // チェックボックスの規則は変えない
+
+        await vm.ApplyCropAsync(vm.SelectedPage, Card);
+        Assert.Equal("位置で候補にしています", NoteOf(vm, "mynumF.gender"));
+        vm.UndoCommand.Execute(null);
+        Assert.Equal("切り抜くと位置で候補になります", NoteOf(vm, "mynumF.gender"));
+
+        vm.SelectedDocumentType = vm.DocumentTypes.Single(t => t.Type == DocumentType.MenkyoshoFront);
+        await WaitIdle(vm);
+        Assert.Equal("自動で探します（見つからなければ手で塗ってください）", NoteOf(vm, "menkyo.number"));
+
+        var (noOcr, _, _) = Vm(_ => [], withRecognizer: false);
+        await noOcr.ImportAsync(["a.png"]);
+        noOcr.SelectedDocumentType = noOcr.DocumentTypes.Single(t => t.Type == DocumentType.MenkyoshoFront);
+        await WaitIdle(noOcr);
+        Assert.Equal("手動で塗ってください", NoteOf(noOcr, "menkyo.number"));
+        Assert.Equal("自動で探します", NoteOf(noOcr, "menkyo.face"));
+    }
+
+    [Fact]
     public async Task Crop_ReadsAtCurrentRotation()
     {
         var (vm, _, _) = Vm(_ => MyNumberBackOcr());

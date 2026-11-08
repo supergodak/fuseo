@@ -697,7 +697,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Checklist.Clear();
         if (SelectedPage is { } p && _presets.TryGetValue(p.State.Type, out var preset))
-            foreach (var row in State.Checklist.Build(preset, _english)) Checklist.Add(new ChecklistItemViewModel(row, p.State, NoteEdited));
+            foreach (var row in State.Checklist.Build(preset, _english, ocrAvailable: _recognizer is not null, cardFramed: p.State.CardFramed))
+                Checklist.Add(new ChecklistItemViewModel(row, p.State, NoteEdited));
         RebuildCandidates();
         OnPropertyChanged(nameof(BannerWarnings));
         OnPropertyChanged(nameof(IsBannerVisible));

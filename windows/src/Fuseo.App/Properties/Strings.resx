@@ -50,9 +50,14 @@
   <data name="PageMaskCount" xml:space="preserve"><value>マスク {0}</value></data>
   <data name="DocumentTypeLabel" xml:space="preserve"><value>書類の種類</value></data>
   <data name="ChecklistHeading" xml:space="preserve"><value>この書類で普通伏せる欄</value></data>
-  <data name="ChecklistNote" xml:space="preserve"><value>自動では塗られません。キャンバスで手で塗ってください。チェックは自分用の目印です。</value></data>
+  <data name="ChecklistNote" xml:space="preserve"><value>自動で見つけた箇所は下の「自動検出の候補」に出ます（初期の ON/OFF は欄ごとに違います）。見つからない欄は手で塗ってください。チェックは自分用の目印です。</value></data>
   <data name="ChecklistManualGuide" xml:space="preserve"><value>手動で塗ってください</value></data>
-  <data name="ChecklistQrNote" xml:space="preserve"><value>見つかった QR コードは下の「自動検出の候補」に出ます</value></data>
+  <data name="ChecklistAutoDetect" xml:space="preserve"><value>自動で探します</value></data>
+  <data name="ChecklistTextDetect" xml:space="preserve"><value>自動で探します（見つからなければ手で塗ってください）</value></data>
+  <data name="ChecklistPositioned" xml:space="preserve"><value>位置で候補にしています</value></data>
+  <data name="ChecklistCropForPosition" xml:space="preserve"><value>切り抜くと位置で候補になります</value></data>
+  <data name="ChecklistTextThenPosition" xml:space="preserve"><value>自動で探します（見つからなければ位置で候補にします）</value></data>
+  <data name="ChecklistTextThenCrop" xml:space="preserve"><value>自動で探します（見つからなければ、切り抜くと位置で候補になります）</value></data>
   <data name="CandidatesHeading" xml:space="preserve"><value>自動検出の候補</value></data>
   <data name="CandidatesEmpty" xml:space="preserve"><value>候補はありません。必要な箇所は手で塗ってください。</value></data>
   <data name="BannerClose" xml:space="preserve"><value>注意書きを閉じる</value></data>

@@ -79,15 +79,8 @@ public sealed class ChecklistItemViewModel(ChecklistRow row, PageState page, Act
     public string Label => Row.Label;
     public string Basis => Row.Basis;
     public bool HasCheckBox => Row.Kind == ChecklistRowKind.Check;
-    public bool IsManualGuide => Row.Kind == ChecklistRowKind.ManualGuide;
-    public bool IsQrCandidate => Row.Kind == ChecklistRowKind.QrCandidate;
-
-    public string? Note => Row.Kind switch
-    {
-        ChecklistRowKind.ManualGuide => Strings.ChecklistManualGuide,
-        ChecklistRowKind.QrCandidate => Strings.ChecklistQrNote,
-        _ => null,
-    };
+    public string? Note => Row.Note;
+    public bool HasNote => !string.IsNullOrEmpty(Row.Note);
 
     public bool IsChecked
     {

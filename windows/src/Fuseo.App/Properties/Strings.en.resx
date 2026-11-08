@@ -50,9 +50,14 @@
   <data name="PageMaskCount" xml:space="preserve"><value>Masks: {0}</value></data>
   <data name="DocumentTypeLabel" xml:space="preserve"><value>Document type</value></data>
   <data name="ChecklistHeading" xml:space="preserve"><value>Fields usually hidden on this document</value></data>
-  <data name="ChecklistNote" xml:space="preserve"><value>These are not painted automatically. Paint them yourself on the canvas. The checkboxes are just reminders for you.</value></data>
+  <data name="ChecklistNote" xml:space="preserve"><value>Areas found automatically appear under “Auto-detected candidates” below (whether each starts on or off depends on the field). Paint any field that was not found by hand. The checkboxes are just reminders for you.</value></data>
   <data name="ChecklistManualGuide" xml:space="preserve"><value>Paint this by hand</value></data>
-  <data name="ChecklistQrNote" xml:space="preserve"><value>QR codes that are found appear under “Auto-detected candidates” below</value></data>
+  <data name="ChecklistAutoDetect" xml:space="preserve"><value>Searched for automatically</value></data>
+  <data name="ChecklistTextDetect" xml:space="preserve"><value>Searched for automatically (paint it by hand if it is not found)</value></data>
+  <data name="ChecklistPositioned" xml:space="preserve"><value>Suggested by its position on the card</value></data>
+  <data name="ChecklistCropForPosition" xml:space="preserve"><value>Crop to the card to get a suggestion by position</value></data>
+  <data name="ChecklistTextThenPosition" xml:space="preserve"><value>Searched for automatically (suggested by its position if not found)</value></data>
+  <data name="ChecklistTextThenCrop" xml:space="preserve"><value>Searched for automatically (if not found, crop to the card to get a suggestion by position)</value></data>
   <data name="CandidatesHeading" xml:space="preserve"><value>Auto-detected candidates</value></data>
   <data name="CandidatesEmpty" xml:space="preserve"><value>No candidates. Paint over anything that needs hiding by hand.</value></data>
   <data name="BannerClose" xml:space="preserve"><value>Close the notice</value></data>

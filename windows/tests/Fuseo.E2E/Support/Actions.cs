@@ -121,6 +121,53 @@ internal static class Actions
         return new Point(last.X + last.Width / 2, last.Y + last.Height / 2);
     }
 
+    public static string DocumentTypeName(this FuseoApp app) =>
+        ((SelectionPattern)app.Main.Get("main.documentType").GetCurrentPattern(SelectionPattern.Pattern)).Current.GetSelection()
+            .FirstOrDefault()?.Current.Name ?? "";
+
+    public static void WaitDocumentType(this FuseoApp app, string displayName) =>
+        Wait.Until(() => app.DocumentTypeName() == displayName, $"種類が「{displayName}」", TimeSpan.FromSeconds(30));
+
+    /// <summary>右ペインの「自動検出の候補」に出ている文字（各候補の表示名）。</summary>
+    public static List<string> CandidateTexts(this FuseoApp app) =>
+        app.Main.Find("main.candidates") is { } list
+            ? list.Descendants(ControlType.Text).Where(t => t.IsShown()).Select(t => t.Text()).Where(t => t.Length > 0).ToList()
+            : [];
+
+    /// <summary>チェックリストの各行の案内文（表示されているもの）。</summary>
+    public static List<string> ChecklistNotes(this FuseoApp app) =>
+        app.Main.FindAll("checklist.note").Where(n => n.IsShown()).Select(n => n.Text()).ToList();
+
+    /// <summary>
+    /// アプリの全ウィンドウの UIA の木から、文字（Name・ValuePattern の値・HelpText）を全部集める。
+    /// 「生の番号が画面のどこにも出ない」の確認用（ファイルのダイアログは開いていない時に呼ぶ）。
+    /// </summary>
+    public static List<string> AllUiText(this FuseoApp app)
+    {
+        var texts = new List<string>();
+        void Walk(AutomationElement e, int depth)
+        {
+            if (depth > 60) return;
+            try
+            {
+                var c = e.Current;
+                texts.Add(c.Name ?? "");
+                texts.Add(c.HelpText ?? "");
+                texts.Add(c.ItemStatus ?? "");
+                if (e.TryGetCurrentPattern(ValuePattern.Pattern, out var vp)) texts.Add(((ValuePattern)vp).Current.Value ?? "");
+            }
+            catch (ElementNotAvailableException) { return; }
+            var child = TreeWalker.RawViewWalker.GetFirstChild(e);
+            while (child is not null)
+            {
+                Walk(child, depth + 1);
+                child = TreeWalker.RawViewWalker.GetNextSibling(child);
+            }
+        }
+        foreach (var w in app.Windows()) Walk(w, 0);
+        return texts.Where(t => t.Length > 0).ToList();
+    }
+
     // ---- 書き出し ----
 
     /// <summary>書き出しシートを開いて、焼き込み（プレビュー）が終わるまで待つ。</summary>

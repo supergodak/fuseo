@@ -40,4 +40,24 @@ internal static class Ja
     public const string TypeMyNumberBack = "マイナンバーカード（裏）";
     public const string TypeLicenseBack = "運転免許証（裏）";
     public const string TypeGeneric = "その他の書類";
+    public const string TypeMyNumberFront = "マイナンバーカード（表）";
+    public const string TypeLicenseFront = "運転免許証（表）";
+
+    // ---- 文字認識・フォルダ・一覧・書類ごとの書き出し（W9-3〜W9-5） ----
+    public const string RuleMyNumber = "個人番号（マイナンバー）";
+    public const string RuleLicenseNumber = "免許証番号";
+    public const string RuleGender = "性別";
+    public const string RuleOrganDonation = "臓器提供意思欄";
+    public const string StatusReread = "文字を読み直し、候補を作り直しました。";
+    public const string NoteAuto = "自動で探します";
+    public const string NotePositioned = "位置で候補にしています";
+    public const string NoteCropForPosition = "切り抜くと位置で候補になります";
+    public const string NoteTextThenPosition = "自動で探します（見つからなければ位置で候補にします）";
+    public const string OpenFolderDialog = "開くフォルダを選んでください";
+    public const string ExportFolderDialog = "保存先のフォルダを選んでください";
+    public const string OpenedAsNewWork = "新しい作業として開きました（前の作業は一覧に残っています）。";
+    public static string SkippedUnsupported(int n) => $"対応していないファイル {n} 件は飛ばしました。";
+    public static string GridTitle(string file, int p, int n) => $"{file}（{p}/{n}）";
+    public static string SeparateCompleted(int n) => $"{n} 件を保存しました。";
+    public static string ExportedSeparate(int n, string folder) => $"{n} 件を保存しました（保存先: {folder}）";
 }
