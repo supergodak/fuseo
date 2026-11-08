@@ -10,6 +10,7 @@ public partial class ExportWindow : Window
     public ExportWindow()
     {
         InitializeComponent();
+        WindowFit.ToWorkArea(this);
         Loaded += async (_, _) =>
         {
             if (DataContext is not ExportViewModel vm) return;

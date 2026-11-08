@@ -200,4 +200,29 @@ Use Undo to go back to before the crop.</value></data>
   <data name="StatusRereading" xml:space="preserve"><value>Reading text again…</value></data>
   <data name="StatusReread" xml:space="preserve"><value>Text read again and candidates rebuilt.</value></data>
   <data name="StatusRereadFailed" xml:space="preserve"><value>Could not read the text. Paint over anything that needs hiding by hand.</value></data>
+  <!-- W9-4: フォルダ一括処理 -->
+  <data name="OpenFolder" xml:space="preserve"><value>Open folder</value></data>
+  <data name="OpenFolderTip" xml:space="preserve"><value>Open all images and PDFs in a folder as a new work (subfolders are not included). You can also drop a folder onto the window.</value></data>
+  <data name="OpenFolderTitle" xml:space="preserve"><value>Choose a folder to open</value></data>
+  <data name="FolderNoSupportedFiles" xml:space="preserve"><value>This folder has no files that can be imported (JPEG / PNG / BMP / TIFF / HEIC / PDF are supported; subfolders are not included).</value></data>
+  <data name="FolderNoSupportedFilesSkipped" xml:space="preserve"><value>This folder has no files that can be imported ({0} unsupported files; JPEG / PNG / BMP / TIFF / HEIC / PDF are supported; subfolders are not included).</value></data>
+  <data name="StatusOpenedAsNewWork" xml:space="preserve"><value>Opened as a new work (the previous work is kept in the list).</value></data>
+  <data name="StatusSkippedUnsupported" xml:space="preserve"><value>Skipped unsupported files: {0}.</value></data>
+  <data name="ViewSingle" xml:space="preserve"><value>One by one</value></data>
+  <data name="ViewGrid" xml:space="preserve"><value>Grid</value></data>
+  <data name="ViewTip" xml:space="preserve"><value>Use “Grid” to check the masks on every page. Click a cell to go back to editing that page.</value></data>
+  <data name="GridCellTitle" xml:space="preserve"><value>{0} ({1}/{2})</value></data>
+  <data name="ExportModeLabel" xml:space="preserve"><value>Files:</value></data>
+  <data name="ExportCombine" xml:space="preserve"><value>Combine into one file</value></data>
+  <data name="ExportSeparate" xml:space="preserve"><value>Separate file per document</value></data>
+  <data name="ExportSeparateModeNote" xml:space="preserve"><value>After pressing Save, choose a destination folder. Each document is saved as “original name-masked”; if a file with the same name exists, -2, -3 … is added (nothing is overwritten and the original files are not changed).</value></data>
+  <data name="ExportFolderDialogTitle" xml:space="preserve"><value>Choose a destination folder</value></data>
+  <data name="ExportZeroMaskDocuments" xml:space="preserve"><value>Documents with pages that have no masks: {0}</value></data>
+  <data name="ListSeparator" xml:space="preserve"><value>, </value></data>
+  <data name="ExportSeparateFailed" xml:space="preserve"><value>Saved {0} documents, but {1} could not be saved.
+{2}</value></data>
+  <data name="ExportSeparateFailedItem" xml:space="preserve"><value>- {0}: {1}</value></data>
+  <data name="ExportSeparateCompleted" xml:space="preserve"><value>Saved {0} documents.</value></data>
+  <data name="ExportOpenSavedFolder" xml:space="preserve"><value>Open destination folder</value></data>
+  <data name="StatusExportedSeparate" xml:space="preserve"><value>Saved {0} documents (folder: {1})</value></data>
 </root>

@@ -65,6 +65,17 @@ internal sealed class FakeDialogs : IDialogService
     public void ShowAbout() => AboutShown++;
     public void OpenFolder(string path) => OpenedFolders.Add(path);
 
+    /// <summary>フォルダ選択の答え（W9-4）。<see cref="FolderHandler"/> があればそちらを使う。</summary>
+    public string? Folder { get; set; }
+    public Func<string, string?>? FolderHandler { get; set; }
+    public List<string> FolderRequests { get; } = [];
+
+    public string? AskFolder(string title)
+    {
+        FolderRequests.Add(title);
+        return FolderHandler is { } h ? h(title) : Folder;
+    }
+
     public Quad? CropResult { get; set; }
     public List<CropRequest> CropRequests { get; } = [];
 

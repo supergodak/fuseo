@@ -48,17 +48,31 @@ public sealed class PageState
     private (Quad Crop, PageBitmap Bitmap)? _croppedCache;
     private (Quad? Crop, int Rotation, PageBitmap Bitmap)? _rotatedCache;
 
-    public PageState(PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf, Guid? id = null)
+    public PageState(PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf, Guid? id = null,
+                     Guid? sourceDocId = null)
     {
         Id = id ?? Guid.NewGuid();
+        // 指定が無ければ 1 ページで 1 つの書類（取り込み・復元は必ず渡す）。
+        SourceDocId = sourceDocId is { } d && d != Guid.Empty ? d : Guid.NewGuid();
         Original = original ?? throw new ArgumentNullException(nameof(original));
         SourceName = sourceName;
         SourcePageIndex = sourcePageIndex;
         FromPdf = fromPdf;
     }
 
-    public static PageState From(SourcePage page) =>
-        new(page.Bitmap, page.SourceName, page.PageIndex, page.FromPdf);
+    public static PageState From(SourcePage page, Guid? sourceDocId = null) =>
+        new(page.Bitmap, page.SourceName, page.PageIndex, page.FromPdf, sourceDocId: sourceDocId);
+
+    /// <summary>
+    /// 書類のまとまり（W9-4・§10.17）。取り込み時に元ファイルごとに 1 つ（PDF・複数フレームの TIFF の全ページは同じ値）。
+    /// 並べ替えでページが離れても書類はこの値で決まる（書類内のページ順は画面のページ順）。不変。
+    /// </summary>
+    public Guid SourceDocId { get; }
+
+    /// <summary>
+    /// いまの編集状態（不変の 1 時点）。編集・Undo のたびに別のインスタンスになるので、一覧のサムネイルの作り直しの判定に使う。
+    /// </summary>
+    public EditSnapshot Snapshot => _current;
 
     /// <summary>ページの id（自動保存のファイル名 pages/&lt;id&gt;.png に使う。復元時は保存時と同じ値）。</summary>
     public Guid Id { get; }
@@ -72,11 +86,11 @@ public sealed class PageState
         Guid id, PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf,
         DocumentType type, int rotation, ManualMask manual, IReadOnlyList<MaskCandidate> candidates,
         IReadOnlyList<NormRect> rawQr, IEnumerable<string> checkedRuleIds,
-        Quad? crop = null, IReadOnlyList<NormRect>? rawFaces = null, bool typeIsManual = false)
+        Quad? crop = null, IReadOnlyList<NormRect>? rawFaces = null, bool typeIsManual = false, Guid? sourceDocId = null)
     {
         if (rotation is < 0 or > 3) throw new ArgumentOutOfRangeException(nameof(rotation), "回転は 0..3");
         if (crop is { } q && !q.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
-        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id);
+        var state = new PageState(original, sourceName, sourcePageIndex, fromPdf, id, sourceDocId);
         state._current = new EditSnapshot(
             new ManualMask { Rects = [.. manual.Rects], Strokes = [.. manual.Strokes] },
             candidates.ToList(), rotation, type, NormalizeCrop(crop),
@@ -114,16 +128,25 @@ public sealed class PageState
     {
         get
         {
-            var (crop, rotation) = (Crop, Rotation);
-            var cropped = CroppedFor(crop);
-            if (rotation == 0) return cropped;
-            lock (_baseLock)
-            {
-                if (_rotatedCache is { } c && c.Crop == crop && c.Rotation == rotation) return c.Bitmap;
-                var bmp = QuarterTurn.Rotate(cropped, rotation);
-                _rotatedCache = (crop, rotation, bmp);
-                return bmp;
-            }
+            var current = _current;
+            return BaseFor(current.Crop, current.Rotation);
+        }
+    }
+
+    /// <summary>
+    /// 指定の切り抜き・回転での基準の画像（<see cref="Base"/> と同じ作り方・同じキャッシュ）。<see cref="Snapshot"/> の値を渡せば、
+    /// UI スレッドで写し取った時点の画像を別スレッドで作れる（一覧のサムネイル用）。**書き換え禁止**。
+    /// </summary>
+    public PageBitmap BaseFor(Quad? crop, int rotation)
+    {
+        var cropped = CroppedFor(crop);
+        if (rotation == 0) return cropped;
+        lock (_baseLock)
+        {
+            if (_rotatedCache is { } c && c.Crop == crop && c.Rotation == rotation) return c.Bitmap;
+            var bmp = QuarterTurn.Rotate(cropped, rotation);
+            _rotatedCache = (crop, rotation, bmp);
+            return bmp;
         }
     }
 
@@ -318,10 +341,14 @@ public sealed class PageState
     /// 焼き込みに渡す確定マスク = ON の候補の box ＋ 手動矩形（矩形）、手動ストローク（ストローク）。
     /// OFF の候補は含めない。最終判断は書き出しシートの確認で利用者が行う（絶対条件）。
     /// </summary>
-    public ConfirmedMasks BuildConfirmedMasks()
+    public ConfirmedMasks BuildConfirmedMasks() => ConfirmedMasksOf(_current);
+
+    /// <summary>ある時点（<see cref="Snapshot"/>）の確定マスク（<see cref="BuildConfirmedMasks"/> と同じ組み立て）。</summary>
+    public static ConfirmedMasks ConfirmedMasksOf(EditSnapshot snapshot)
     {
-        var rects = Candidates.Where(c => c.IsOn).Select(c => c.Box).Concat(Manual.Rects).ToList();
-        return new ConfirmedMasks(rects, Manual.Strokes.ToList());
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rects = snapshot.Candidates.Where(c => c.IsOn).Select(c => c.Box).Concat(snapshot.Manual.Rects).ToList();
+        return new ConfirmedMasks(rects, snapshot.Manual.Strokes.ToList());
     }
 
     private void Commit(EditSnapshot next)

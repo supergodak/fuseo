@@ -151,6 +151,7 @@ public static class WorkDocumentJson
         Require(p.CheckedRuleIds is not null && p.CheckedRuleIds.All(id => id is not null), $"{at}.checkedRuleIds が不正");
         Require(p.RawFaces is not null, $"{at}.rawFaces が null");
         foreach (var r in p.RawFaces!) Require(IsValidRect(r), $"{at}.rawFaces が範囲外");
+        Require(p.SourceDocId != Guid.Empty, $"{at}.sourceDocId が空");
         Require(p.Ocr is not null, $"{at}.ocr が null");
         if (p.ManualQuad is { } q)
             Require(q.Corners.All(c => c.X >= -Epsilon && c.X <= 1 + Epsilon && c.Y >= -Epsilon && c.Y <= 1 + Epsilon) && q.IsConvex,

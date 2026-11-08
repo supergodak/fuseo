@@ -45,6 +45,11 @@ public interface IDialogService
     /// </summary>
     Quad? AskCrop(CropRequest request);
 
+    /// <summary>
+    /// フォルダを選ぶ（W9-4: 「フォルダを開く」と「書類ごとに分ける」の保存先。<c>Microsoft.Win32.OpenFolderDialog</c>）。取り消しなら null。
+    /// </summary>
+    string? AskFolder(string title);
+
     /// <summary>ローカルのフォルダをエクスプローラーで開く（URL は渡さない・<see cref="FolderLauncher"/>）。</summary>
     void OpenFolder(string path);
 }

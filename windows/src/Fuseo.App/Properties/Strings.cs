@@ -217,4 +217,29 @@ public static class Strings
     public static string StatusRereading => Get(nameof(StatusRereading));
     public static string StatusReread => Get(nameof(StatusReread));
     public static string StatusRereadFailed => Get(nameof(StatusRereadFailed));
+
+    // ---- W9-4: フォルダ一括処理 ----
+    public static string OpenFolder => Get(nameof(OpenFolder));
+    public static string OpenFolderTip => Get(nameof(OpenFolderTip));
+    public static string OpenFolderTitle => Get(nameof(OpenFolderTitle));
+    public static string FolderNoSupportedFiles => Get(nameof(FolderNoSupportedFiles));
+    public static string FolderNoSupportedFilesSkipped => Get(nameof(FolderNoSupportedFilesSkipped));
+    public static string StatusOpenedAsNewWork => Get(nameof(StatusOpenedAsNewWork));
+    public static string StatusSkippedUnsupported => Get(nameof(StatusSkippedUnsupported));
+    public static string ViewSingle => Get(nameof(ViewSingle));
+    public static string ViewGrid => Get(nameof(ViewGrid));
+    public static string ViewTip => Get(nameof(ViewTip));
+    public static string GridCellTitle => Get(nameof(GridCellTitle));
+    public static string ExportModeLabel => Get(nameof(ExportModeLabel));
+    public static string ExportCombine => Get(nameof(ExportCombine));
+    public static string ExportSeparate => Get(nameof(ExportSeparate));
+    public static string ExportSeparateModeNote => Get(nameof(ExportSeparateModeNote));
+    public static string ExportFolderDialogTitle => Get(nameof(ExportFolderDialogTitle));
+    public static string ExportZeroMaskDocuments => Get(nameof(ExportZeroMaskDocuments));
+    public static string ListSeparator => Get(nameof(ListSeparator));
+    public static string ExportSeparateFailed => Get(nameof(ExportSeparateFailed));
+    public static string ExportSeparateFailedItem => Get(nameof(ExportSeparateFailedItem));
+    public static string ExportSeparateCompleted => Get(nameof(ExportSeparateCompleted));
+    public static string ExportOpenSavedFolder => Get(nameof(ExportOpenSavedFolder));
+    public static string StatusExportedSeparate => Get(nameof(StatusExportedSeparate));
 }

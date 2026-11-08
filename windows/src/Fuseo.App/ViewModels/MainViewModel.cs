@@ -81,6 +81,7 @@ public sealed partial class MainViewModel : ObservableObject
             .Select(p => new PresetOption(p.DocumentType, p.Name(_english), p)).ToList();
 
         OpenFilesCommand = new RelayCommand(() => _ = OpenFilesAsync(), () => !IsBusy);
+        OpenFolderCommand = new RelayCommand(() => _ = OpenFolderAsync(), () => !IsBusy);
         RemovePageCommand = new RelayCommand(RemoveSelectedPage, () => SelectedPage is not null && !IsBusy);
         MovePageUpCommand = new RelayCommand(() => MoveSelectedPage(-1), () => CanMove(-1));
         MovePageDownCommand = new RelayCommand(() => MoveSelectedPage(+1), () => CanMove(+1));
@@ -112,6 +113,8 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<CandidateViewModel> CandidateItems { get; } = [];
 
     public RelayCommand OpenFilesCommand { get; }
+    /// <summary>「フォルダを開く」（W9-4）: 選んだフォルダの直下の対応ファイルを新しい作業として開く。</summary>
+    public RelayCommand OpenFolderCommand { get; }
     public RelayCommand RemovePageCommand { get; }
     public RelayCommand MovePageUpCommand { get; }
     public RelayCommand MovePageDownCommand { get; }
@@ -367,7 +370,13 @@ public sealed partial class MainViewModel : ObservableObject
         if (paths is { Count: > 0 }) await ImportAsync(paths);
     }
 
-    /// <summary>ファイル（ドロップ・開く）を取り込んで末尾に足し、最初の新しいページを選ぶ。</summary>
+    /// <summary>
+    /// ファイル・フォルダ（ドロップ・開く）を取り込む。
+    /// - ファイルだけ: 今どおり末尾に足し、最初の新しいページを選ぶ。
+    /// - フォルダを含む（W9-4・§10.17）: フォルダは直下の対応ファイルに展開してファイルと合わせ、**新しい作業として開く**
+    ///   （いまページがあれば自動保存を確定してから空にする＝「新しい書類」と同じ・確認なし）。対応ファイルが 0 件なら取り込まずに知らせる。
+    /// 元のファイルは読むだけ。
+    /// </summary>
     public async Task ImportAsync(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0 || IsBusy) return;
@@ -375,13 +384,38 @@ public sealed partial class MainViewModel : ObservableObject
         StatusMessage = Strings.StatusImporting;
         try
         {
-            var loaded = await _source.LoadAsync(paths, _dialogs.AskPasswordAsync, CancellationToken.None, Pages.Count);
+            // フォルダの展開（列挙）だけ別スレッドで。ファイルだけの取り込みは今までどおりその場で読み込みへ進む
+            // （毎回スレッドを跨ぐと、ファイルだけの取り込みまで開始が遅れる）。
+            var intake = paths.Any(System.IO.Directory.Exists)
+                ? await Task.Run(() => FolderIntake.Expand(paths))
+                : FolderIntake.Expand(paths);
+            var notes = new List<string>();
+            if (intake.ContainsFolder)
+            {
+                if (intake.Files.Count == 0)
+                {
+                    StatusMessage = null;
+                    _dialogs.ShowError(Strings.ImportErrorTitle, intake.Unsupported > 0
+                        ? string.Format(Strings.FolderNoSupportedFilesSkipped, intake.Unsupported)
+                        : Strings.FolderNoSupportedFiles);
+                    return;
+                }
+                if (HasPages)
+                {
+                    await StartNewWorkAsync();
+                    StatusMessage = Strings.StatusImporting;
+                    notes.Add(Strings.StatusOpenedAsNewWork);
+                }
+                if (intake.Unsupported > 0) notes.Add(string.Format(Strings.StatusSkippedUnsupported, intake.Unsupported));
+            }
+            var loaded = await _source.LoadAsync(intake.Files, _dialogs.AskPasswordAsync, CancellationToken.None, Pages.Count);
             // 検出・文字の読み取りは取り込みの一部として済ませる（後から非同期に届いて編集履歴と競合しないように）。
             var (findings, types, failed) = await AnalyzePagesAsync(loaded);
+            var docIds = SourceDocIdsFor(loaded);
             PageViewModel? first = null;
             for (var i = 0; i < loaded.Count; i++)
             {
-                var state = PageState.From(loaded[i]);
+                var state = PageState.From(loaded[i], docIds[i]);
                 // 自動の向き・種別は取り込みの一部（Undo の対象外・回転ボタン／ピッカーで直せる）。
                 state.InitializeAnalysis(findings[i], findings[i].Ocr is null ? 0 : findings[i].OcrTurns, types[i],
                                          _presets.GetValueOrDefault(types[i]), _english);
@@ -392,8 +426,10 @@ public sealed partial class MainViewModel : ObservableObject
             Renumber();
             if (first is not null) SelectedPage = first;
             if (loaded.Count > 0) NoteEdited();
-            StatusMessage = failed > 0 ? string.Format(Strings.StatusDetectFailed, loaded.Count, failed)
+            var main = failed > 0 ? string.Format(Strings.StatusDetectFailed, loaded.Count, failed)
                 : loaded.Count > 0 ? string.Format(Strings.StatusImported, loaded.Count) : null;
+            if (main is not null) notes.Insert(0, main);
+            StatusMessage = notes.Count > 0 ? string.Join(" ", notes) : null;
         }
         catch (OperationCanceledException)
         {
@@ -408,6 +444,22 @@ public sealed partial class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// 取り込んだページの書類のまとまり（W9-4）: 元ファイルごとに 1 つ。PageSource は渡した順に、ファイルごとにページ番号 0 から返すので、
+    /// ページ番号 0 か元ファイル名が変わったところで新しい書類にする。
+    /// </summary>
+    public static Guid[] SourceDocIdsFor(IReadOnlyList<SourcePage> pages)
+    {
+        var ids = new Guid[pages.Count];
+        for (var i = 0; i < pages.Count; i++)
+        {
+            var continues = i > 0 && pages[i].PageIndex != 0
+                            && string.Equals(pages[i].SourceName, pages[i - 1].SourceName, StringComparison.Ordinal);
+            ids[i] = continues ? ids[i - 1] : Guid.NewGuid();
+        }
+        return ids;
     }
 
     /// <summary>同時に検出するページ数の上限（1 ページで数十 MB の作業領域を使うため）。</summary>
@@ -552,6 +604,8 @@ public sealed partial class MainViewModel : ObservableObject
     private void Renumber()
     {
         for (var i = 0; i < Pages.Count; i++) Pages[i].Number = i + 1;
+        if (Pages.Count == 0) IsGridView = false;
+        RebuildGrid();
         OnPropertyChanged(nameof(HasPages));
         OnPropertyChanged(nameof(IsLibraryVisible));
         RefreshCommands();
@@ -630,6 +684,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void AfterEdit()
     {
         SelectedPage?.Refresh();
+        RebuildGrid();
         RebuildCandidates();
         RefreshCommands();
         CanvasChanged?.Invoke(this, EventArgs.Empty);
@@ -666,6 +721,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         OpenSettingsCommand.RaiseCanExecuteChanged();
         OpenFilesCommand.RaiseCanExecuteChanged();
+        OpenFolderCommand.RaiseCanExecuteChanged();
         RemovePageCommand.RaiseCanExecuteChanged();
         MovePageUpCommand.RaiseCanExecuteChanged();
         MovePageDownCommand.RaiseCanExecuteChanged();

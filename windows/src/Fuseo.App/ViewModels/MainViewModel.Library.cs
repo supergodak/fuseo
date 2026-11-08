@@ -134,6 +134,14 @@ public sealed partial class MainViewModel
     public async Task NewDocumentAsync()
     {
         if (IsBusy || !HasPages) return;
+        await StartNewWorkAsync();
+    }
+
+    /// <summary>
+    /// 「新しい書類」の中身（IsBusy の判定なし）。フォルダの取り込み（W9-4）も、取り込み中（IsBusy）にこれで前の作業を閉じる。
+    /// </summary>
+    private async Task StartNewWorkAsync()
+    {
         // 写し取りは FlushAsync の中で同期的に済むので、すぐ画面を空にしてよい。
         var flushed = FlushSaveAsync();
         _session = null;

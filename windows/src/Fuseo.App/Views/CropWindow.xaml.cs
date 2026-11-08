@@ -12,6 +12,7 @@ public partial class CropWindow : Window
     public CropWindow(CropRequest request)
     {
         InitializeComponent();
+        WindowFit.ToWorkArea(this);
         Picture.Source = BitmapConvert.ToBitmapSource(request.Image);
         Editor.ImagePixelWidth = request.Image.Width;
         Editor.ImagePixelHeight = request.Image.Height;

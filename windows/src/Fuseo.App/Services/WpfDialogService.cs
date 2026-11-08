@@ -75,6 +75,12 @@ public sealed class WpfDialogService(Window owner) : IDialogService
         win.ShowDialog();
     }
 
+    public string? AskFolder(string title)
+    {
+        var dlg = new OpenFolderDialog { Title = title, Multiselect = false };
+        return dlg.ShowDialog(ActiveOwner()) == true ? dlg.FolderName : null;
+    }
+
     public void OpenFolder(string path) => FolderLauncher.Open(path);
 
     public Fuseo.Core.Geometry.Quad? AskCrop(CropRequest request) => CropWindow.Ask(owner, request);

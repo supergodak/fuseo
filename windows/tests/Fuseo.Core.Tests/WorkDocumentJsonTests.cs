@@ -153,6 +153,7 @@ public class WorkDocumentJsonTests
       ],
       "rawFaces": [],
       "typeIsManual": false,
+      "sourceDocId": null,
       "ocr": [],
       "manualQuad": null,
       "analysisOptions": null
@@ -334,6 +335,7 @@ public class WorkDocumentJsonTests
             Assert.Equal(p.CheckedRuleIds, q.CheckedRuleIds);
             Assert.Equal(p.RawFaces, q.RawFaces);
             Assert.Equal(p.TypeIsManual, q.TypeIsManual);
+            Assert.Equal(p.SourceDocId, q.SourceDocId);
             Assert.Empty(q.Ocr);
             Assert.Null(q.ManualQuad);
             Assert.Null(q.AnalysisOptions);
@@ -531,6 +533,34 @@ public class WorkDocumentJsonTests
     [InlineData("\"typeIsManual\": false", "\"typeIsManual\": \"yes\"")]
     public void W93Fields_RejectInvalid(string from, string to) =>
         Assert.Throws<WorkDocumentFormatException>(() => WorkDocumentJson.Parse(Mutate(from, to)));
+
+    // ---- W9-4: 任意項目 sourceDocId（書類のまとまり） ----
+
+    [Fact]
+    public void OldDocument_WithoutSourceDocId_LoadsAsNull()
+    {
+        Assert.Null(WorkDocumentJson.Parse(GoldenBeforeW93).Pages[0].SourceDocId);
+        Assert.Null(WorkDocumentJson.Parse(Mutate("\"sourceDocId\": null,", "")).Pages[0].SourceDocId);
+    }
+
+    [Fact]
+    public void SourceDocId_RoundTrip()
+    {
+        var docId = Guid.Parse("cccccccc-0000-0000-0000-000000000009");
+        var doc = Sample() with { Pages = [Sample().Pages[0] with { SourceDocId = docId }] };
+        var json = WorkDocumentJson.Serialize(doc);
+        Assert.Contains("\"sourceDocId\": \"cccccccc-0000-0000-0000-000000000009\"", json);
+        var back = WorkDocumentJson.Parse(json);
+        Assert.Equal(docId, back.Pages[0].SourceDocId);
+        Assert.Equal(json, WorkDocumentJson.Serialize(back));
+    }
+
+    [Theory]
+    [InlineData("\"sourceDocId\": \"00000000-0000-0000-0000-000000000000\"")]
+    [InlineData("\"sourceDocId\": \"not-a-guid\"")]
+    [InlineData("\"sourceDocId\": 3")]
+    public void SourceDocId_RejectsInvalid(string to) =>
+        Assert.Throws<WorkDocumentFormatException>(() => WorkDocumentJson.Parse(Mutate("\"sourceDocId\": null", to)));
 
     [Fact]
     public void Options_AreReadOnly() => Assert.True(WorkDocumentJson.Options.IsReadOnly);

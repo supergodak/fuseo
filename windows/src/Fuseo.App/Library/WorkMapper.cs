@@ -63,6 +63,7 @@ public static class WorkMapper
                 CheckedRuleIds = s.CheckedRuleIds.OrderBy(r => r, StringComparer.Ordinal).ToList(),
                 RawFaces = s.Findings.Faces.ToList(),
                 TypeIsManual = s.TypeIsManual,
+                SourceDocId = s.SourceDocId,
                 ManualQuad = s.Crop,
             });
         }
@@ -83,6 +84,7 @@ public static class WorkMapper
     public static IReadOnlyList<PageState> Restore(LoadedWork work)
     {
         var result = new List<PageState>(work.Document.Pages.Count);
+        var docIds = SourceDocIds(work.Document.Pages);
         for (var i = 0; i < work.Document.Pages.Count; i++)
         {
             var p = work.Document.Pages[i];
@@ -90,9 +92,26 @@ public static class WorkMapper
             var id = WorkPaths.PageIdFromImageFile(p.ImageFile) ?? Guid.NewGuid();
             result.Add(PageState.Restore(
                 id, work.Images[i], p.SourceName, p.SourcePageIndex, p.FromPdf, p.DocumentType, p.ManualRotation,
-                p.Manual, p.Candidates, QrBoxes(p), p.CheckedRuleIds, p.ManualQuad, p.RawFaces, p.TypeIsManual));
+                p.Manual, p.Candidates, QrBoxes(p), p.CheckedRuleIds, p.ManualQuad, p.RawFaces, p.TypeIsManual, docIds[i]));
         }
         return result;
+    }
+
+    /// <summary>
+    /// ページごとの書類のまとまり（W9-4・§10.17）。保存された sourceDocId があればそれ。無いページ（W9-4 より前の作業）は
+    /// 「連続して同じ sourceName のページ」を 1 つの書類とみなして新しい id を割り当てる（読み込み時に決めるだけ）。
+    /// </summary>
+    public static IReadOnlyList<Guid> SourceDocIds(IReadOnlyList<WorkPage> pages)
+    {
+        var ids = new Guid[pages.Count];
+        for (var i = 0; i < pages.Count; i++)
+        {
+            if (pages[i].SourceDocId is { } saved) { ids[i] = saved; continue; }
+            var continues = i > 0 && pages[i - 1].SourceDocId is null
+                            && string.Equals(pages[i - 1].SourceName, pages[i].SourceName, StringComparison.Ordinal);
+            ids[i] = continues ? ids[i - 1] : Guid.NewGuid();
+        }
+        return ids;
     }
 
     /// <summary>

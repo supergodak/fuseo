@@ -248,5 +248,6 @@ sealed class Dialogs : IDialogService
     public void ShowSettings(SettingsViewModel viewModel) { }
     public void ShowAbout() { }
     public void OpenFolder(string path) { }
+    public string? AskFolder(string title) => null;
     public Quad? AskCrop(CropRequest request) => null;
 }

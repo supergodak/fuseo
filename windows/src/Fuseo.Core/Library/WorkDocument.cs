@@ -7,7 +7,7 @@ namespace Fuseo.Core.Library;
 
 // W5「自動保存ライブラリ」のデータモデル（docs/windows-design.md §3.6・スキーマ fuseo-win/1）。
 // 項目名は Mac 版の WorkDocument（Sources/MaskingCore/Library/WorkDocument.swift）に合わせ、Windows で足す項目
-// （origin・coordinateFrame・fromPdf・sourcePageIndex・rawDetections・rawDetector・checkedRuleIds、W9-3 で rawFaces・typeIsManual）を加える。
+// （origin・coordinateFrame・fromPdf・sourcePageIndex・rawDetections・rawDetector・checkedRuleIds、W9-3 で rawFaces・typeIsManual、W9-4 で sourceDocId）を加える。
 // 保存されるのは**黒塗り前の画像**を含むデータ。このパソコンの中だけ・通信なし。
 // ここは純粋なモデルと JSON だけ（ファイル I/O は Fuseo.App の FileWorkLibrary）。
 
@@ -84,6 +84,11 @@ public sealed record WorkPage
     public IReadOnlyList<NormRect> RawFaces { get; init; } = [];
     /// <summary>利用者が種別を選んだか（W9-3・任意項目。無ければ false＝自動扱い）。OCR の結果そのものは保存しない。</summary>
     public bool TypeIsManual { get; init; }
+    /// <summary>
+    /// 書類のまとまり（W9-4・任意項目）。取り込み時に元ファイルごとに 1 つ（PDF・複数フレームの TIFF の全ページは同じ値）。
+    /// 無ければ null（W9-4 より前の作業。読み込み側が「連続して同じ sourceName のページ」を 1 つの書類とみなす）。
+    /// </summary>
+    public Guid? SourceDocId { get; init; }
 
     // ---- Mac 互換用（ocr・analysisOptions は Windows では使わない・常に空で持つ） ----
     public IReadOnlyList<JsonElement> Ocr { get; init; } = [];

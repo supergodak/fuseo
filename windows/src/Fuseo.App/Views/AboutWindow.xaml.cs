@@ -11,6 +11,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        WindowFit.ToWorkArea(this);
         VersionText.Text = string.Format(Strings.AboutVersion, AboutInfo.Version);
         LicenseText.Text = AboutInfo.LicenseText;
         ThirdPartyText.Text = AboutInfo.ThirdPartyNotices;

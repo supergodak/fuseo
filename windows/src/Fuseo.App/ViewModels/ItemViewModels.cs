@@ -47,6 +47,18 @@ public sealed class PageViewModel(PageState state) : ObservableObject
         }
     }
 
+    private BitmapSource? _gridThumbnail;
+
+    /// <summary>一覧（W9-4）のサムネイル（確定マスクを黒で重ねた表示用の縮小画像）。作るのは MainViewModel（別スレッド）。</summary>
+    public BitmapSource? GridThumbnail
+    {
+        get => _gridThumbnail;
+        internal set => SetProperty(ref _gridThumbnail, value);
+    }
+
+    /// <summary>いま作っている・作り終えた一覧のサムネイルの元の編集状態（<see cref="PageState.Snapshot"/>）。</summary>
+    internal EditSnapshot? GridThumbnailKey { get; set; }
+
     public void Refresh()
     {
         OnPropertyChanged(nameof(MaskCountText));

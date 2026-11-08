@@ -27,6 +27,8 @@ public sealed class ExportViewModel : ObservableObject
     private ExportFormat _format = ExportFormat.Pdf;
     private bool _isPreparing;
     private bool _isSaving;
+    private bool _separate;
+    private bool _isCompleted;
 
     public ExportViewModel(IReadOnlyList<PageState> pages, IReadOnlyDictionary<DocumentType, DocumentPreset> presets,
                            IMaskRasterizer rasterizer, IExporter exporter, IDialogService dialogs, Func<DateTime> now,
@@ -51,6 +53,89 @@ public sealed class ExportViewModel : ObservableObject
         var manual = pages.Sum(p => p.ManualMaskCount);
         SummaryText = string.Format(Strings.ExportSummary, auto + manual, auto, manual, pages.Count);
         HasPdfSource = pages.Any(p => p.FromPdf);
+
+        // 書類のまとまり（W9-4）: SourceDocId ごと・画面に初めて出てくる順。書類内のページ順は画面のページ順。
+        var order = new List<Guid>();
+        var groups = new Dictionary<Guid, List<int>>();
+        for (var i = 0; i < pages.Count; i++)
+        {
+            if (!groups.TryGetValue(pages[i].SourceDocId, out var list))
+            {
+                groups[pages[i].SourceDocId] = list = [];
+                order.Add(pages[i].SourceDocId);
+            }
+            list.Add(i);
+        }
+        Documents = order.Select(id => new ExportDocument(pages[groups[id][0]].SourceName, groups[id])).ToList();
+        // マスクが 0 のページを含む書類（安全側: 1 ページでも 0 なら挙げる）。
+        ZeroMaskDocumentNames = Documents.Where(d => d.PageIndexes.Any(i => pages[i].MaskCount == 0))
+            .Select(d => d.Name).ToList();
+        ZeroMaskDocumentsText = ZeroMaskDocumentNames.Count > 0
+            ? string.Format(Strings.ExportZeroMaskDocuments, string.Join(Strings.ListSeparator, ZeroMaskDocumentNames))
+            : "";
+        OpenSavedFolderCommand = new RelayCommand(OpenSavedFolder, () => SavedFolder is not null);
+    }
+
+    /// <summary>書類（元ファイル）ごとのページ番号（0 始まり・画面の順）。</summary>
+    public IReadOnlyList<ExportDocument> Documents { get; }
+
+    /// <summary>書類が 2 つ以上のときだけ「1 つにまとめる／書類ごとに分ける」を出す。</summary>
+    public bool HasMultipleDocuments => Documents.Count > 1;
+
+    /// <summary>マスクが 0 のページを含む書類の名前（書き出しシートで列挙する）。</summary>
+    public IReadOnlyList<string> ZeroMaskDocumentNames { get; }
+    public string ZeroMaskDocumentsText { get; }
+    public bool HasZeroMaskDocuments => ZeroMaskDocumentNames.Count > 0;
+
+    /// <summary>「書類ごとに分ける」（書類が 1 つなら常に false＝今どおり 1 ファイル）。</summary>
+    public bool IsSeparate
+    {
+        get => _separate && HasMultipleDocuments;
+        set
+        {
+            if (!HasMultipleDocuments || !SetProperty(ref _separate, value)) return;
+            OnPropertyChanged(nameof(IsCombine));
+            OnPropertyChanged(nameof(ShowSeparateFilesNote));
+            OnPropertyChanged(nameof(ShowSeparateModeNote));
+        }
+    }
+
+    public bool IsCombine { get => !IsSeparate; set { if (value) IsSeparate = false; } }
+
+    public bool ShowSeparateModeNote => IsSeparate;
+
+    /// <summary>「書類ごとに分ける」で保存し終えた（シートは閉じずに完了を表示する）。</summary>
+    public bool IsCompleted
+    {
+        get => _isCompleted;
+        private set
+        {
+            if (!SetProperty(ref _isCompleted, value)) return;
+            OnPropertyChanged(nameof(IsNotCompleted));
+            RefreshCommands();
+        }
+    }
+
+    public bool IsNotCompleted => !IsCompleted;
+
+    /// <summary>「書類ごとに分ける」の保存先フォルダ（保存できたときだけ）。</summary>
+    public string? SavedFolder { get; private set; }
+
+    public string? CompletedText { get; private set; }
+
+    public RelayCommand OpenSavedFolderCommand { get; }
+
+    private void OpenSavedFolder()
+    {
+        if (SavedFolder is not { } folder) return;
+        try
+        {
+            _dialogs.OpenFolder(folder);
+        }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
+        {
+            _dialogs.ShowError(Strings.ExportErrorTitle, string.Format(Strings.SettingsOpenFolderFailed, e.Message));
+        }
     }
 
     public RelayCommand SaveCommand { get; }
@@ -91,7 +176,7 @@ public sealed class ExportViewModel : ObservableObject
     public bool IsPng { get => Format == ExportFormat.Png; set { if (value) Format = ExportFormat.Png; } }
 
     public bool ShowPdfNote => IsPdf;
-    public bool ShowSeparateFilesNote => !IsPdf && _pages.Count > 1;
+    public bool ShowSeparateFilesNote => !IsPdf && (IsSeparate ? Documents.Any(d => d.PageIndexes.Count > 1) : _pages.Count > 1);
 
     public string SaveButtonText => HasZeroMaskPage ? Strings.ExportSaveWithoutMask : Strings.ExportSave;
 
@@ -107,7 +192,7 @@ public sealed class ExportViewModel : ObservableObject
         private set { if (SetProperty(ref _isSaving, value)) RefreshCommands(); }
     }
 
-    public bool CanSave => _burned is not null && !IsPreparing && !IsSaving;
+    public bool CanSave => _burned is not null && !IsPreparing && !IsSaving && !IsCompleted;
 
     /// <summary>
     /// 全ページを焼き込む（UI を塞がないよう別スレッド）。確定マスクの組み立ては呼び出しスレッドで行い、
@@ -139,6 +224,11 @@ public sealed class ExportViewModel : ObservableObject
     public async Task SaveAsync()
     {
         if (!CanSave || _burned is not { } burned) return;
+        if (IsSeparate)
+        {
+            await SaveSeparateAsync(burned);
+            return;
+        }
         var format = Format;
         var chosen = _dialogs.AskSavePath(format, ExportNaming.DefaultFileName(_now(), format));
         if (chosen is null) return;
@@ -175,10 +265,75 @@ public sealed class ExportViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 「書類ごとに分ける」（§10.17）: 保存先フォルダを選び、書類ごとに <c>&lt;元名&gt;-masked&lt;拡張子&gt;</c> へ順に書く。
+    /// **既存のファイルは上書きしない**（名前を変える＋<see cref="ExportWriter"/> の上書きしないモード）。1 件失敗しても残りは続け、
+    /// 最後に失敗した書類名と理由をまとめて表示する。書くのはプレビューしたのと同じ焼き込み結果だけ。
+    /// </summary>
+    private async Task SaveSeparateAsync(IReadOnlyList<BurnedPage> burned)
+    {
+        var folder = _dialogs.AskFolder(Strings.ExportFolderDialogTitle);
+        if (folder is null) return;
+        var format = Format;
+        var docs = Documents;
+        IsSaving = true;
+        try
+        {
+            var (saved, failures) = await Task.Run(() =>
+            {
+                var options = new ExportOptions(format);
+                var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var ok = new List<string>();
+                var bad = new List<(string Name, string Reason)>();
+                foreach (var d in docs)
+                {
+                    try
+                    {
+                        var pages = d.PageIndexes.Select(i => burned[i]).ToList();
+                        var targets = ExportNaming.SeparateTargets(folder, d.Name, format, pages.Count, ExportNaming.PathTaken, taken);
+                        ExportWriter.Write(_exporter, pages, options, targets, overwrite: false);
+                        ok.Add(Path.GetFileName(targets[0]));
+                    }
+                    catch (Exception e) when (e is not OutOfMemoryException)
+                    {
+                        bad.Add((d.Name, e.Message));
+                    }
+                }
+                return (ok, bad);
+            });
+            if (failures.Count > 0)
+                _dialogs.ShowError(Strings.ExportErrorTitle, string.Format(Strings.ExportSeparateFailed, saved.Count, failures.Count,
+                    string.Join("\n", failures.Select(f => string.Format(Strings.ExportSeparateFailedItem, f.Name, f.Reason)))));
+            if (saved.Count > 0)
+            {
+                SavedFolder = folder;
+                var folderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
+                SavedFileName = string.IsNullOrEmpty(folderName) ? folder : folderName;
+                SavedSummary = string.Format(Strings.StatusExportedSeparate, saved.Count, SavedFileName);
+                CompletedText = string.Format(Strings.ExportSeparateCompleted, saved.Count);
+                OnPropertyChanged(nameof(SavedFolder));
+                OnPropertyChanged(nameof(CompletedText));
+                OpenSavedFolderCommand.RaiseCanExecuteChanged();
+                IsCompleted = true;
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
     private void RefreshCommands()
     {
         OnPropertyChanged(nameof(CanSave));
         SaveCommand.RaiseCanExecuteChanged();
         CancelCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(CancelButtonText));
     }
+
+    /// <summary>保存し終えたら「閉じる」。</summary>
+    public string CancelButtonText => IsCompleted ? Strings.Close : Strings.Cancel;
 }
+
+/// <summary>書き出しの書類 1 つ（元ファイルの名前と、書き出すページの番号＝画面の順・0 始まり）。</summary>
+public sealed record ExportDocument(string Name, IReadOnlyList<int> PageIndexes);
