@@ -13,7 +13,7 @@ internal static class E2EPaths
 
     public static string Exe { get; } =
         Environment.GetEnvironmentVariable("FUSEO_E2E_EXE") is { Length: > 0 } exe
-            ? exe : @"C:\fuseo-win\windows\publish\Fuseo-win-0.1.0-arm64\Fuseo.exe";
+            ? exe : @"C:\fuseo-e2e\app\Fuseo.exe";
 
     public static string Root { get; } = Local(
         Environment.GetEnvironmentVariable("FUSEO_E2E_ROOT") is { Length: > 0 } r ? r : @"C:\fuseo-e2e");

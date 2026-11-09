@@ -18,12 +18,21 @@ Fuseo for Windows {VERSION}
 
 ■ 使い方（短く）
 - 画像（JPEG / PNG / BMP / TIFF）や PDF をウィンドウにドラッグするか、「ファイルを開く」で選びます。
-- 「書類の種類」を選ぶと、その書類で普通伏せる欄の一覧が出ます。矩形かブラシで塗ってください。
+  フォルダをドラッグするか「フォルダを開く」で選ぶと、フォルダの中の書類をまとめて取り込みます（合計 50 ページまで）。
+- 取り込むと、Windows 標準の文字認識（このパソコンの中だけで動きます）で書類の種類と向きを判定し、
+  マイナンバー・運転免許証番号・保険証の記号番号・在留カード番号・QR コードなどを「自動検出の候補」に出します。
+  判定や検出は外れることがあります。違うときは「書類の種類」を選び直し、足りない所は矩形かブラシで塗ってください。
+- 「書類の種類」を選ぶと、その書類で普通伏せる欄の一覧が出ます。
 - 斜めに撮った写真は「切り抜き」で四隅を合わせると、まっすぐに直せます。
 - 「書き出し」で仕上がりを確認してから保存します。塗った部分は画素そのものが黒になり、
   元に戻せません。撮影日時などの情報（メタデータ）も書き出したファイルには入りません。
-- 自動で見つけるのは QR コード・バーコードだけです。番号や氏名などは自動では塗られません。
+- 「一覧」でページ全体を見渡せます。マスクが 1 つもないページには赤い「マスクなし」が付きます。
+- 複数の書類を開いているときは、「書類ごとに分ける」で書類ごとに「元の名前-masked」として保存できます
+  （同じ名前のファイルがあれば -2, -3 … を付け、既存のファイルは上書きしません）。
+- 氏名・住所などは自動では塗られません。自動検出も完全ではありません。
   保存する前に、必ず仕上がりをご自身で確認してください。
+- 番号の自動検出には「日本語の文字認識」が必要です（日本語版 Windows には通常入っています）。
+  入っていない場合は、設定 › 時刻と言語 › 言語 › 日本語 › 言語のオプション で追加できます（追加しなくても手で塗れます）。
 - 原本の保存が必要な書類は、黒塗りしたコピーで代わりにできません。
   マイナンバーカードの裏面は、そもそも提出できない場面が多い書類です。提出先の指示をご確認ください。
 - HEIC（iPhone の写真）は、Microsoft Store の「HEIF 画像拡張機能」が入っている場合だけ開けます。
@@ -79,9 +88,14 @@ Getting started
 4. The first launch can take a few seconds while program parts are unpacked to a temporary folder.
 
 Notes
-- Drag images (JPEG / PNG / BMP / TIFF) or PDFs onto the window, or use "Open files".
-- Only QR codes and barcodes are found automatically. Numbers and names are not painted for you.
-  Always check the result on the export sheet before saving.
+- Drag images (JPEG / PNG / BMP / TIFF), PDFs or a folder onto the window, or use "Open files" / "Open folder"
+  (up to 50 pages in total).
+- Windows' built-in text recognition (runs on this PC only) detects the document type and orientation and suggests
+  Japanese ID numbers and QR codes as "Auto-detected candidates". Detection can miss or be wrong; names and addresses
+  are never painted for you. Always check the result on the export sheet before saving.
+- With several documents open, "Separate file per document" saves each as "<original name>-masked"
+  (adds -2, -3 ... instead of overwriting existing files).
+- Number detection needs Japanese text recognition (Settings > Time & language > Language & region > Japanese).
 - Painted areas are replaced with black pixels and cannot be recovered. Metadata is not written.
 - HEIC photos open only if Microsoft's "HEIF Image Extensions" is installed.
 

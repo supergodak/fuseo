@@ -3,12 +3,14 @@
 本人確認書類や控除証明書 PDF の「見せなくてよい部分」を自分で塗って、**復元できない形**で提出用コピーにする Windows 用ツールです。
 完全ローカル・無料・オープンソース（MIT）。macOS / iPhone 版と同じ書類の知識（プリセット）を使います。
 
-> 開発中（v0.1）。配布は窓の杜・Vector と GitHub Releases を予定しています。
+- 0.2: Windows 標準の文字認識（`Windows.Media.Ocr`・端末内のみ）で書類の種類・向きを判定し、マイナンバー・免許証番号・保険証の記号番号・在留カード番号・QR コード・顔写真を候補にします（初期の ON/OFF はプリセットどおり・保存前の確認は必須）。フォルダの一括取り込みと、書類ごとの書き出し（`元の名前-masked`）。
+- 配布は GitHub Releases（タグ `win-v*`）と窓の杜・Vector。
 
 ## 構成
-- `src/Fuseo.Core` — 座標・データの型・プリセット・焼き込み・書き出し（UI 非依存・.NET 8）
+- `src/Fuseo.Core` — 座標・データの型・プリセット・種別判定と番号検出・焼き込み・書き出し（UI 非依存・.NET 8）
+- `src/Fuseo.Input` — 画像／PDF の取り込み・QR（ZXing.Net）・文字認識と顔検出（Windows SDK）
 - `src/Fuseo.App` — WPF アプリ（`Fuseo.exe`）
-- `tests/` — xUnit
+- `tests/` — xUnit、画面操作の E2E（`tests/Fuseo.E2E`）、合成書類での受け入れ検査（`tests/Acceptance`）
 - 技術上の約束: [docs/contract.md](docs/contract.md)
 
 ## ビルド

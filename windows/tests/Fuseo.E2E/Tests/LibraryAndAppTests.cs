@@ -215,7 +215,9 @@ public class SettingsAndAboutTests(ITestOutputHelper output) : E2ETest(output)
             var app = s.Launch();
             app.Button("main.about").Click();
             var w = app.WaitWindow(Ja.AboutWindow);
-            Assert.Equal("バージョン 0.1.0", w.Get("about.version").Text());
+            // 期待値は操作している exe の版情報から取る（版番号を上げるたびにテストを直さなくてよいように）。
+            var v = System.Diagnostics.FileVersionInfo.GetVersionInfo(E2EPaths.Exe);
+            Assert.Equal($"バージョン {v.ProductMajorPart}.{v.ProductMinorPart}.{v.ProductBuildPart}", w.Get("about.version").Text());
             Assert.Contains("MIT", w.Get("about.license").Value());
             w.Get("about.copyWebsite").Click();
             Wait.Until(() => ClipboardAccess.GetText() == "https://fuseo.ati-mirai.co.jp/", "サイトのアドレスがコピーされる");
