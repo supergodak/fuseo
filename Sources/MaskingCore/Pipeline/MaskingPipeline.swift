@@ -75,7 +75,9 @@ public final class MaskingPipeline {
             if options.recognizeText { ocr = try recognizer.recognize(basePage) }
         }
 
-        let classification = classifier.classify(ocr: ocr, presets: presets)
+        let classification = classifier.classify(ocr: ocr, presets: presets,
+                                                 allowCards: Self.allowsCardTypes(options: options,
+                                                                                  pixelSize: basePage.pixelSize))
         if let forcedType {
             MaskingLog.pipeline.info("種別を手動指定: \(forcedType.rawValue, privacy: .public)（自動判定=\(classification.type.rawValue, privacy: .public)）")
         }
@@ -110,6 +112,18 @@ public final class MaskingPipeline {
         let candidates = ruleEngine.candidates(for: preset, page: page, ocr: ocr)
         return AnalyzedPage(page: page, ocr: ocr, classification: classification,
                             preset: preset, candidates: candidates)
+    }
+
+    /// カード類を種別の候補にしてよいか（0.3.0）。PDF 由来の平面ページ（`.insetOnly`）で、縦横比が
+    /// ID-1 カード（1.586）から 8% 以上離れている＝紙そのもの（A4 1.414・レター 1.294 など）なら false。
+    /// ページの中のカードを切り抜いた場合・手で切り抜いた場合はカードの縦横比になるので true のまま。
+    /// 写真（`.auto`）と復元ページ（`.off`）は従来どおり true（検出に失敗した写真でもカードと判定できるように）。
+    static func allowsCardTypes(options: AnalysisOptions, pixelSize: CGSize) -> Bool {
+        guard options.documentDetection == .insetOnly else { return true }
+        let long = max(pixelSize.width, pixelSize.height), short = min(pixelSize.width, pixelSize.height)
+        guard short > 0 else { return true }
+        let id1 = 85.60 / 53.98
+        return abs(Double(long / short) - id1) / id1 < 0.08
     }
 
     /// 時計回りに90°×n回転した新規CGImageを返す。

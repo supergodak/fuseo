@@ -147,7 +147,14 @@ public protocol TextRecognizer {
 }
 
 public protocol DocumentClassifying {
-    func classify(ocr: [OCRItem], presets: [DocumentPreset]) -> ClassificationResult
+    /// - allowCards: false ならカード類（`isID1Card`）を種別にしない（紙の大きさの PDF ページ・0.3.0）。
+    func classify(ocr: [OCRItem], presets: [DocumentPreset], allowCards: Bool) -> ClassificationResult
+}
+
+public extension DocumentClassifying {
+    func classify(ocr: [OCRItem], presets: [DocumentPreset]) -> ClassificationResult {
+        classify(ocr: ocr, presets: presets, allowCards: true)
+    }
 }
 
 public protocol FieldDetecting {

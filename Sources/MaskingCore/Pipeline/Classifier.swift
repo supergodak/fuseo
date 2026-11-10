@@ -10,6 +10,10 @@ import Foundation
 /// - OCR 観測数が `maxCardObservations` を超える画像では、
 ///   1. カード類（`isID1Card`）は候補にしない（実物カードは 13〜32 観測）
 ///   2. それ以外の種別も**異なるキーワード2語以上**の一致を要する
+///
+/// **紙の大きさの PDF ページ（0.3.0）**: 「個人番号」欄のある A4 の申告書が「マイナンバーカード（裏）」と判定され、
+/// 位置推定の大きなマスクが付いた（文字入れの検証で発見）。PDF から取り込んだページで縦横比がカードと違う
+/// （A4・レター等）ものは、呼び出し側が `allowCards: false` を渡してカード類を候補にしない。
 /// - `ranking` は従来どおり生スコア（確認UIの「種別を変更」候補・診断用）。採否は `type`/`score` だけに効く。
 public struct KeywordClassifier: DocumentClassifying {
     /// カードとみなせる OCR 観測数の上限。実物カード 6 枚の実測 13〜32 観測（2026-10-09）に余裕を持たせた値。
@@ -17,7 +21,7 @@ public struct KeywordClassifier: DocumentClassifying {
 
     public init() {}
 
-    public func classify(ocr: [OCRItem], presets: [DocumentPreset]) -> ClassificationResult {
+    public func classify(ocr: [OCRItem], presets: [DocumentPreset], allowCards: Bool) -> ClassificationResult {
         let joined = ocr.map(\.text).joined().replacingOccurrences(of: " ", with: "")
         let textHeavy = ocr.count > Self.maxCardObservations
 
@@ -35,6 +39,7 @@ public struct KeywordClassifier: DocumentClassifying {
 
         let accepted = scored.first { candidate in
             guard candidate.score > 0 else { return false }
+            if !allowCards && candidate.type.isID1Card { return false }
             guard textHeavy else { return true }
             if candidate.type.isID1Card { return false }
             return candidate.hits >= 2
