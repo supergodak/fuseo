@@ -61,6 +61,7 @@ Mac 版は **macOS 14（Sonoma）以降**（Apple Silicon／Intel）、iPhone �
 2. **読み込む** — 書類の写真や PDF をウィンドウにドラッグ＆ドロップ（JPEG／PNG／HEIC／TIFF／PDF、複数枚可。PDF は各ページを画像として処理し、ページの中に小さく写ったカードは自動で切り抜きます）。
 3. **確認する** — 切り抜き・傾き補正・種別判定・黒塗り候補の検出まで自動で進みます。候補が正しいか画面で確認します。
 4. **調整する** — 塗らない候補はチェックを外す。足りないところは矩形・ブラシで塗り足す。
+   Mac 版（0.3.0〜）は**書類に文字を打ち込む**こともできます（申込書・申告書の記入。枠の位置と大きさ・文字サイズ・行間は手で決めます。黒塗りは文字より上に塗られます）。
 5. **書き出す** — PDF／JPEG／PNG を選んで保存。仕上がりプレビューで実際の塗りつぶし状態を確認できます。
 
 iPhone 版は起動後に「カメラで撮影／写真から選ぶ／ファイルから」の 3 つから読み込むだけで、以降（3〜5）の流れは同じです。メールの添付ファイルや「ファイル」アプリの共有メニューから **「Fuseo にコピー」** を選んで直接開くこともできます。一度に扱える PDF のページ数は iPhone 版が 10 ページ、Mac 版が 50 ページまでです（それより長い書類は Mac 版へ）。
@@ -127,6 +128,7 @@ The Mac app requires **macOS 14 (Sonoma) or later** (Apple Silicon or Intel); th
 2. **Load** a document photo or PDF by dragging it into the window (JPEG / PNG / HEIC / TIFF / PDF; multiple pages OK — PDF pages are processed as images, and a small card inside a page is cropped automatically).
 3. **Review** — cropping, deskew, document-type detection, and redaction candidates run automatically. Check them on screen.
 4. **Adjust** — uncheck candidates you don't want; add missing spots with the rectangle or brush tool.
+   On Mac (0.3.0+) you can also **type text onto the document** to fill in forms — you set the frame position and size, font size, and line spacing by hand; redactions are always painted over typed text.
 5. **Export** — choose PDF / JPEG / PNG and save. A preview shows exactly how the redactions will look.
 
 On iPhone you load documents from the home screen instead — take a photo, pick from your library, or open a file — and steps 3–5 are the same. You can also open a document directly from a mail attachment or the Files app share sheet via **Copy to Fuseo**. A single import can hold up to 10 PDF pages on iPhone and 50 on Mac (use the Mac app for longer documents).
