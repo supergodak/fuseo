@@ -333,9 +333,14 @@ final class WorkLibraryTests: XCTestCase {
 
     func test_load_unknownSchemaVersion_throwsCorrupted() throws {
         let lib = FileWorkLibrary(rootURL: root)
-        var doc = sampleDocument()
-        doc.schemaVersion = 99
+        let doc = sampleDocument()
         try lib.save(doc, pageImages: images(for: doc))
+        // 保存は中身から版を決める（0.3.0）ので、未来の版で書かれたファイルを直接作る
+        let docURL = root.appendingPathComponent(doc.id.uuidString).appendingPathComponent("document.json")
+        let raw = String(decoding: try Data(contentsOf: docURL), as: UTF8.self)
+            .replacingOccurrences(of: "\"schemaVersion\":1", with: "\"schemaVersion\":99")
+        XCTAssertTrue(raw.contains("\"schemaVersion\":99"))
+        try Data(raw.utf8).write(to: docURL)
         XCTAssertThrowsError(try lib.load(id: doc.id)) { error in
             guard case WorkLibraryError.corrupted = error else {
                 return XCTFail("corrupted を期待: \(error)")

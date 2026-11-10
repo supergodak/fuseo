@@ -10,7 +10,7 @@ import CoreGraphics
 public struct RasterMaskRenderer: MaskRendering {
     public init() {}
 
-    public func burnIn(page: PageImage, masks: [NormRect], strokes: [BrushStroke]) throws -> CGImage {
+    public func burnIn(page: PageImage, texts: [TextBox], masks: [NormRect], strokes: [BrushStroke]) throws -> CGImage {
         let w = page.cgImage.width
         let h = page.cgImage.height
         let size = CGSize(width: w, height: h)
@@ -21,6 +21,9 @@ public struct RasterMaskRenderer: MaskRendering {
             throw MaskingError.renderFailed
         }
         ctx.draw(page.cgImage, in: CGRect(origin: .zero, size: size))
+
+        // 文字入れ（0.3.0）: マスクより先に描く＝マスクの下に文字の画素は残らない
+        TextBoxRenderer.draw(texts, in: ctx, imageSize: size)
 
         let opaqueBlack = CGColor(red: 0, green: 0, blue: 0, alpha: 1)
 

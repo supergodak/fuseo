@@ -106,7 +106,7 @@ final class PageState: Identifiable {
     func noteEdited() { onEdit?() }
 
     /// ユーザー編集（候補チェック変更・手動マスク）があるか。切り抜き変更の確認アラート条件。
-    var hasUserEdits: Bool { candidatesEdited || manualMaskCount > 0 }
+    var hasUserEdits: Bool { candidatesEdited || manualMaskCount > 0 || !analyzed.texts.isEmpty }
 
     // MARK: - 派生値（書き出しサマリ・ゼロマスク判定）
 
@@ -660,12 +660,14 @@ final class AppState {
         await withReanalysis {
         do {
             let keepManual = page.analyzed.manual
+            let keepTexts = page.analyzed.texts     // 文字枠も手動マスクと同じく種別変更で保持する
             var re = try await analysis.analyze(url: page.sourceURL, forcedType: type,
                                                 manualQuad: page.reanalysisQuad,
                                                 manualRotation: page.analysisRotation,
                                                 options: page.analysisOptions)
             applyFaceDefault(to: &re)
             re.manual = keepManual
+            re.texts = keepTexts
             page.analyzed = re
             page.forcedType = type
             page.candidatesEdited = false

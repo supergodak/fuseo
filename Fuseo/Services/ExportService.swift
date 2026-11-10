@@ -19,7 +19,7 @@ struct ExportService {
         guard !pages.isEmpty else { throw MaskingError.exportFailed("出力するページがありません") }
         let rendered = try pages.map { page -> RenderedPage in
             let masks = page.effectiveMaskRects
-            let image = try renderer.burnIn(page: page.page, masks: masks, strokes: page.manual.strokes)
+            let image = try renderer.burnIn(page: page.page, texts: page.texts, masks: masks, strokes: page.manual.strokes)
             return RenderedPage(image: image, ocrItems: page.ocr, maskRects: masks)
         }
 

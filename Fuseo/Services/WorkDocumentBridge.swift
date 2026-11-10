@@ -56,7 +56,8 @@ enum WorkDocumentBridge {
                 candidates: page.analyzed.candidates,
                 manual: page.analyzed.manual,
                 pixelWidth: image.width,
-                pixelHeight: image.height)
+                pixelHeight: image.height,
+                texts: page.analyzed.texts)
         }
         return WorkDocument(id: id, title: title, createdAt: createdAt, updatedAt: updatedAt,
                             status: status, lastExportedName: lastExportedName, pages: workPages)
@@ -98,7 +99,8 @@ enum WorkDocumentBridge {
                 classification: ClassificationResult(type: wp.documentType, score: 0, ranking: []),
                 preset: preset,
                 candidates: wp.candidates,
-                manual: wp.manual)
+                manual: wp.manual,
+                texts: wp.texts)
             let page = PageState(sourceURL: imageURL, analyzed: analyzed,
                                  isFlatSource: wp.isFlatSource,
                                  analysisOptions: wp.analysisOptions,

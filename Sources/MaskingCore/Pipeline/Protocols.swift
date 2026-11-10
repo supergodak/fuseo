@@ -62,15 +62,19 @@ public struct AnalyzedPage {
     public let preset: DocumentPreset
     public var candidates: [MaskCandidate]
     public var manual: ManualMask
+    /// 文字入れ（0.3.0）の文字枠。マスクではない（マスク数・ゼロマスク判定に数えない）。焼き込みはマスクより先。
+    public var texts: [TextBox]
 
     public init(page: PageImage, ocr: [OCRItem], classification: ClassificationResult,
-                preset: DocumentPreset, candidates: [MaskCandidate], manual: ManualMask = ManualMask()) {
+                preset: DocumentPreset, candidates: [MaskCandidate], manual: ManualMask = ManualMask(),
+                texts: [TextBox] = []) {
         self.page = page
         self.ocr = ocr
         self.classification = classification
         self.preset = preset
         self.candidates = candidates
         self.manual = manual
+        self.texts = texts
     }
 
     /// 焼き込み対象の最終マスク矩形（isOn の候補＋手動矩形。ブラシは renderer が別途扱う）。
@@ -153,7 +157,14 @@ public protocol FieldDetecting {
 public protocol MaskRendering {
     /// ラスタ焼き込み: 新規ビットマップに基準画像を描き、マスクを完全不透明（黒）で塗って返す。
     /// α合成・注釈・レイヤーは禁止（core-design.md §4）。
-    func burnIn(page: PageImage, masks: [NormRect], strokes: [BrushStroke]) throws -> CGImage
+    /// 文字入れ（0.3.0）: 焼き込み順は 基準画像 → 文字 → マスク → ブラシ（マスクは常に文字の上）。
+    func burnIn(page: PageImage, texts: [TextBox], masks: [NormRect], strokes: [BrushStroke]) throws -> CGImage
+}
+
+public extension MaskRendering {
+    func burnIn(page: PageImage, masks: [NormRect], strokes: [BrushStroke]) throws -> CGImage {
+        try burnIn(page: page, texts: [], masks: masks, strokes: strokes)
+    }
 }
 
 public protocol Exporting {

@@ -10,7 +10,15 @@ import Foundation
 public struct WorkDocument: Codable, Sendable, Equatable {
 
     /// 保存形式の版。読み込み側は未知の版を拒否する（前方互換の事故防止）。
-    public static let currentSchemaVersion = 1
+    /// v2（0.3.0）= ページに文字枠（`texts`）がある。**文字枠が 1 つでもあるときだけ v2 で書き、無ければ v1 のまま**
+    /// （古い版が文字入りの作業を開いて保存し、文字が黙って消える事故を防ぐ。文字の無い作業は古い版でも開ける）。
+    public static let currentSchemaVersion = 2
+    public static let supportedSchemaVersions: ClosedRange<Int> = 1...2
+
+    /// 中身から決まる保存形式の版（保存時に `schemaVersion` へ入れる）。
+    public var requiredSchemaVersion: Int {
+        pages.contains(where: { !$0.texts.isEmpty }) ? 2 : 1
+    }
 
     public enum Status: String, Codable, Sendable {
         /// 編集中（まだ書き出していない）
@@ -37,8 +45,8 @@ public struct WorkDocument: Codable, Sendable, Equatable {
                 status: Status = .inProgress,
                 lastExportedName: String? = nil,
                 pages: [WorkPage] = [],
-                schemaVersion: Int = WorkDocument.currentSchemaVersion) {
-        self.schemaVersion = schemaVersion
+                schemaVersion: Int? = nil) {
+        self.schemaVersion = 1
         self.id = id
         self.title = title
         self.createdAt = createdAt
@@ -46,6 +54,7 @@ public struct WorkDocument: Codable, Sendable, Equatable {
         self.status = status
         self.lastExportedName = lastExportedName
         self.pages = pages
+        self.schemaVersion = schemaVersion ?? requiredSchemaVersion
     }
 }
 
@@ -80,6 +89,8 @@ public struct WorkPage: Codable, Sendable, Equatable {
     /// 基準画像のピクセルサイズ（復元前に一覧・レイアウトで使うため JSON にも持つ）。
     public var pixelWidth: Int
     public var pixelHeight: Int
+    /// 文字入れ（v2）。空なら JSON に書かない（v1 の表現を 1 バイトも変えないため）。
+    public var texts: [TextBox]
 
     public init(index: Int,
                 imageFile: String? = nil,
@@ -95,7 +106,8 @@ public struct WorkPage: Codable, Sendable, Equatable {
                 candidates: [MaskCandidate] = [],
                 manual: ManualMask = ManualMask(),
                 pixelWidth: Int,
-                pixelHeight: Int) {
+                pixelHeight: Int,
+                texts: [TextBox] = []) {
         self.index = index
         self.imageFile = imageFile ?? WorkPage.canonicalImageFile(index: index)
         self.thumbnailFile = thumbnailFile ?? WorkPage.canonicalThumbnailFile(index: index)
@@ -111,6 +123,52 @@ public struct WorkPage: Codable, Sendable, Equatable {
         self.manual = manual
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
+        self.texts = texts
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case index, imageFile, thumbnailFile, sourceName, isFlatSource, analysisOptions, documentType,
+             forcedType, manualQuad, manualRotation, ocr, candidates, manual, pixelWidth, pixelHeight, texts
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        index = try c.decode(Int.self, forKey: .index)
+        imageFile = try c.decode(String.self, forKey: .imageFile)
+        thumbnailFile = try c.decode(String.self, forKey: .thumbnailFile)
+        sourceName = try c.decode(String.self, forKey: .sourceName)
+        isFlatSource = try c.decode(Bool.self, forKey: .isFlatSource)
+        analysisOptions = try c.decode(AnalysisOptions.self, forKey: .analysisOptions)
+        documentType = try c.decode(DocumentType.self, forKey: .documentType)
+        forcedType = try c.decodeIfPresent(DocumentType.self, forKey: .forcedType)
+        manualQuad = try c.decodeIfPresent(Quad.self, forKey: .manualQuad)
+        manualRotation = try c.decode(Int.self, forKey: .manualRotation)
+        ocr = try c.decode([OCRItem].self, forKey: .ocr)
+        candidates = try c.decode([MaskCandidate].self, forKey: .candidates)
+        manual = try c.decode(ManualMask.self, forKey: .manual)
+        pixelWidth = try c.decode(Int.self, forKey: .pixelWidth)
+        pixelHeight = try c.decode(Int.self, forKey: .pixelHeight)
+        texts = try c.decodeIfPresent([TextBox].self, forKey: .texts) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(index, forKey: .index)
+        try c.encode(imageFile, forKey: .imageFile)
+        try c.encode(thumbnailFile, forKey: .thumbnailFile)
+        try c.encode(sourceName, forKey: .sourceName)
+        try c.encode(isFlatSource, forKey: .isFlatSource)
+        try c.encode(analysisOptions, forKey: .analysisOptions)
+        try c.encode(documentType, forKey: .documentType)
+        try c.encodeIfPresent(forcedType, forKey: .forcedType)
+        try c.encodeIfPresent(manualQuad, forKey: .manualQuad)
+        try c.encode(manualRotation, forKey: .manualRotation)
+        try c.encode(ocr, forKey: .ocr)
+        try c.encode(candidates, forKey: .candidates)
+        try c.encode(manual, forKey: .manual)
+        try c.encode(pixelWidth, forKey: .pixelWidth)
+        try c.encode(pixelHeight, forKey: .pixelHeight)
+        if !texts.isEmpty { try c.encode(texts, forKey: .texts) }
     }
 
     /// 既定のページ画像パス（`pages/000.png`）。

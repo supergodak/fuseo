@@ -102,7 +102,7 @@ public final class FileWorkLibrary: WorkLibrary {
         let doc: WorkDocument
         do { doc = try WorkJSON.decoder().decode(WorkDocument.self, from: data) }
         catch { throw WorkLibraryError.corrupted("document.json の形式が不正です") }
-        guard doc.schemaVersion == WorkDocument.currentSchemaVersion else {
+        guard WorkDocument.supportedSchemaVersions.contains(doc.schemaVersion) else {
             throw WorkLibraryError.corrupted("schemaVersion \(doc.schemaVersion)")
         }
         return (doc, dir)
@@ -211,6 +211,8 @@ public final class FileWorkLibrary: WorkLibrary {
 
         // 3) JSON（document.json と一覧用 summary.json）
         let encoder = WorkJSON.encoder()
+        var doc = doc
+        doc.schemaVersion = doc.requiredSchemaVersion   // 文字枠があるときだけ v2（WorkDocument の注記）
         do {
             let docData = try encoder.encode(doc)
             try docData.write(to: dir.appendingPathComponent(Self.documentFileName))
