@@ -41,10 +41,12 @@ enum ColorModeFilter {
 ///   除外**して合成する（マスク下の文字列を PDF に残さない。部分交差も安全側に倒して除外）。
 public struct FileExporter: Exporting {
 
-    /// PDFの解像度（px→pt換算）。150dpi 相当＝A4スキャンの一般的な見た目。
+    /// PDFの解像度（px→pt換算）。PDF 取り込みの描画解像度（PDFRasterizer 既定 300dpi）と同じにして、
+    /// PDF から取り込んだページを元の紙の大きさで書き出す（0.2.3 までは 150dpi で紙が実寸の 2 倍だった）。
+    /// Windows 版の書き出し（pt = px × 72 / 300）とも同じ。
     let pdfDPI: CGFloat
 
-    public init(pdfDPI: CGFloat = 150) {
+    public init(pdfDPI: CGFloat = 300) {
         self.pdfDPI = pdfDPI
     }
 
@@ -105,6 +107,10 @@ public struct FileExporter: Exporting {
             ctx.endPDFPage()
         }
         ctx.closePDF()
+        // 文書情報から macOS の版と作成・更新日時を消す（Producer だけにする）
+        if (try? PDFInfoScrubber.scrub(fileAt: url)) != true {
+            MaskingLog.pipeline.error("PDF の文書情報を書き換えられませんでした")
+        }
     }
 
     /// 検索可能PDFのテキスト層（不可視テキスト描画＝OCRレイヤの標準手法）。
