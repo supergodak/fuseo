@@ -29,6 +29,8 @@ struct BatchGridView: View {
                 Image(decorative: page.analyzed.page.cgImage, scale: 1.0)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    // 文字入れ（0.3.0）: 打った文字も書き出しと同じ描画で見せる（編集はしない）
+                    .overlay { TextInkLayer(texts: page.analyzed.texts, imageSize: page.analyzed.page.pixelSize) }
                     .frame(maxWidth: .infinity)
                     .frame(height: 150)
                     .background(Color(nsColor: .windowBackgroundColor))

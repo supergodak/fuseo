@@ -67,6 +67,20 @@ struct ExportSheet: View {
             Text("マスク \(summary.total)箇所（自動 \(summary.auto)・手動 \(summary.manual)）／ \(summary.pageCount)ページ")
                 .font(.callout)
 
+            // 文字入れ（0.3.0）: 書いた量の確認（設計 §2）。はみ出しは切り取らずにそのまま描く。
+            if appState.exportTextCount > 0 {
+                Text("文字 \(appState.exportTextCount)箇所")
+                    .font(.callout)
+                    .accessibilityIdentifier("export.textCount")
+                if appState.exportOverflowingTextCount > 0 {
+                    Text("枠からはみ出している文字が \(appState.exportOverflowingTextCount)箇所あります（はみ出したまま書き出します）。")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("export.textOverflow")
+                }
+            }
+
             if appState.hasPDFPages {
                 Text("PDFは各ページを画像として処理します。書き出したPDFのテキストは選択・検索できません（OCRテキスト層をオンにすると検索は可能。マスク箇所の文字は含まれません）。")
                     .font(.caption)

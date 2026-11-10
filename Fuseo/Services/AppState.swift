@@ -24,7 +24,8 @@ enum Stage: Equatable {
 
 /// 確認画面のツール（toolbar セグメント・wp5 §2.1）。
 enum ReviewTool: String, CaseIterable {
-    case select, rect, brush
+    /// text = 文字入れ（0.3.0・docs/form-fill-design.md §5）。ドラッグで枠を作って打つ。
+    case select, rect, brush, text
 }
 
 /// 確認画面のレイアウト（v1.2 一括処理）。grid=一覧レビュー（サムネイル格子）。
@@ -42,12 +43,21 @@ final class PageState: Identifiable {
     var analyzed: AnalyzedPage
     /// リスト⇔キャンバスのハイライト双方向同期用（wp5 §2.1）。手動矩形の選択と排他。
     var selectedCandidateID: MaskCandidate.ID? {
-        didSet { if selectedCandidateID != nil { selectedManualRectIndex = nil } }
+        didSet { if selectedCandidateID != nil { selectedManualRectIndex = nil; selectedTextID = nil } }
     }
     /// キャンバスで選択中の手動矩形の添字（候補選択と排他）。
     var selectedManualRectIndex: Int? {
-        didSet { if selectedManualRectIndex != nil { selectedCandidateID = nil } }
+        didSet { if selectedManualRectIndex != nil { selectedCandidateID = nil; selectedTextID = nil } }
     }
+    /// 選択中の文字枠（候補・手動矩形の選択と排他・文字入れ 0.3.0）。
+    var selectedTextID: TextBox.ID? {
+        didSet { if selectedTextID != nil { selectedCandidateID = nil; selectedManualRectIndex = nil } }
+    }
+    /// 入力中（入力欄を出している）の文字枠。入力中は `analyzed.texts` を直接書き換えて画面に即反映し、
+    /// 確定（Return・フォーカスが外れる）で 1 手として Undo に積む。
+    private(set) var editingTextID: TextBox.ID?
+    /// 入力を始める前の文字枠一覧（取り消し・Undo の戻り先）。
+    private var textEditSnapshot: [TextBox]?
     /// 表示ズーム（1..4×・wp5 §2）。フィット倍率として使う（`pixelAccurate` が false のとき有効）。
     var zoom: CGFloat = 1.0
     /// 100%（1:1 ピクセル）表示か。true のとき zoom を無視して原寸表示（スクロールでパン）。
@@ -208,7 +218,9 @@ final class PageState: Identifiable {
 
     /// Deleteキー: 手動矩形は削除、自動候補はチェックOFF（リストからは消さない）。
     func deleteSelection(undo: UndoManager?) {
-        if let id = selectedCandidateID,
+        if selectedTextID != nil {
+            deleteSelectedText(undo: undo)
+        } else if let id = selectedCandidateID,
            let idx = analyzed.candidates.firstIndex(where: { $0.id == id }) {
             if analyzed.candidates[idx].isOn {
                 analyzed.candidates[idx].isOn = false
@@ -232,6 +244,187 @@ final class PageState: Identifiable {
         analyzed.manual.rects.indices.map(ManualItem.rect)
             + analyzed.manual.strokes.indices.map(ManualItem.stroke)
     }
+
+    // MARK: - 文字枠（文字入れ 0.3.0・docs/form-fill-design.md §1/§5）
+    //
+    // 作成・移動・大きさ・文字の確定・設定・削除・複製がそれぞれ 1 手（スナップショット方式・手動マスクと同じ型）。
+    // 新しい枠は「作成＋最初の文字の確定」で 1 手にまとめる（空のまま確定・取り消しした枠は Undo に残さない）。
+
+    func text(_ id: TextBox.ID) -> TextBox? { analyzed.texts.first(where: { $0.id == id }) }
+    var selectedText: TextBox? { selectedTextID.flatMap(text) }
+
+    /// 文字枠一覧を変更し、変更前を UndoManager に登録する（undo/redo 対称）。
+    func mutateTexts(undo: UndoManager?, actionName: String? = nil, _ change: (inout [TextBox]) -> Void) {
+        let before = analyzed.texts
+        change(&analyzed.texts)
+        guard analyzed.texts != before else { return }
+        dropStaleTextSelection()
+        noteEdited()
+        undo?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.mutateTexts(undo: undo, actionName: actionName) { $0 = before }
+            }
+        }
+        if let actionName { undo?.setActionName(actionName) }
+    }
+
+    /// Undo などで消えた枠を選択・入力中のまま残さない。
+    private func dropStaleTextSelection() {
+        if let id = selectedTextID, text(id) == nil { selectedTextID = nil }
+        if let id = editingTextID, text(id) == nil { editingTextID = nil; textEditSnapshot = nil }
+    }
+
+    /// 新しい枠を作って入力を始める（Undo への登録は確定時）。
+    @discardableResult
+    func beginNewText(box: NormRect, style: TextBox.Style, undo: UndoManager?) -> TextBox.ID {
+        commitTextEditing(undo: undo)
+        let before = analyzed.texts
+        let t = TextBox(box: box, style: style.clamped())
+        analyzed.texts.append(t)
+        textEditSnapshot = before
+        editingTextID = t.id
+        selectedTextID = t.id
+        return t.id
+    }
+
+    /// 既存の枠の入力を始める（ダブルクリック）。
+    func beginTextEditing(_ id: TextBox.ID, undo: UndoManager?) {
+        guard text(id) != nil else { return }
+        if editingTextID == id { return }
+        commitTextEditing(undo: undo)
+        textEditSnapshot = analyzed.texts
+        editingTextID = id
+        selectedTextID = id
+    }
+
+    /// 入力中の文字（キー入力ごと・Undo なし）。画面は焼き込みと同じ描画で即反映する。
+    func setEditingText(_ s: String) {
+        guard let id = editingTextID, let i = analyzed.texts.firstIndex(where: { $0.id == id }),
+              analyzed.texts[i].text != s else { return }
+        analyzed.texts[i].text = s
+        noteEdited()
+    }
+
+    /// 入力の確定（Return・フォーカスが外れた）。空になった枠は消す。入力前との差分を 1 手として積む。
+    func commitTextEditing(undo: UndoManager?) {
+        guard let id = editingTextID, let before = textEditSnapshot else { return }
+        editingTextID = nil
+        textEditSnapshot = nil
+        let wasNew = !before.contains(where: { $0.id == id })
+        if let t = text(id), t.text.isEmpty { analyzed.texts.removeAll { $0.id == id } }
+        let after = analyzed.texts
+        guard after != before else { dropStaleTextSelection(); return }
+        analyzed.texts = before          // 一旦戻してから undo 対称の変更で確定する
+        mutateTexts(undo: undo, actionName: wasNew ? String(localized: "文字を追加") : String(localized: "文字を変更")) {
+            $0 = after
+        }
+    }
+
+    /// 入力の取り消し（Esc）。入力前に戻す（新しい枠はそのまま消える）。
+    func cancelTextEditing() {
+        guard editingTextID != nil, let before = textEditSnapshot else { return }
+        editingTextID = nil
+        textEditSnapshot = nil
+        if analyzed.texts != before {
+            analyzed.texts = before
+            noteEdited()
+        }
+        dropStaleTextSelection()
+    }
+
+    /// 入力中の状態と文字枠の選択を捨てる（回転・切り抜きで基準画像が変わったとき）。
+    func resetTextEditingState() {
+        editingTextID = nil
+        textEditSnapshot = nil
+        selectedTextID = nil
+    }
+
+    /// ドラッグ中のライブ更新（Undo なし。確定は commitTextBox）。
+    func setTextBoxLive(_ id: TextBox.ID, _ box: NormRect) {
+        guard let i = analyzed.texts.firstIndex(where: { $0.id == id }), analyzed.texts[i].box != box else { return }
+        analyzed.texts[i].box = box
+        noteEdited()
+    }
+
+    /// ドラッグ確定: 開始時の枠との差分を 1 手として積む（移動・大きさ変更）。
+    func commitTextBox(_ id: TextBox.ID, from old: NormRect, undo: UndoManager?) {
+        guard let i = analyzed.texts.firstIndex(where: { $0.id == id }) else { return }
+        let final = analyzed.texts[i].box
+        guard final != old else { return }
+        analyzed.texts[i].box = old
+        setTextBox(id, final, undo: undo)
+    }
+
+    /// 枠を設定する（数値入力・矢印キー。1 回 = 1 手）。
+    func setTextBox(_ id: TextBox.ID, _ box: NormRect, undo: UndoManager?) {
+        mutateTexts(undo: undo, actionName: String(localized: "文字枠を移動")) { texts in
+            if let i = texts.firstIndex(where: { $0.id == id }) { texts[i].box = box }
+        }
+    }
+
+    /// 設定（書体・サイズ・行間・揃え・マス数・色）を変える（1 回 = 1 手・範囲は clamped）。
+    func setTextStyle(_ id: TextBox.ID, _ style: TextBox.Style, undo: UndoManager?) {
+        mutateTexts(undo: undo, actionName: String(localized: "文字の設定を変更")) { texts in
+            if let i = texts.firstIndex(where: { $0.id == id }) { texts[i].style = style }
+        }
+    }
+
+    /// 選択中の枠を基準画像のピクセル単位で動かす（矢印キー 1px・⇧+矢印 10px。dy は画面の下向きが正）。
+    func nudgeSelectedText(dxPx: Double, dyPx: Double, undo: UndoManager?) {
+        guard let t = selectedText else { return }
+        let size = analyzed.page.pixelSize
+        guard size.width > 0, size.height > 0 else { return }
+        var px = CoordinateSpace.viewRect(t.box, in: size)        // 基準画像のピクセル・左上原点
+        px.origin.x = min(max(0, px.minX + dxPx), size.width - px.width)
+        px.origin.y = min(max(0, px.minY + dyPx), size.height - px.height)
+        setTextBox(t.id, CoordinateSpace.normRect(fromViewRect: px, in: size), undo: undo)
+    }
+
+    /// 選択中の枠を消す（Delete）。
+    func deleteSelectedText(undo: UndoManager?) {
+        guard let id = selectedTextID else { return }
+        if editingTextID == id { cancelTextEditing() }
+        mutateTexts(undo: undo, actionName: String(localized: "文字を削除")) { $0.removeAll { $0.id == id } }
+        selectedTextID = nil
+    }
+
+    /// 選択中の枠を少しずらして複製する（⌘D）。複製した枠を選ぶ。ずらす量は 2mm（300dpi 換算）。
+    func duplicateSelectedText(undo: UndoManager?) {
+        commitTextEditing(undo: undo)
+        guard let t = selectedText else { return }
+        let size = analyzed.page.pixelSize
+        guard size.width > 0, size.height > 0 else { return }
+        let offset = TextGeometry.pixels(fromMM: 2)
+        var px = CoordinateSpace.viewRect(t.box, in: size)
+        px.origin.x = min(max(0, px.minX + offset), max(0, size.width - px.width))
+        px.origin.y = min(max(0, px.minY + offset), max(0, size.height - px.height))
+        var copy = t
+        copy.id = UUID()
+        copy.box = CoordinateSpace.normRect(fromViewRect: px, in: size)
+        mutateTexts(undo: undo, actionName: String(localized: "文字を複製")) { $0.append(copy) }
+        selectedTextID = copy.id
+    }
+
+    /// 文字枠の位置と大きさ（mm・ページ左上から）。写真の取り込みでは 300dpi 換算の目安。
+    func textFrameMM(_ id: TextBox.ID) -> TextGeometry.FrameMM? {
+        guard let t = text(id) else { return nil }
+        return TextGeometry.frameMM(t.box, imageSize: analyzed.page.pixelSize)
+    }
+
+    /// mm で枠を指定する（1 回 = 1 手）。ページの外に出る分は収める。
+    func setTextFrameMM(_ id: TextBox.ID, _ frame: TextGeometry.FrameMM, undo: UndoManager?) {
+        guard let box = TextGeometry.normRect(fromMM: frame, imageSize: analyzed.page.pixelSize) else { return }
+        setTextBox(id, box, undo: undo)
+    }
+
+    /// はみ出している文字枠の数（書き出しの確認用）。
+    var overflowingTextCount: Int {
+        let size = analyzed.page.pixelSize
+        return analyzed.texts.filter { !$0.text.isEmpty && TextBoxRenderer.layout($0, imageSize: size).overflows }.count
+    }
+
+    /// 書き出しで描かれる文字枠の数（空の枠は描かれないので数えない）。
+    var textCount: Int { analyzed.texts.filter { !$0.text.isEmpty }.count }
 
     func deleteManualItem(at listIndex: Int, undo: UndoManager?) {
         let items = manualItems
@@ -262,6 +455,8 @@ final class AppState {
     var brushWidth: Double = 0.03
     /// 仕上がりプレビュー（ON = 完全不透明の黒で描画・編集は選択ツールのみ）。
     var previewMode = false
+    /// 次に作る文字枠の設定（文字入れ 0.3.0）。前に使った設定を引き継ぐ（文字そのものは引き継がない）。
+    var nextTextStyle: TextBox.Style = .default
 
     // 書き出しシート
     var showingExportSheet = false
@@ -296,6 +491,37 @@ final class AppState {
 
     var currentPage: PageState? {
         pages.indices.contains(currentPageIndex) ? pages[currentPageIndex] : nil
+    }
+
+    // MARK: - 文字入れの設定（0.3.0・docs/form-fill-design.md §5）
+
+    /// 文字パネルの設定変更。文字枠を選んでいればその枠を変え（1 回 = 1 手）、選んでいなければ
+    /// 「次に作る枠の設定」を変える。どちらの場合も次の枠へ引き継ぐ（ただしマス数は、選んだ枠から変えたときは
+    /// 引き継がない＝個人番号欄の 12 マスが次の氏名欄に付いてしまわないように）。
+    func applyTextStyle(page: PageState?, undo: UndoManager?, _ change: (inout TextBox.Style) -> Void) {
+        if let page, let id = page.selectedTextID, page.text(id) != nil {
+            page.commitTextEditing(undo: undo)
+            guard let current = page.text(id) else { return }
+            var s = current.style
+            change(&s)
+            s = s.clamped()
+            page.setTextStyle(id, s, undo: undo)
+            var next = s
+            next.cells = nextTextStyle.cells
+            nextTextStyle = next
+        } else {
+            var s = nextTextStyle
+            change(&s)
+            nextTextStyle = s.clamped()
+        }
+    }
+
+    /// 「枠の高さに合わせる」: 選択中の枠の文字サイズを 1 回だけ計算して入れる（自動で追従はしない）。
+    func fitSelectedTextToFrame(page: PageState, undo: UndoManager?) {
+        page.commitTextEditing(undo: undo)
+        guard let t = page.selectedText else { return }
+        let size = TextBoxRenderer.fittingFontSizePt(t, imageSize: page.analyzed.page.pixelSize)
+        applyTextStyle(page: page, undo: undo) { $0.fontSizePt = size }
     }
 
     // MARK: - ページの削除・並べ替え（0.2.3）
@@ -711,6 +937,8 @@ final class AppState {
             page.manualQuad = quad
             page.candidatesEdited = false
             page.selectedCandidateID = nil
+            page.selectedManualRectIndex = nil
+            page.resetTextEditingState()     // 文字枠も基準画像の座標系が変わるので破棄（re.texts = []）
             noteBaseImageChanged(page)
         } catch {
             presentError(String(localized: "切り抜きを変更した再解析に失敗しました。"))
@@ -758,6 +986,7 @@ final class AppState {
             page.candidatesEdited = false
             page.selectedCandidateID = nil
             page.selectedManualRectIndex = nil
+            page.resetTextEditingState()     // 文字枠も座標系が変わるので破棄（re.texts = []）
             noteBaseImageChanged(page)
         } catch {
             presentError(String(localized: "回転後の再解析に失敗しました。"))
@@ -773,6 +1002,11 @@ final class AppState {
         let manual = pages.reduce(0) { $0 + $1.manualMaskCount }
         return (auto + manual, auto, manual, pages.count)
     }
+
+    /// 書き出す文字の数（全ページ・空の枠は数えない）。書き出しの確認に「文字 N か所」として出す。
+    var exportTextCount: Int { pages.reduce(0) { $0 + $1.textCount } }
+    /// 枠からはみ出している文字の数（全ページ）。書き出しはそのまま描く（切り取らない）。
+    var exportOverflowingTextCount: Int { pages.reduce(0) { $0 + $1.overflowingTextCount } }
 
     /// マスクが1つも無いページが存在するか（赤字警告・ボタンラベル切替の条件・wp5 §3-1）。
     var hasZeroMaskPage: Bool { pages.contains(where: \.hasZeroMask) }

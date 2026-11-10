@@ -35,7 +35,7 @@ struct CropAdjustSheet: View {
             Button("変更する", role: .destructive) { Task { await apply() } }
             Button("キャンセル", role: .cancel) {}
         } message: {
-            Text("切り抜きを変えると、このページの手動マスクと候補の編集内容は失われます。")
+            Text("切り抜きを変えると、このページの手動マスク・文字と候補の編集内容は失われます。")
         }
         // 注意: ルートに accessibilityIdentifier を付けると子要素全部に伝播して
         // ボタン個別のID（crop.full 等）を上書きするため付けない（実測で判明）。

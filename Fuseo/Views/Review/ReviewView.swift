@@ -48,13 +48,13 @@ struct ReviewView: View {
             Button("変更する", role: .destructive) { appState.confirmPendingTypeChange() }
             Button("キャンセル", role: .cancel) { appState.cancelPendingTypeChange() }
         } message: {
-            Text("候補の編集内容（チェックの変更）は失われます。手動マスクは保持されます。")
+            Text("候補の編集内容（チェックの変更）は失われます。手動マスクと文字は保持されます。")
         }
         .alert("回転しますか？", isPresented: pendingRotationBinding) {
             Button("回転する", role: .destructive) { appState.confirmPendingRotation() }
             Button("キャンセル", role: .cancel) { appState.cancelPendingRotation() }
         } message: {
-            Text("回転すると座標が変わるため、このページの手動マスクと候補の編集内容は失われます。")
+            Text("回転すると座標が変わるため、このページの手動マスク・文字と候補の編集内容は失われます。")
         }
         .overlay(alignment: .bottom) { exportDoneToast }
     }
@@ -111,6 +111,7 @@ struct ReviewView: View {
                 toolButton(.select, "選択", "cursorarrow")
                 toolButton(.rect, "矩形", "rectangle.dashed")
                 toolButton(.brush, "ブラシ", "paintbrush")
+                toolButton(.text, "文字", "textformat")
 
                 if appState.tool == .brush {
                     Slider(value: brushWidthBinding, in: 0.01...0.10) { Text("幅") }

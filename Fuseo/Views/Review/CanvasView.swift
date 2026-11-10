@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import MaskingCore
 
 /// 確認画面の中央キャンバス（wp5 §2）。基準画像をフィット表示し、候補/手動マスクを重ねる。
@@ -18,6 +19,12 @@ struct CanvasView: View {
     @State private var brushPoints: [CGPoint] = []
     // 選択マスクの移動/リサイズのドラッグ開始時矩形（undo用・1ドラッグ=1操作）
     @State private var editStartBox: NormRect?
+    // 文字枠の移動/大きさ変更のドラッグ開始時の枠（undo用・1ドラッグ=1操作）
+    @State private var textEditStartBox: NormRect?
+    // 位置合わせの補助線（吸い付いたときだけ・表示座標）
+    @State private var snapGuides: [TextSnap.Guide] = []
+    // 矢印キー・Delete・⌘D を受けるためのキャンバスのフォーカス
+    @FocusState private var canvasFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,27 +41,59 @@ struct CanvasView: View {
                             // ページの境界を見せる（白い余白の多い PDF ページが「小さな画像」に見えないように）
                             .overlay(Rectangle().stroke(Color.secondary.opacity(0.35), lineWidth: 1).allowsHitTesting(false))
                             .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                            // 選択ツールで何もない所をクリック → 文字枠の選択を外す
+                            .onTapGesture {
+                                guard appState.tool == .select else { return }
+                                page.commitTextEditing(undo: undoManager)
+                                page.selectedTextID = nil
+                            }
+
+                        // 描く順は書き出しと同じ: 基準画像 → 文字 → マスク（候補・手動矩形）→ ブラシ（設計 §2）
+                        TextInkLayer(texts: page.analyzed.texts, imageSize: page.analyzed.page.pixelSize)
+                            .frame(width: disp.width, height: disp.height)
+
+                        // 選択ツールでは文字枠の当たり判定をマスクの下に置く（上に見えているマスクが優先）
+                        if appState.tool == .select && !appState.previewMode { textHitTargets(disp) }
 
                         candidateOverlays(disp)
                         manualRectOverlays(disp)
                         strokeOverlay(disp)
+                        textFrameOutlines(disp)
                         selectionEditLayer(disp)
                         liveDragOverlay(disp)
 
                         // 手動ツール時はドラッグ捕捉レイヤを最前面に置く（候補タップより優先）。
                         if appState.tool != .select && !appState.previewMode {
-                            Color.clear
-                                .contentShape(Rectangle())
-                                .frame(width: disp.width, height: disp.height)
-                                .highPriorityGesture(toolDrag(disp))
+                            if appState.tool == .text {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .frame(width: disp.width, height: disp.height)
+                                    .highPriorityGesture(textToolDrag(disp))
+                            } else {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .frame(width: disp.width, height: disp.height)
+                                    .highPriorityGesture(toolDrag(disp))
+                            }
                         }
+                        // 文字ツールでは既存の枠のクリックを捕捉レイヤより優先（選択・移動・ダブルクリックで入力）
+                        if appState.tool == .text && !appState.previewMode { textHitTargets(disp) }
+
+                        textSelectionLayer(disp)
+                        snapGuideOverlay(disp)
+                        textEditorLayer(disp)
                     }
                     .coordinateSpace(name: "canvas")
                     // 画像の表示領域そのもの（UI テストのドラッグ座標の基準。レターボックス余白を含まない）
                     .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("review.page")
                     .focusable()
+                    .focused($canvasFocused)
                     .onDeleteCommand { page.deleteSelection(undo: undoManager) }
+                    .onKeyPress(keys: [.upArrow, .downArrow, .leftArrow, .rightArrow]) { press in
+                        nudgeText(press)
+                    }
+                    .background { duplicateShortcut }
                     .frame(width: disp.width, height: disp.height)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -267,6 +306,16 @@ struct CanvasView: View {
 
     @ViewBuilder
     private func liveDragOverlay(_ disp: CGSize) -> some View {
+        if appState.tool == .text, let s = dragStart, let c = dragCurrent,
+           abs(c.x - s.x) >= 4 || abs(c.y - s.y) >= 4 {
+            let r = CGRect(x: min(s.x, c.x), y: min(s.y, c.y),
+                           width: abs(c.x - s.x), height: abs(c.y - s.y))
+            Rectangle()
+                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                .frame(width: max(r.width, 1), height: max(r.height, 1))
+                .position(x: r.midX, y: r.midY)
+                .allowsHitTesting(false)
+        }
         if appState.tool == .rect, let s = dragStart, let c = dragCurrent {
             let r = CGRect(x: min(s.x, c.x), y: min(s.y, c.y),
                            width: abs(c.x - s.x), height: abs(c.y - s.y))
@@ -301,7 +350,7 @@ struct CanvasView: View {
                     dragCurrent = g.location
                 case .brush:
                     brushPoints.append(g.location)
-                case .select:
+                case .select, .text:   // 文字ツールは textToolDrag が受ける
                     break
                 }
             }
@@ -323,10 +372,269 @@ struct CanvasView: View {
                         page.addStroke(BrushStroke(points: norm, width: appState.brushWidth), undo: undoManager)
                     }
                     brushPoints = []
-                case .select:
+                case .select, .text:   // 文字ツールは textToolDrag が受ける
                     break
                 }
             }
+    }
+
+    // MARK: - 文字枠（文字入れ 0.3.0・docs/form-fill-design.md §5）
+
+    /// 文字枠の当たり判定（選択・移動・ダブルクリックで入力）。選択中の枠は textSelectionLayer が受ける。
+    @ViewBuilder
+    private func textHitTargets(_ disp: CGSize) -> some View {
+        ForEach(page.analyzed.texts) { t in
+            if t.id != page.selectedTextID && t.id != page.editingTextID {
+                let rect = CoordinateSpace.viewRect(t.box, in: disp)
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .frame(width: max(rect.width, 6), height: max(rect.height, 6))
+                    .position(x: rect.midX, y: rect.midY)
+                    .onTapGesture(count: 2) { beginEditing(t.id) }
+                    .onTapGesture { selectText(t.id) }
+                    .gesture(textMoveGesture(t.id, disp))
+            }
+        }
+    }
+
+    private func selectText(_ id: TextBox.ID) {
+        page.commitTextEditing(undo: undoManager)
+        page.selectedTextID = id
+        canvasFocused = true
+    }
+
+    private func beginEditing(_ id: TextBox.ID) {
+        page.beginTextEditing(id, undo: undoManager)
+    }
+
+    /// 枠の線（編集中の画面だけ。仕上がりプレビューと書き出しには出さない）。
+    /// はみ出している枠は赤い破線、選択中はアクセント色、それ以外は薄い点線。
+    @ViewBuilder
+    private func textFrameOutlines(_ disp: CGSize) -> some View {
+        if !appState.previewMode {
+            let imageSize = page.analyzed.page.pixelSize
+            ForEach(page.analyzed.texts) { t in
+                let rect = CoordinateSpace.viewRect(t.box, in: disp)
+                let overflows = TextBoxRenderer.layout(t, imageSize: imageSize).overflows
+                let selected = t.id == page.selectedTextID || t.id == page.editingTextID
+                Rectangle()
+                    .strokeBorder(overflows ? Color.red : (selected ? Color.accentColor : Color.secondary.opacity(0.7)),
+                                  style: StrokeStyle(lineWidth: overflows || selected ? 1.5 : 1,
+                                                     dash: overflows ? [5, 3] : (selected ? [] : [2, 3])))
+                    .frame(width: max(rect.width, 1), height: max(rect.height, 1))
+                    .position(x: rect.midX, y: rect.midY)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    /// つまみの位置（画面向き）。
+    private enum TextHandle: CaseIterable {
+        case tl, t, tr, r, br, b, bl, l
+        var movesLeft: Bool { self == .tl || self == .l || self == .bl }
+        var movesRight: Bool { self == .tr || self == .r || self == .br }
+        var movesTop: Bool { self == .tl || self == .t || self == .tr }
+        var movesBottom: Bool { self == .bl || self == .b || self == .br }
+
+        func point(in r: CGRect) -> CGPoint {
+            let x = movesLeft ? r.minX : (movesRight ? r.maxX : r.midX)
+            let y = movesTop ? r.minY : (movesBottom ? r.maxY : r.midY)
+            return CGPoint(x: x, y: y)
+        }
+    }
+
+    /// 選択中の文字枠の移動ボディと 8 か所のつまみ（入力中は出さない）。
+    @ViewBuilder
+    private func textSelectionLayer(_ disp: CGSize) -> some View {
+        if (appState.tool == .select || appState.tool == .text), !appState.previewMode,
+           let t = page.selectedText, page.editingTextID != t.id {
+            let rect = CoordinateSpace.viewRect(t.box, in: disp)
+            Rectangle()
+                .fill(Color.clear)
+                .contentShape(Rectangle())
+                .frame(width: max(rect.width, 6), height: max(rect.height, 6))
+                .position(x: rect.midX, y: rect.midY)
+                .onTapGesture(count: 2) { beginEditing(t.id) }
+                .onTapGesture { canvasFocused = true }
+                .gesture(textMoveGesture(t.id, disp))
+
+            ForEach(TextHandle.allCases, id: \.self) { handle in
+                Rectangle()
+                    .fill(Color.white)
+                    .overlay(Rectangle().strokeBorder(Color.accentColor, lineWidth: 1.5))
+                    .frame(width: 8, height: 8)
+                    .padding(6)                     // 当たり判定を広げる
+                    .contentShape(Rectangle())
+                    .position(handle.point(in: rect))
+                    .gesture(textResizeGesture(t.id, handle, disp))
+            }
+        }
+    }
+
+    /// ⌘ を押している間は吸い付かない。
+    private var snappingDisabled: Bool { NSEvent.modifierFlags.contains(.command) }
+
+    /// 同じページの他の文字枠（表示座標）。
+    private func otherTextRects(_ id: TextBox.ID, _ disp: CGSize) -> [CGRect] {
+        page.analyzed.texts.filter { $0.id != id }.map { CoordinateSpace.viewRect($0.box, in: disp) }
+    }
+
+    private func clampInside(_ r: CGRect, _ disp: CGSize) -> CGRect {
+        var r = r
+        r.origin.x = min(max(0, r.minX), max(0, disp.width - r.width))
+        r.origin.y = min(max(0, r.minY), max(0, disp.height - r.height))
+        return r
+    }
+
+    private func textMoveGesture(_ id: TextBox.ID, _ disp: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 2, coordinateSpace: .named("canvas"))
+            .onChanged { g in
+                if textEditStartBox == nil {
+                    page.commitTextEditing(undo: undoManager)
+                    page.selectedTextID = id
+                    canvasFocused = true
+                    textEditStartBox = page.text(id)?.box
+                }
+                guard let start = textEditStartBox else { return }
+                var r = clampInside(CoordinateSpace.viewRect(start, in: disp)
+                    .offsetBy(dx: g.translation.width, dy: g.translation.height), disp)
+                if snappingDisabled {
+                    snapGuides = []
+                } else {
+                    let snapped = TextSnap.snapMove(r, others: otherTextRects(id, disp))
+                    r = clampInside(snapped.rect, disp)
+                    snapGuides = snapped.guides
+                }
+                page.setTextBoxLive(id, CoordinateSpace.normRect(fromViewRect: r, in: disp))
+            }
+            .onEnded { _ in
+                if let old = textEditStartBox { page.commitTextBox(id, from: old, undo: undoManager) }
+                textEditStartBox = nil
+                snapGuides = []
+            }
+    }
+
+    private func textResizeGesture(_ id: TextBox.ID, _ handle: TextHandle, _ disp: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("canvas"))
+            .onChanged { g in
+                if textEditStartBox == nil { textEditStartBox = page.text(id)?.box }
+                guard let start = textEditStartBox else { return }
+                let s = CoordinateSpace.viewRect(start, in: disp)
+                let minSize: CGFloat = 4                       // つぶれ防止（表示 pt）
+                var minX = s.minX, maxX = s.maxX, minY = s.minY, maxY = s.maxY
+                if handle.movesLeft { minX = min(max(0, s.minX + g.translation.width), s.maxX - minSize) }
+                if handle.movesRight { maxX = max(min(disp.width, s.maxX + g.translation.width), s.minX + minSize) }
+                if handle.movesTop { minY = min(max(0, s.minY + g.translation.height), s.maxY - minSize) }
+                if handle.movesBottom { maxY = max(min(disp.height, s.maxY + g.translation.height), s.minY + minSize) }
+                var r = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+                if snappingDisabled || !(handle.movesLeft || handle.movesRight) {
+                    snapGuides = []
+                } else {
+                    let snapped = TextSnap.snapResize(r, movingLeft: handle.movesLeft, movingRight: handle.movesRight,
+                                                      others: otherTextRects(id, disp))
+                    r = snapped.rect
+                    snapGuides = snapped.guides
+                }
+                page.setTextBoxLive(id, CoordinateSpace.normRect(fromViewRect: r, in: disp))
+            }
+            .onEnded { _ in
+                if let old = textEditStartBox { page.commitTextBox(id, from: old, undo: undoManager) }
+                textEditStartBox = nil
+                snapGuides = []
+            }
+    }
+
+    /// 吸い付いたときの細い補助線。
+    @ViewBuilder
+    private func snapGuideOverlay(_ disp: CGSize) -> some View {
+        if !snapGuides.isEmpty {
+            Path { path in
+                for g in snapGuides {
+                    switch g.axis {
+                    case .vertical:
+                        path.move(to: CGPoint(x: g.position, y: 0))
+                        path.addLine(to: CGPoint(x: g.position, y: disp.height))
+                    case .horizontal:
+                        path.move(to: CGPoint(x: 0, y: g.position))
+                        path.addLine(to: CGPoint(x: disp.width, y: g.position))
+                    }
+                }
+            }
+            .stroke(Color.pink, lineWidth: 1)
+            .frame(width: disp.width, height: disp.height)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+
+    /// 入力欄（枠のすぐ下。下に余地が無ければ上）。
+    @ViewBuilder
+    private func textEditorLayer(_ disp: CGSize) -> some View {
+        if !appState.previewMode, let id = page.editingTextID, let t = page.text(id) {
+            let rect = CoordinateSpace.viewRect(t.box, in: disp)
+            let width = min(max(rect.width, 240), max(240, disp.width))
+            let estimatedHeight: CGFloat = 64
+            let below = rect.maxY + 6 + estimatedHeight <= disp.height
+            // Return/Esc で閉じたら矢印キー・Delete・⌘D がすぐ効くようにキャンバスへフォーカスを戻す
+            // （パネルの数値欄などをクリックして閉じたときは戻さない＝その欄のフォーカスを奪わない）
+            TextEditorOverlay(page: page, id: id, undoManager: undoManager,
+                              onKeyboardFinish: { canvasFocused = true })
+                .frame(width: width)
+                .offset(x: min(max(0, rect.minX), max(0, disp.width - width)),
+                        y: below ? rect.maxY + 6 : max(0, rect.minY - 6 - estimatedHeight))
+                .id(id)
+        }
+    }
+
+    /// 文字ツール: ドラッグで枠を作る／クリックで既定の大きさの枠を作る。どちらもそのまま入力に入る。
+    private func textToolDrag(_ disp: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+            .onChanged { g in
+                if dragStart == nil { dragStart = g.startLocation }
+                dragCurrent = g.location
+            }
+            .onEnded { g in
+                defer { dragStart = nil; dragCurrent = nil }
+                let s = g.startLocation, c = g.location
+                let viewRect = CGRect(x: min(s.x, c.x), y: min(s.y, c.y),
+                                      width: abs(c.x - s.x), height: abs(c.y - s.y))
+                let box: NormRect?
+                if viewRect.width >= 4 && viewRect.height >= 4 {
+                    box = CoordinateSpace.normRect(fromViewRect: viewRect, in: disp)
+                } else {
+                    let p = CoordinateSpace.normPoint(fromViewPoint: s, in: disp)
+                    box = TextGeometry.defaultBox(clickedAt: p, style: appState.nextTextStyle,
+                                                  imageSize: page.analyzed.page.pixelSize)
+                }
+                guard let box, box.w > 0, box.h > 0 else { return }
+                page.beginNewText(box: box, style: appState.nextTextStyle, undo: undoManager)
+            }
+    }
+
+    /// 矢印キー: 選択中の文字枠を基準画像の 1px（⇧ で 10px）動かす。入力中はテキスト欄が受ける。
+    private func nudgeText(_ press: KeyPress) -> KeyPress.Result {
+        guard page.selectedTextID != nil, page.editingTextID == nil, !appState.previewMode else { return .ignored }
+        let step: Double = press.modifiers.contains(.shift) ? 10 : 1
+        switch press.key {
+        case .leftArrow: page.nudgeSelectedText(dxPx: -step, dyPx: 0, undo: undoManager)
+        case .rightArrow: page.nudgeSelectedText(dxPx: step, dyPx: 0, undo: undoManager)
+        case .upArrow: page.nudgeSelectedText(dxPx: 0, dyPx: -step, undo: undoManager)
+        case .downArrow: page.nudgeSelectedText(dxPx: 0, dyPx: step, undo: undoManager)
+        default: return .ignored
+        }
+        return .handled
+    }
+
+    /// ⌘D（選択中の文字枠を複製）。見えないボタンでキーボードショートカットだけを受ける。
+    private var duplicateShortcut: some View {
+        Button("文字を複製") { page.duplicateSelectedText(undo: undoManager) }
+            .keyboardShortcut("d", modifiers: .command)
+            .disabled(page.selectedTextID == nil || page.editingTextID != nil || appState.previewMode)
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
     }
 
     private func viewPoint(_ p: CGPoint, in disp: CGSize) -> CGPoint {

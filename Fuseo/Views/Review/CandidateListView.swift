@@ -10,10 +10,12 @@ struct CandidateListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                textStyleSection
                 typeSection
                 warningsSection
                 candidateSection
                 manualSection
+                textListSection
             }
             .padding(12)
         }
@@ -168,5 +170,185 @@ struct CandidateListView: View {
         case .rect(let i): return "矩形 \(i + 1)"
         case .stroke(let i): return "ブラシ \(i + 1)"
         }
+    }
+
+    // MARK: - 文字パネル（文字入れ 0.3.0・docs/form-fill-design.md §5）
+
+    /// 文字ツールのとき、または文字枠を選んでいるときに出す。選んでいればその枠、いなければ次に作る枠の設定を変える。
+    @ViewBuilder
+    private var textStyleSection: some View {
+        if appState.tool == .text || page.selectedText != nil {
+            let selected = page.selectedText
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("文字").font(.headline)
+                    Spacer()
+                    Text(selected == nil ? "次に作る枠の設定" : "選択中の枠")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("review.textPanel.target")
+                }
+
+                Picker("書体", selection: styleBinding(\.font)) {
+                    Text("ゴシック").tag(TextBox.Font.gothic)
+                    Text("明朝").tag(TextBox.Font.mincho)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("review.textPanel.font")
+
+                numberRow("サイズ", value: styleBinding(\.fontSizePt), range: TextBox.fontSizeRange,
+                          step: TextBox.fontSizeStep, unit: "pt", id: "review.textPanel.size")
+                numberRow("行間", value: styleBinding(\.lineSpacing), range: TextBox.lineSpacingRange,
+                          step: TextBox.lineSpacingStep, unit: "倍", id: "review.textPanel.lineSpacing")
+
+                Picker("横", selection: styleBinding(\.hAlign)) {
+                    Text("左").tag(TextBox.HAlign.left)
+                    Text("中央").tag(TextBox.HAlign.center)
+                    Text("右").tag(TextBox.HAlign.right)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("review.textPanel.hAlign")
+
+                Picker("縦", selection: styleBinding(\.vAlign)) {
+                    Text("上").tag(TextBox.VAlign.top)
+                    Text("中央").tag(TextBox.VAlign.center)
+                    Text("下").tag(TextBox.VAlign.bottom)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("review.textPanel.vAlign")
+
+                HStack(spacing: 6) {
+                    Text("マス数").frame(width: 44, alignment: .leading)
+                    TextField("マス数", value: styleBinding(\.cells), format: .number)
+                        .labelsHidden()
+                        .frame(width: 56)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityIdentifier("review.textPanel.cells")
+                    Stepper("マス数", value: styleBinding(\.cells), in: 0...TextBox.maxCells)
+                        .labelsHidden()
+                    Text("0 = マス目なし").font(.caption).foregroundStyle(.secondary)
+                }
+                .help("枠の幅を N 等分して 1 マスに 1 文字ずつ置きます（個人番号・郵便番号など）。マスの位置は枠の幅と左右の端で合わせてください")
+
+                Picker("色", selection: styleBinding(\.color)) {
+                    Text("黒").tag(TextBox.Color.black)
+                    Text("青").tag(TextBox.Color.blue)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("review.textPanel.color")
+
+                if let selected {
+                    Divider()
+                    Text("位置と大きさ（mm・ページ左上から）").font(.caption).foregroundStyle(.secondary)
+                    Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 6) {
+                        GridRow {
+                            mmField("X", \.x, selected.id, "review.textPanel.x")
+                            mmField("Y", \.y, selected.id, "review.textPanel.y")
+                        }
+                        GridRow {
+                            mmField("幅", \.width, selected.id, "review.textPanel.width")
+                            mmField("高さ", \.height, selected.id, "review.textPanel.height")
+                        }
+                    }
+                    Button("枠の高さに合わせる") {
+                        appState.fitSelectedTextToFrame(page: page, undo: undoManager)
+                    }
+                    .help("行数と行間から、文字が枠の高さの 9 割になる文字サイズを 1 回だけ計算して入れます（自動では追従しません）")
+                    .accessibilityIdentifier("review.textPanel.fit")
+                }
+            }
+            .padding(8)
+            .background(Color.accentColor.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("review.textPanel")
+        }
+    }
+
+    private func styleBinding<V>(_ keyPath: WritableKeyPath<TextBox.Style, V>) -> Binding<V> {
+        Binding(
+            get: { (page.selectedText?.style ?? appState.nextTextStyle)[keyPath: keyPath] },
+            set: { value in appState.applyTextStyle(page: page, undo: undoManager) { $0[keyPath: keyPath] = value } }
+        )
+    }
+
+    private func numberRow(_ title: String, value: Binding<Double>, range: ClosedRange<Double>,
+                           step: Double, unit: String, id: String) -> some View {
+        HStack(spacing: 6) {
+            Text(title).frame(width: 44, alignment: .leading)
+            TextField(title, value: value, format: .number.precision(.fractionLength(0...2)))
+                .labelsHidden()
+                .frame(width: 64)
+                .multilineTextAlignment(.trailing)
+                .accessibilityIdentifier(id)
+            Stepper(title, value: value, in: range, step: step)
+                .labelsHidden()
+                .accessibilityIdentifier("\(id).stepper")
+            Text(unit).foregroundStyle(.secondary)
+        }
+    }
+
+    private func mmField(_ title: String, _ keyPath: WritableKeyPath<TextGeometry.FrameMM, Double>,
+                         _ id: TextBox.ID, _ axID: String) -> some View {
+        let binding = Binding<Double>(
+            get: { page.textFrameMM(id)?[keyPath: keyPath] ?? 0 },
+            set: { value in
+                page.commitTextEditing(undo: undoManager)
+                guard var frame = page.textFrameMM(id) else { return }
+                frame[keyPath: keyPath] = value
+                page.setTextFrameMM(id, frame, undo: undoManager)
+            })
+        return HStack(spacing: 4) {
+            Text(title).frame(width: 28, alignment: .leading)
+            TextField(title, value: binding, format: .number.precision(.fractionLength(1)))
+                .labelsHidden()
+                .frame(width: 64)
+                .multilineTextAlignment(.trailing)
+                .accessibilityIdentifier(axID)
+        }
+    }
+
+    // MARK: - 文字の一覧
+
+    @ViewBuilder
+    private var textListSection: some View {
+        if !page.analyzed.texts.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("文字").font(.headline)
+                ForEach(Array(page.analyzed.texts.enumerated()), id: \.element.id) { index, t in
+                    HStack {
+                        Text(textRowLabel(t, index: index))
+                            .font(.body)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .accessibilityIdentifier("review.text.row.\(index)")
+                        Spacer()
+                        Button(role: .destructive) {
+                            page.selectedTextID = t.id
+                            page.deleteSelectedText(undo: undoManager)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("review.text.delete.\(index)")
+                    }
+                    .padding(6)
+                    .background(page.selectedTextID == t.id ? Color.accentColor.opacity(0.12) : Color.clear)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        page.commitTextEditing(undo: undoManager)
+                        page.selectedTextID = t.id
+                    }
+                }
+            }
+        }
+    }
+
+    private func textRowLabel(_ t: TextBox, index: Int) -> String {
+        let lines = t.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let firstLine = lines.first ?? ""
+        if firstLine.isEmpty && lines.count <= 1 { return "文字 \(index + 1)（入力中）" }
+        return lines.count > 1 ? "文字 \(index + 1): \(firstLine)（\(lines.count) 行）" : "文字 \(index + 1): \(firstLine)"
     }
 }
