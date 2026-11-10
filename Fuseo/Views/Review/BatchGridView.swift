@@ -73,6 +73,7 @@ struct BatchGridView: View {
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.secondary.opacity(0.25)))
         }
         .buttonStyle(.plain)
+        .contextMenu { PageActionsMenu(index: index) }
         .accessibilityIdentifier("review.grid.cell.\(index)")
         .help("クリックで個別に確認・調整")
     }

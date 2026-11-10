@@ -298,6 +298,62 @@ final class AppState {
         pages.indices.contains(currentPageIndex) ? pages[currentPageIndex] : nil
     }
 
+    // MARK: - ページの削除・並べ替え（0.2.3）
+
+    /// ページを削除できるか（最後の 1 ページは消さない＝空の作業を作らない。書類ごと要らなければ「新しい書類」へ）。
+    var canRemovePage: Bool { pages.count > 1 }
+
+    /// ページを削除する。Undo で同じ位置に戻る。選択は「同じ位置（末尾なら一つ前）」へ移る。
+    func removePage(at index: Int, undo: UndoManager?) {
+        guard canRemovePage, pages.indices.contains(index) else { return }
+        let page = pages.remove(at: index)
+        if currentPageIndex > index || currentPageIndex >= pages.count {
+            currentPageIndex = max(0, currentPageIndex - 1)
+        }
+        pageOrderChanged()
+        undo?.registerUndo(withTarget: self) { state in
+            MainActor.assumeIsolated { state.insertPage(page, at: index, undo: undo) }
+        }
+        undo?.setActionName(String(localized: "ページを削除"))
+    }
+
+    /// 削除の取り消し（Redo で再び削除）。挿入したページを選ぶ。
+    private func insertPage(_ page: PageState, at index: Int, undo: UndoManager?) {
+        let at = min(max(index, 0), pages.count)
+        pages.insert(page, at: at)
+        page.onEdit = { [weak self] in self?.noteEdited() }
+        currentPageIndex = at
+        pageOrderChanged()
+        undo?.registerUndo(withTarget: self) { state in
+            MainActor.assumeIsolated { state.removePage(at: at, undo: undo) }
+        }
+        undo?.setActionName(String(localized: "ページを削除"))
+    }
+
+    func canMovePage(at index: Int, by offset: Int) -> Bool {
+        pages.indices.contains(index) && pages.indices.contains(index + offset)
+    }
+
+    /// ページを前後へ 1 つ動かす（offset = -1 で前・+1 で後ろ）。動かしたページを選んだままにする。Undo できる。
+    func movePage(at index: Int, by offset: Int, undo: UndoManager?) {
+        guard canMovePage(at: index, by: offset) else { return }
+        let target = index + offset
+        pages.swapAt(index, target)
+        currentPageIndex = target
+        pageOrderChanged()
+        undo?.registerUndo(withTarget: self) { state in
+            MainActor.assumeIsolated { state.movePage(at: target, by: -offset, undo: undo) }
+        }
+        undo?.setActionName(String(localized: "ページを移動"))
+    }
+
+    /// ページの構成が変わった。保存のページ画像は**位置（index）で名前が決まる**ので、全ページを書き直す
+    /// （一部だけだと、ずれた位置に前の画像が残って別のページの画像で復元されてしまう）。
+    private func pageOrderChanged() {
+        dirtyImagePageIDs = Set(pages.map(\.id))
+        noteEdited()
+    }
+
     // MARK: - 取り込み・解析（wp5 §1 Processing）
 
     /// 画像ファイル群を取り込む（PDF を経由しない従来経路）。
