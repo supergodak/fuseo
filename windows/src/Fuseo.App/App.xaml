@@ -7,5 +7,146 @@
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <v:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+
+        <!-- ツールバー（0.3.1）: アイコン＋名前。Windows 10 は Segoe MDL2 Assets、11 は Segoe Fluent Icons（同じ文字コード）。 -->
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+        <SolidColorBrush x:Key="TbHover" Color="#EAF2FB"/>
+        <SolidColorBrush x:Key="TbHoverBorder" Color="#C5DCF5"/>
+        <SolidColorBrush x:Key="TbPressed" Color="#D6E7F9"/>
+        <SolidColorBrush x:Key="TbChecked" Color="#CCE4F7"/>
+        <SolidColorBrush x:Key="TbAccent" Color="#0067C0"/>
+
+        <ControlTemplate x:Key="TbButtonTemplate" TargetType="Button">
+            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1"
+                    CornerRadius="4" Padding="{TemplateBinding Padding}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="glyph" Text="{Binding (v:Icon.Glyph), RelativeSource={RelativeSource TemplatedParent}}"
+                               FontFamily="{StaticResource IconFont}" FontSize="18" HorizontalAlignment="Center"
+                               RenderTransformOrigin="0.5,0.5"/>
+                    <ContentPresenter x:Name="label" HorizontalAlignment="Center" Margin="0,3,0,0" TextElement.FontSize="11"/>
+                </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="v:Icon.Mirror" Value="True">
+                    <Setter TargetName="glyph" Property="RenderTransform">
+                        <Setter.Value><ScaleTransform ScaleX="-1"/></Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="v:Icon.HideLabel" Value="True">
+                    <Setter TargetName="label" Property="Visibility" Value="Collapsed"/>
+                    <Setter TargetName="glyph" Property="FontSize" Value="20"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="bd" Property="Background" Value="{StaticResource TbHover}"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource TbHoverBorder}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="bd" Property="Background" Value="{StaticResource TbPressed}"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource TbAccent}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="TbToggleTemplate" TargetType="ToggleButton">
+            <Border x:Name="bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
+                    CornerRadius="4" Padding="{TemplateBinding Padding}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="glyph" Text="{Binding (v:Icon.Glyph), RelativeSource={RelativeSource TemplatedParent}}"
+                               FontFamily="{StaticResource IconFont}" FontSize="18" HorizontalAlignment="Center"
+                               RenderTransformOrigin="0.5,0.5"/>
+                    <ContentPresenter x:Name="label" HorizontalAlignment="Center" Margin="0,3,0,0" TextElement.FontSize="11"/>
+                </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="v:Icon.Mirror" Value="True">
+                    <Setter TargetName="glyph" Property="RenderTransform">
+                        <Setter.Value><ScaleTransform ScaleX="-1"/></Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="v:Icon.HideLabel" Value="True">
+                    <Setter TargetName="label" Property="Visibility" Value="Collapsed"/>
+                    <Setter TargetName="glyph" Property="FontSize" Value="20"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="bd" Property="Background" Value="{StaticResource TbHover}"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource TbHoverBorder}"/>
+                </Trigger>
+                <!-- 選んでいる道具は塗りつぶし＋青い枠＋青いアイコン（いまの道具がひと目で分かるように） -->
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="bd" Property="Background" Value="{StaticResource TbChecked}"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource TbAccent}"/>
+                    <Setter TargetName="glyph" Property="Foreground" Value="{StaticResource TbAccent}"/>
+                    <Setter TargetName="label" Property="TextElement.FontWeight" Value="SemiBold"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource TbAccent}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style x:Key="TbButton" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource TbButtonTemplate}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="MinWidth" Value="48"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="TbToggle" TargetType="RadioButton">
+            <Setter Property="Template" Value="{StaticResource TbToggleTemplate}"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="MinWidth" Value="48"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <!-- 主な操作（書き出し）: 青地に白 -->
+        <Style x:Key="TbPrimary" TargetType="Button" BasedOn="{StaticResource TbButton}">
+            <Setter Property="Background" Value="{StaticResource TbAccent}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="MinWidth" Value="64"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding (v:Icon.Glyph), RelativeSource={RelativeSource TemplatedParent}}"
+                                           FontFamily="{StaticResource IconFont}" FontSize="18" HorizontalAlignment="Center"/>
+                                <ContentPresenter HorizontalAlignment="Center" Margin="0,3,0,0" TextElement.FontSize="11"
+                                                  TextElement.FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1975C5"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#005A9E"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#005A9E"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- グループの区切り線 -->
+        <Style x:Key="TbSeparator" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Background" Value="#DDD"/>
+            <Setter Property="Margin" Value="6,6,8,6"/>
+        </Style>
     </Application.Resources>
 </Application>

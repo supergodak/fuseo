@@ -33,16 +33,16 @@
   <data name="RotateLeftTip" xml:space="preserve"><value>このページを左に 90° 回します。塗ったマスクも一緒に回ります（Ctrl+L）</value></data>
   <data name="RotateRight" xml:space="preserve"><value>右に回転</value></data>
   <data name="RotateRightTip" xml:space="preserve"><value>このページを右に 90° 回します。塗ったマスクも一緒に回ります（Ctrl+R）</value></data>
-  <data name="ZoomOut" xml:space="preserve"><value>－</value></data>
-  <data name="ZoomIn" xml:space="preserve"><value>＋</value></data>
-  <data name="ZoomFit" xml:space="preserve"><value>全体表示</value></data>
+  <data name="ZoomOut" xml:space="preserve"><value>縮小</value></data>
+  <data name="ZoomIn" xml:space="preserve"><value>拡大</value></data>
+  <data name="ZoomFit" xml:space="preserve"><value>全体</value></data>
   <data name="ZoomTip" xml:space="preserve"><value>Ctrl+ホイールで拡大縮小、ホイールで上下、Shift+ホイールで左右、中ボタン・右ボタン・Space+ドラッグで移動します</value></data>
   <data name="ExportButton" xml:space="preserve"><value>書き出し…</value></data>
   <data name="EmptyTitle" xml:space="preserve"><value>ここに画像か PDF をドロップ</value></data>
   <data name="EmptySubtitle" xml:space="preserve"><value>または「ファイルを開く」から選んでください。対応形式: JPEG / PNG / BMP / TIFF / PDF。ファイルはこのパソコンの中だけで処理し、外部に送信しません。</value></data>
   <data name="PagesHeading" xml:space="preserve"><value>ページ</value></data>
-  <data name="MoveUp" xml:space="preserve"><value>↑ 上へ</value></data>
-  <data name="MoveDown" xml:space="preserve"><value>↓ 下へ</value></data>
+  <data name="MoveUp" xml:space="preserve"><value>上へ</value></data>
+  <data name="MoveDown" xml:space="preserve"><value>下へ</value></data>
   <data name="RemovePage" xml:space="preserve"><value>削除</value></data>
   <data name="PageTitleImage" xml:space="preserve"><value>{0}. {1}</value></data>
   <data name="PageTitlePdf" xml:space="preserve"><value>{0}. {1}（{2} ページ目）</value></data>

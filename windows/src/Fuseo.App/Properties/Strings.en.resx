@@ -33,16 +33,16 @@
   <data name="RotateLeftTip" xml:space="preserve"><value>Rotate this page 90° to the left. Painted masks rotate with it (Ctrl+L)</value></data>
   <data name="RotateRight" xml:space="preserve"><value>Rotate right</value></data>
   <data name="RotateRightTip" xml:space="preserve"><value>Rotate this page 90° to the right. Painted masks rotate with it (Ctrl+R)</value></data>
-  <data name="ZoomOut" xml:space="preserve"><value>−</value></data>
-  <data name="ZoomIn" xml:space="preserve"><value>+</value></data>
+  <data name="ZoomOut" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="ZoomIn" xml:space="preserve"><value>Zoom in</value></data>
   <data name="ZoomFit" xml:space="preserve"><value>Fit</value></data>
   <data name="ZoomTip" xml:space="preserve"><value>Ctrl+wheel to zoom, wheel to scroll up/down, Shift+wheel to scroll sideways. Drag with the middle or right button, or Space+drag, to pan</value></data>
   <data name="ExportButton" xml:space="preserve"><value>Export…</value></data>
   <data name="EmptyTitle" xml:space="preserve"><value>Drop an image or PDF here</value></data>
   <data name="EmptySubtitle" xml:space="preserve"><value>Or choose one with “Open files”. Supported formats: JPEG / PNG / BMP / TIFF / PDF. Files are processed only on this PC and are never sent anywhere.</value></data>
   <data name="PagesHeading" xml:space="preserve"><value>Pages</value></data>
-  <data name="MoveUp" xml:space="preserve"><value>↑ Up</value></data>
-  <data name="MoveDown" xml:space="preserve"><value>↓ Down</value></data>
+  <data name="MoveUp" xml:space="preserve"><value>Up</value></data>
+  <data name="MoveDown" xml:space="preserve"><value>Down</value></data>
   <data name="RemovePage" xml:space="preserve"><value>Remove</value></data>
   <data name="PageTitleImage" xml:space="preserve"><value>{0}. {1}</value></data>
   <data name="PageTitlePdf" xml:space="preserve"><value>{0}. {1} (page {2})</value></data>

@@ -28,47 +28,48 @@
             <DockPanel>
                 <!-- 書き出し・設定・バージョン情報は右に固定（折り返しても書き出しボタンは常に右上に見える）。 -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="8,2,0,2">
-                    <Button Content="{x:Static p:Strings.Settings}" Command="{Binding OpenSettingsCommand}" Padding="8,4"
+                    <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE713;" v:Icon.HideLabel="True" MinWidth="36" Content="{x:Static p:Strings.Settings}" Command="{Binding OpenSettingsCommand}"
                             ToolTip="{x:Static p:Strings.SettingsTip}" AutomationProperties.AutomationId="main.settings"/>
-                    <Button Content="{x:Static p:Strings.About}" Command="{Binding OpenAboutCommand}" Padding="8,4" Margin="4,0,8,0"
+                    <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE946;" v:Icon.HideLabel="True" MinWidth="36" Content="{x:Static p:Strings.About}" Command="{Binding OpenAboutCommand}"
                             ToolTip="{x:Static p:Strings.AboutTip}" AutomationProperties.AutomationId="main.about"/>
-                    <Button Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
-                            Padding="14,4" FontWeight="SemiBold" AutomationProperties.AutomationId="main.export"/>
+                    <Button Style="{StaticResource TbPrimary}" v:Icon.Glyph="&#xEDE1;" Margin="10,0,0,0" Content="{x:Static p:Strings.ExportButton}" Command="{Binding ExportCommand}"
+                            AutomationProperties.AutomationId="main.export"/>
                 </StackPanel>
 
                 <WrapPanel Orientation="Horizontal" AutomationProperties.AutomationId="main.toolbar">
                     <WrapPanel.Resources>
                         <Style TargetType="StackPanel">
                             <Setter Property="Orientation" Value="Horizontal"/>
-                            <Setter Property="Margin" Value="0,2,14,2"/>
+                            <Setter Property="Margin" Value="0,2,0,2"/>
                         </Style>
                     </WrapPanel.Resources>
                     <StackPanel>
-                        <Button Content="{x:Static p:Strings.NewDocument}" Command="{Binding NewDocumentCommand}"
-                                Padding="8,4" Margin="0,0,4,0" ToolTip="{x:Static p:Strings.NewDocumentTip}"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE710;" Content="{x:Static p:Strings.NewDocument}" Command="{Binding NewDocumentCommand}"
+                                ToolTip="{x:Static p:Strings.NewDocumentTip}"
                                 AutomationProperties.AutomationId="main.newDocument"/>
-                        <Button Content="{x:Static p:Strings.OpenFiles}" Command="{Binding OpenFilesCommand}"
-                                Padding="8,4" ToolTip="{x:Static p:Strings.OpenFilesTip}" AutomationProperties.AutomationId="main.openFiles"/>
-                        <Button Content="{x:Static p:Strings.OpenFolder}" Command="{Binding OpenFolderCommand}"
-                                Padding="8,4" Margin="4,0,0,0" ToolTip="{x:Static p:Strings.OpenFolderTip}"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE8E5;" Content="{x:Static p:Strings.OpenFiles}" Command="{Binding OpenFilesCommand}"
+                                ToolTip="{x:Static p:Strings.OpenFilesTip}" AutomationProperties.AutomationId="main.openFiles"/>
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE838;" Content="{x:Static p:Strings.OpenFolder}" Command="{Binding OpenFolderCommand}"
+                                ToolTip="{x:Static p:Strings.OpenFolderTip}"
                                 AutomationProperties.AutomationId="main.openFolder"/>
                     </StackPanel>
+                    <Border Style="{StaticResource TbSeparator}"/>
                     <StackPanel>
-                        <TextBlock Text="{x:Static p:Strings.ToolLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                                     Content="{x:Static p:Strings.ToolSelect}" IsChecked="{Binding IsSelectTool}" Padding="8,4"
+                        <RadioButton Style="{StaticResource TbToggle}" v:Icon.Glyph="&#xE8B0;" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolSelect}" IsChecked="{Binding IsSelectTool}"
                                      ToolTip="{x:Static p:Strings.ToolSelectTip}" AutomationProperties.AutomationId="tool.select"/>
-                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                                     Content="{x:Static p:Strings.ToolRect}" IsChecked="{Binding IsRectTool}" Padding="8,4" Margin="2,0"
+                        <RadioButton Style="{StaticResource TbToggle}" v:Icon.Glyph="&#xE739;" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolRect}" IsChecked="{Binding IsRectTool}"
                                      ToolTip="{x:Static p:Strings.ToolRectTip}" AutomationProperties.AutomationId="tool.rect"/>
-                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                                     Content="{x:Static p:Strings.ToolBrush}" IsChecked="{Binding IsBrushTool}" Padding="8,4"
+                        <RadioButton Style="{StaticResource TbToggle}" v:Icon.Glyph="&#xE771;" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolBrush}" IsChecked="{Binding IsBrushTool}"
                                      ToolTip="{x:Static p:Strings.ToolBrushTip}" AutomationProperties.AutomationId="tool.brush"/>
-                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
-                                     Content="{x:Static p:Strings.ToolText}" IsChecked="{Binding IsTextTool}" Padding="8,4" Margin="2,0,0,0"
+                        <RadioButton Style="{StaticResource TbToggle}" v:Icon.Glyph="&#xE8D2;" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolText}" IsChecked="{Binding IsTextTool}"
                                      ToolTip="{x:Static p:Strings.ToolTextTip}" AutomationProperties.AutomationId="tool.text"/>
                     </StackPanel>
-                    <StackPanel>
+                    <!-- 太さはブラシのときだけ（道具の続きに置く・区切り線なし） -->
+                    <StackPanel Visibility="{Binding IsBrushTool, Converter={StaticResource BoolToVis}}" Margin="8,2,0,2">
                         <TextBlock Text="{x:Static p:Strings.BrushSizeLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="brush"
                                      Content="{x:Static p:Strings.BrushThin}" IsChecked="{Binding IsBrushThin}" Padding="6,4"
@@ -80,28 +81,31 @@
                                      Content="{x:Static p:Strings.BrushThick}" IsChecked="{Binding IsBrushThick}" Padding="6,4"
                                      AutomationProperties.AutomationId="brush.thick"/>
                     </StackPanel>
+                    <Border Style="{StaticResource TbSeparator}"/>
                     <StackPanel>
-                        <Button Content="{x:Static p:Strings.Undo}" Command="{Binding UndoCommand}" Padding="8,4"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE7A7;" Content="{x:Static p:Strings.Undo}" Command="{Binding UndoCommand}"
                                 ToolTip="{x:Static p:Strings.UndoTip}" AutomationProperties.AutomationId="main.undo"/>
-                        <Button Content="{x:Static p:Strings.Redo}" Command="{Binding RedoCommand}" Padding="8,4" Margin="2,0"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE7A6;" Content="{x:Static p:Strings.Redo}" Command="{Binding RedoCommand}"
                                 ToolTip="{x:Static p:Strings.RedoTip}" AutomationProperties.AutomationId="main.redo"/>
-                        <Button Content="{x:Static p:Strings.DeleteSelection}" Command="{Binding DeleteSelectionCommand}"
-                                Padding="8,4" ToolTip="{x:Static p:Strings.DeleteSelectionTip}" AutomationProperties.AutomationId="main.deleteSelection"/>
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE74D;" Content="{x:Static p:Strings.DeleteSelection}" Command="{Binding DeleteSelectionCommand}"
+                                ToolTip="{x:Static p:Strings.DeleteSelectionTip}" AutomationProperties.AutomationId="main.deleteSelection"/>
                     </StackPanel>
+                    <Border Style="{StaticResource TbSeparator}"/>
                     <StackPanel>
-                        <Button Content="{x:Static p:Strings.RotateLeft}" Command="{Binding RotateLeftCommand}" Padding="8,4"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE7AD;" v:Icon.Mirror="True" Content="{x:Static p:Strings.RotateLeft}" Command="{Binding RotateLeftCommand}"
                                 ToolTip="{x:Static p:Strings.RotateLeftTip}" AutomationProperties.AutomationId="main.rotateLeft"/>
-                        <Button Content="{x:Static p:Strings.RotateRight}" Command="{Binding RotateRightCommand}" Padding="8,4" Margin="2,0,0,0"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE7AD;" Content="{x:Static p:Strings.RotateRight}" Command="{Binding RotateRightCommand}"
                                 ToolTip="{x:Static p:Strings.RotateRightTip}" AutomationProperties.AutomationId="main.rotateRight"/>
-                        <Button Content="{x:Static p:Strings.Crop}" Command="{Binding CropCommand}" Padding="8,4" Margin="2,0,0,0"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE7A8;" Content="{x:Static p:Strings.Crop}" Command="{Binding CropCommand}"
                                 ToolTip="{x:Static p:Strings.CropTip}" AutomationProperties.AutomationId="main.crop"/>
                     </StackPanel>
+                    <Border Style="{StaticResource TbSeparator}"/>
                     <StackPanel>
-                        <Button Content="{x:Static p:Strings.ZoomOut}" Click="OnZoomOut" Padding="8,4" MinWidth="30"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE71F;" Content="{x:Static p:Strings.ZoomOut}" Click="OnZoomOut"
                                 ToolTip="{x:Static p:Strings.ZoomTip}" AutomationProperties.AutomationId="main.zoomOut"/>
-                        <Button Content="{x:Static p:Strings.ZoomIn}" Click="OnZoomIn" Padding="8,4" MinWidth="30" Margin="2,0"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE8A3;" Content="{x:Static p:Strings.ZoomIn}" Click="OnZoomIn"
                                 ToolTip="{x:Static p:Strings.ZoomTip}" AutomationProperties.AutomationId="main.zoomIn"/>
-                        <Button Content="{x:Static p:Strings.ZoomFit}" Click="OnZoomFit" Padding="8,4"
+                        <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE9A6;" Content="{x:Static p:Strings.ZoomFit}" Click="OnZoomFit"
                                 ToolTip="{x:Static p:Strings.ZoomTip}" AutomationProperties.AutomationId="main.zoomFit"/>
                     </StackPanel>
                 </WrapPanel>
@@ -118,11 +122,11 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="{x:Static p:Strings.PagesHeading}" FontWeight="SemiBold" Margin="10,8,10,4"/>
                 <UniformGrid DockPanel.Dock="Bottom" Rows="1" Margin="8">
-                    <Button Content="{x:Static p:Strings.MoveUp}" Command="{Binding MovePageUpCommand}" Margin="0,0,2,0" Padding="2,3"
+                    <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE70E;" Content="{x:Static p:Strings.MoveUp}" Command="{Binding MovePageUpCommand}"
                             AutomationProperties.AutomationId="pages.moveUp"/>
-                    <Button Content="{x:Static p:Strings.MoveDown}" Command="{Binding MovePageDownCommand}" Margin="2,0" Padding="2,3"
+                    <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE70D;" Content="{x:Static p:Strings.MoveDown}" Command="{Binding MovePageDownCommand}"
                             AutomationProperties.AutomationId="pages.moveDown"/>
-                    <Button Content="{x:Static p:Strings.RemovePage}" Command="{Binding RemovePageCommand}" Margin="2,0,0,0" Padding="2,3"
+                    <Button Style="{StaticResource TbButton}" v:Icon.Glyph="&#xE74D;" Content="{x:Static p:Strings.RemovePage}" Command="{Binding RemovePageCommand}"
                             AutomationProperties.AutomationId="pages.remove"/>
                 </UniformGrid>
                 <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}" BorderThickness="0"
@@ -441,11 +445,11 @@
             <Border DockPanel.Dock="Top" Background="White" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="10,4"
                     Visibility="{Binding HasPages, Converter={StaticResource BoolToVis}}">
                 <StackPanel Orientation="Horizontal" ToolTip="{x:Static p:Strings.ViewTip}">
-                    <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="view"
-                                 Content="{x:Static p:Strings.ViewSingle}" IsChecked="{Binding IsSingleView}" Padding="10,3"
+                    <RadioButton Style="{StaticResource TbToggle}" v:Icon.Glyph="&#xE7C3;" GroupName="view"
+                                 Content="{x:Static p:Strings.ViewSingle}" IsChecked="{Binding IsSingleView}"
                                  AutomationProperties.AutomationId="main.viewSingle"/>
-                    <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="view"
-                                 Content="{x:Static p:Strings.ViewGrid}" IsChecked="{Binding IsGridView}" Padding="10,3" Margin="2,0,0,0"
+                    <RadioButton Style="{StaticResource TbToggle}" v:Icon.Glyph="&#xE80A;" GroupName="view"
+                                 Content="{x:Static p:Strings.ViewGrid}" IsChecked="{Binding IsGridView}"
                                  AutomationProperties.AutomationId="main.viewGrid"/>
                 </StackPanel>
             </Border>
