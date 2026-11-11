@@ -174,11 +174,21 @@ public class SettingsAndAboutTests(ITestOutputHelper output) : E2ETest(output)
             // 閉じ終わる前に「閉じる」を押すと、上に重なったエクスプローラーをクリックしてしまう（2026-10-31 に一度失敗）。
             var handle = explorer.Current.NativeWindowHandle;
             ((WindowPattern)explorer.GetCurrentPattern(WindowPattern.Pattern)).Close();
-            Wait.Until(() => !Handles().Contains(handle), "エクスプローラーが閉じる");
+            // 左側に Mac の共有ドライブが並ぶ VM では、読み込み中に「閉じる」への反応が遅れることがある（2026-11-11 に 2 回）。
+            // 待ちを延ばし、それでも残っていれば WM_CLOSE を送ってもう一度待つ（explorer.exe はシェルなので強制終了はしない）。
+            try { Wait.Until(() => !Handles().Contains(handle), "エクスプローラーが閉じる", TimeSpan.FromSeconds(30)); }
+            catch (TimeoutException)
+            {
+                PostMessage(new IntPtr(handle), 0x0010 /* WM_CLOSE */, IntPtr.Zero, IntPtr.Zero);
+                Wait.Until(() => !Handles().Contains(handle), "エクスプローラーが閉じる（WM_CLOSE 後）", TimeSpan.FromSeconds(30));
+            }
         }
         w.Get("settings.close").Click();
         app.WaitWindowClosed(Ja.SettingsWindow);
     });
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [Fact]
     public void Settings_Language_English_AppliesAfterRestart_AndBack() => Run(s =>

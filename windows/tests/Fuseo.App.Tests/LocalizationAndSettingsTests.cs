@@ -432,7 +432,7 @@ public class SettingsViewModelTests
     [Fact]
     public void AboutInfo_HasVersionAndLicenses()
     {
-        Assert.Equal("0.2.0", AboutInfo.Version);
+        Assert.Equal("0.3.0", AboutInfo.Version);
         Assert.StartsWith("MIT License", AboutInfo.LicenseText);
         Assert.Contains("ATI Inc.", AboutInfo.LicenseText);
         var notices = AboutInfo.ThirdPartyNotices;

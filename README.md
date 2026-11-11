@@ -52,6 +52,7 @@ PDF（保険料控除証明書・残高証明書などの電子交付書類）�
 - **Mac（直接ダウンロード・公証済み DMG）:** [製品サイト](https://fuseo.ati-mirai.co.jp) または [GitHub Releases](https://github.com/supergodak/fuseo/releases/latest) から最新版を入手し、**Fuseo** を `/Applications` にドラッグします。
 - **Mac（Homebrew）:** `brew install --cask supergodak/tap/fuseo`
 - **iPhone（無料）:** [App Store](https://apps.apple.com/jp/app/id6788677260) から。UI は日本語／英語に対応しています。
+- **Windows（無料・zip を展開するだけ）:** [GitHub Releases](https://github.com/supergodak/fuseo/releases?q=win-v) の `Fuseo-win-<版>-x64.zip`（一般的なパソコン）／`-arm64.zip`（ARM 版 Windows）。Windows 10（1809 以降）／11。電子署名をしていないため、初回は SmartScreen の警告が出ます（「詳細情報」→「実行」）。詳しくは [windows/README.md](windows/README.md)。
 
 Mac 版は **macOS 14（Sonoma）以降**（Apple Silicon／Intel）、iPhone 版は **iOS 17 以降**が必要です。Apple 純正フレームワーク（Vision・Core Image・PDFKit・SwiftUI）のみで動作し、外部依存はありません。
 
@@ -119,6 +120,7 @@ PDFs (e.g. electronically issued deduction or balance certificates) can be opene
 - **Mac (direct download, notarized DMG):** grab the latest from the [project site](https://fuseo.ati-mirai.co.jp) or [GitHub Releases](https://github.com/supergodak/fuseo/releases/latest), then drag **Fuseo** into `/Applications`.
 - **Mac (Homebrew):** `brew install --cask supergodak/tap/fuseo`
 - **iPhone (free):** get it on the [App Store](https://apps.apple.com/jp/app/id6788677260).
+- **Windows (free, unzip and run):** `Fuseo-win-<version>-x64.zip` (most PCs) or `-arm64.zip` (ARM Windows) from [GitHub Releases](https://github.com/supergodak/fuseo/releases?q=win-v). Windows 10 (1809+) / 11. The app is not code-signed, so SmartScreen warns on first launch ("More info" → "Run anyway"). See [windows/README.md](windows/README.md).
 
 The Mac app requires **macOS 14 (Sonoma) or later** (Apple Silicon or Intel); the iPhone app requires **iOS 17 or later**. Built entirely on Apple's own frameworks (Vision, Core Image, PDFKit, SwiftUI) with no third-party dependencies.
 

@@ -24,6 +24,17 @@ Fuseo for Windows {VERSION}
   判定や検出は外れることがあります。違うときは「書類の種類」を選び直し、足りない所は矩形かブラシで塗ってください。
 - 「書類の種類」を選ぶと、その書類で普通伏せる欄の一覧が出ます。
 - 斜めに撮った写真は「切り抜き」で四隅を合わせると、まっすぐに直せます。
+- 申込書・申告書などに文字を打ち込めます（0.3〜）。道具の「文字」を選び、書きたい欄の上をドラッグして枠を作り
+  （クリックだけなら標準の大きさの枠）、下に出る入力欄に打って Enter で確定します。改行は Shift+Enter、やめるときは Esc。
+  どこに・どの大きさで打つかは自分で決めます（欄やマスを自動で探す機能はありません）。
+  右側の「文字」で、書体（ゴシック・明朝）・サイズ（pt）・行間・字間・横と縦の揃え・マス数（個人番号の 12 マスなど）・
+  色（6 色か「その他」）・位置と大きさ（mm）を変えられます。「枠の高さに合わせる」で文字の大きさを 1 回だけ計算して入れます。
+  枠はドラッグで移動、つまみで大きさ変更、矢印キーで 1 ピクセル（Shift で 10）、Ctrl+D で複製、Delete で削除、ダブルクリックで打ち直し。
+  一度変えた設定は次の枠にも引き継がれます（マス数を除く）。文字が枠からはみ出すと枠が赤い点線になります。
+  打った文字も画像に焼き込まれ、黒塗りは文字より上に塗られます（伏せた所に文字は残りません）。
+  切り抜き・回転をするとそのページの文字は消えます（先に向きを整えてから記入してください）。
+  文字を入れた作業は 0.2 以前の Fuseo では開けません。書き出したファイルは後から文字だけ直せないので、
+  直すときは「作業中の書類」から開き直してください。
 - 「書き出し」で仕上がりを確認してから保存します。塗った部分は画素そのものが黒になり、
   元に戻せません。撮影日時などの情報（メタデータ）も書き出したファイルには入りません。
 - 「一覧」でページ全体を見渡せます。マスクが 1 つもないページには赤い「マスクなし」が付きます。
@@ -93,6 +104,12 @@ Notes
 - Windows' built-in text recognition (runs on this PC only) detects the document type and orientation and suggests
   Japanese ID numbers and QR codes as "Auto-detected candidates". Detection can miss or be wrong; names and addresses
   are never painted for you. Always check the result on the export sheet before saving.
+- Typing text onto forms (0.3+): choose the "Text" tool, drag a box over the field (a click makes a default-size box),
+  type in the box below it and press Enter (Shift+Enter for a new line, Esc to cancel). You decide where and how large;
+  nothing is placed automatically. The "Text" panel sets font (Gothic / Mincho), size (pt), line and letter spacing,
+  alignment, cells (one character per cell, e.g. for numbers), color and the position/size in mm. Typed text is burned
+  into the image and masks are always painted over it. Rotating or cropping a page removes its text.
+  Work with text cannot be opened in versions before 0.3.
 - With several documents open, "Separate file per document" saves each as "<original name>-masked"
   (adds -2, -3 ... instead of overwriting existing files).
 - Number detection needs Japanese text recognition (Settings > Time & language > Language & region > Japanese).

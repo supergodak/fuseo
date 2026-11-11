@@ -19,6 +19,8 @@ internal static class Ja
     public const string LibraryDeleteTitle = "作業の削除";
     public const string LibraryDeleteAllTitle = "すべての作業の削除";
     public const string ExportOverwriteTitle = "上書きの確認";
+    public const string RotateTextsConfirmTitle = "回転";
+    public static string TextSummary(int n) => $"文字 {n} 箇所";
 
     public const string NoMask = "マスクなし";
     public static string MaskCount(int n) => n == 0 ? NoMask : $"マスク {n}";

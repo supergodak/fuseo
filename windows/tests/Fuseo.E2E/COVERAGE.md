@@ -27,7 +27,7 @@ UI オートメーション（System.Windows.Automation）で行い、結果は�
 | パスワード付き PDF: 間違い → 再入力 → 正しい（OK ボタン・Enter） | PasswordTests.WrongPassword_AsksAgain_ThenRightPasswordImports |
 | パスワード付き PDF: キャンセル（エラーを出さない） | PasswordTests.Cancel_ImportsNothing_AndShowsNoError |
 | 新しい書類（ボタン・Ctrl+N）・作業は一覧に残る | LibraryTests.NewDocument_ButtonAndCtrlN_KeepTheWorkInTheList |
-| 道具の切替（ボタン 3 つ・V / R / B キー） | DrawingTests.ToolButtonsAndKeys_SwitchTools_AndKeysPaintWithTheChosenTool |
+| 道具の切替（ボタン 3 つ・V / R / B キー。文字の道具と T キーは「文字入れ」） | DrawingTests.ToolButtonsAndKeys_SwitchTools_AndKeysPaintWithTheChosenTool |
 | 四角で塗る（座標・書き出しの画素） | DrawingTests.RectTool_PaintsExactlyTheDraggedArea |
 | ブラシで塗る・太さ 3 種（細・中・太） | DrawingTests.Brush_ThreeSizes_PaintThinMediumThickLines |
 | 選択（クリック・何も無い所で解除）・選択した四角の移動 | DrawingTests.SelectTool_DragMovesRect_AndUndoMovesItBack |
@@ -67,6 +67,17 @@ UI オートメーション（System.Windows.Automation）で行い、結果は�
 | 「フォルダを開く」（フォルダの選択ダイアログ＝OpenFolderDialog・キャンセル・選んで開く） | FolderAndGridTests.OpenFolderButton_CancelDoesNothing_ThenPicksFolder |
 | 一覧表示（セル数・「ファイル名（p/n）」・マスクなしの赤字・マスク数・セルのクリックで 1 枚ずつに戻る） | FolderAndGridTests.GridView_CellsNoMaskMarks_ClickOpensSinglePage |
 | 書き出しの「書類ごとに分ける」（保存先フォルダの選択・既存の X-masked.pdf の横で -2・既存の Y-masked_1.jpg の横で -2_1/-2_2・既存と元のファイルが 1 バイトも変わらない・マスクなし書類の列挙・完了表示と閉じる） | FolderAndGridTests.ExportSeparate_NextToExistingFiles_AddsSuffix_LeavesExistingAndOriginalsUntouched |
+
+## 文字入れ（v0.3・W10-3）
+
+入力は実行時に作る白いページ（PNG）。文字は Unicode の入力（SendInput）で打つ。
+
+| 操作 | テスト |
+|---|---|
+| 文字の道具（T キー）・ドラッグで枠・打つ・Shift+Enter で改行・Enter で確定・Esc で取り消し・一覧の表示・Ctrl+D で複製・Delete で削除・書き出しの「文字 N 箇所」・保存形式 fuseo-win/2 | TextTests.TextTool_TypeWithShiftEnterNewline_EnterCommits_EscCancels_ListedAndCountedInExport |
+| パネル（サイズ・行間・字間・書体・横/縦の揃え・色のパレット・mm の位置と大きさ・マス数で字間が無効）→ 新しい書類 → 一覧から開き直して同じ | TextTests.Panel_SizeSpacingColorCellsAndMillimeters_SurviveReopenFromLibrary |
+| PDF に書き出して読み戻す: 文字の上のマスクは黒・マスクの外に文字のインク・枠の外は白・PDF にテキスト（BT/Tj）・フォント・書体名が無い | TextTests.ExportPdf_MaskOverTextIsBlack_TextInkOutside_NoTextOrFontInPdf |
+| 文字がある時の回転の確認（キャンセル／OK で文字が消える・版が fuseo-win/1 に戻る）・元に戻す | TextTests.Rotate_WithText_AsksFirst_CancelKeeps_OkRemovesText_UndoRestores |
 
 ## 切り抜き
 
