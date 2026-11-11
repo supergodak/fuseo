@@ -287,6 +287,26 @@ final class TextBoxTests: XCTestCase {
         XCTAssertEqual(back.pages[0].texts, [t])
     }
 
+    /// 試用版（0.3.0 build 73）が保存した文字枠（字間なし・色が名前）を読めること（ユーザー試用で開けなかった）。
+    func test_decode_trialBuildTextBox_withoutLetterSpacing_andNamedColor() throws {
+        let json = """
+        {"box":{"h":0.02,"w":0.5,"x":0.1,"y":0.2},"cells":12,"color":"blue","font":"mincho","fontSizePt":11,
+         "hAlign":"left","id":"11111111-2222-3333-4444-555555555555","lineSpacing":1.4,"text":"A","vAlign":"center"}
+        """
+        let t = try JSONDecoder().decode(TextBox.self, from: Data(json.utf8))
+        XCTAssertEqual(t.letterSpacing, 0)
+        XCTAssertEqual(t.color, .blue)
+        XCTAssertEqual(t.cells, 12)
+        XCTAssertEqual(t.font, .mincho)
+        let black = try JSONDecoder().decode(TextBox.self, from: Data(json.replacingOccurrences(of: "\"blue\"", with: "\"black\"").utf8))
+        XCTAssertEqual(black.color, .black)
+        // 最小限のキーだけでも読める（欠けた設定は既定値）
+        let minimal = try JSONDecoder().decode(TextBox.self, from: Data("""
+        {"box":{"h":0.1,"w":0.1,"x":0,"y":0},"id":"11111111-2222-3333-4444-555555555555"}
+        """.utf8))
+        XCTAssertEqual(minimal.style, TextBox.Style.default)
+    }
+
     func test_library_savesV2_onlyWhenTextsExist_andLoadsBoth_rejectsUnknown() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("fuseo-text-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }

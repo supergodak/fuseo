@@ -16,6 +16,27 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
             func q(_ v: Double) -> Double { v.isFinite ? (min(max(v, 0), 1) * 255).rounded() / 255 : 0 }
             self.r = q(r); self.g = q(g); self.b = q(b)
         }
+        private enum CodingKeys: String, CodingKey { case r, g, b }
+
+        /// `{"r":…,"g":…,"b":…}` のほか、試用版（0.3.0 build 73）が書いた色の名前（"black" / "blue"）も読む。
+        public init(from decoder: Decoder) throws {
+            if let single = try? decoder.singleValueContainer(), let name = try? single.decode(String.self) {
+                switch name {
+                case "blue": self = .blue
+                default: self = .black
+                }
+                return
+            }
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.init(r: try c.decode(Double.self, forKey: .r), g: try c.decode(Double.self, forKey: .g),
+                      b: try c.decode(Double.self, forKey: .b))
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(r, forKey: .r); try c.encode(g, forKey: .g); try c.encode(b, forKey: .b)
+        }
+
         public static let black = Color(r: 0, g: 0, b: 0)
         public static let blue = Color(r: 13 / 255.0, g: 51 / 255.0, b: 158 / 255.0)     // ボールペンの青
         public static let red = Color(r: 200 / 255.0, g: 28 / 255.0, b: 28 / 255.0)
@@ -77,6 +98,28 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
         self.cells = style.cells
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case id, box, text, fontSizePt, lineSpacing, letterSpacing, font, color, hAlign, vAlign, cells
+    }
+
+    /// 設定の欠けた保存データも読む（欠けた設定は既定値）。試用版（build 73）は字間を持たず、色を名前で書いていた。
+    /// 版を上げずに設定を足しても、前に保存した作業が開けなくなる事故を防ぐ。
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = Style.default
+        id = try c.decode(UUID.self, forKey: .id)
+        box = try c.decode(NormRect.self, forKey: .box)
+        text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
+        fontSizePt = try c.decodeIfPresent(Double.self, forKey: .fontSizePt) ?? d.fontSizePt
+        lineSpacing = try c.decodeIfPresent(Double.self, forKey: .lineSpacing) ?? d.lineSpacing
+        letterSpacing = try c.decodeIfPresent(Double.self, forKey: .letterSpacing) ?? d.letterSpacing
+        font = (try? c.decodeIfPresent(Font.self, forKey: .font)) ?? d.font
+        color = (try? c.decodeIfPresent(Color.self, forKey: .color)) ?? d.color
+        hAlign = (try? c.decodeIfPresent(HAlign.self, forKey: .hAlign)) ?? d.hAlign
+        vAlign = (try? c.decodeIfPresent(VAlign.self, forKey: .vAlign)) ?? d.vAlign
+        cells = try c.decodeIfPresent(Int.self, forKey: .cells) ?? d.cells
+    }
+
     /// 文字以外の設定（次に作る枠への引き継ぎに使う）。
     public struct Style: Codable, Sendable, Equatable {
         public var fontSizePt: Double
@@ -131,7 +174,8 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
 
     static func snap(_ v: Double, range: ClosedRange<Double>, step: Double) -> Double {
         guard v.isFinite else { return range.lowerBound }
-        let stepped = (v / step).rounded() * step
+        // 刻みに丸めたあと、浮動小数の端数（1.2000000000000002 など）を落とす
+        let stepped = (((v / step).rounded() * step) * 1e6).rounded() / 1e6
         return min(max(stepped, range.lowerBound), range.upperBound)
     }
 }
