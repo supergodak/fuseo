@@ -12,7 +12,8 @@ using Fuseo.Core.Model;
 
 namespace Fuseo.App.ViewModels;
 
-public enum EditorTool { Select, Rect, Brush }
+/// <summary>編集の道具（Text = 文字入れ・v0.3）。</summary>
+public enum EditorTool { Select, Rect, Brush, Text }
 
 public enum BrushSize { Thin, Medium, Thick }
 
@@ -87,7 +88,7 @@ public sealed partial class MainViewModel : ObservableObject
         MovePageDownCommand = new RelayCommand(() => MoveSelectedPage(+1), () => CanMove(+1));
         UndoCommand = new RelayCommand(Undo, () => SelectedPage?.State.CanUndo == true && !IsBusy);
         RedoCommand = new RelayCommand(Redo, () => SelectedPage?.State.CanRedo == true && !IsBusy);
-        DeleteSelectionCommand = new RelayCommand(DeleteSelection, () => Selection is not null);
+        DeleteSelectionCommand = new RelayCommand(DeleteSelection, () => Selection is not null || SelectedText is not null);
         ExportCommand = new RelayCommand(OpenExport, () => Pages.Count > 0 && !IsBusy);
         DismissBannerCommand = new RelayCommand(DismissBanner);
         RotateLeftCommand = new RelayCommand(() => Rotate(-1), () => SelectedPage is not null && !IsBusy);
@@ -146,9 +147,15 @@ public sealed partial class MainViewModel : ObservableObject
         get => _selectedPage;
         set
         {
+            if (ReferenceEquals(_selectedPage, value)) return;
+            EndTextEditing(_selectedPage);   // 入力中の文字は確定してからページを替える
             if (!SetProperty(ref _selectedPage, value)) return;
             _selection = null;
+            _selectedTextId = null;
             OnPropertyChanged(nameof(Selection));
+            OnPropertyChanged(nameof(SelectedTextId));
+            OnPropertyChanged(nameof(EditingTextId));
+            OnTextStateChanged();
             OnPropertyChanged(nameof(SelectedDocumentType));
             RebuildSidePane();
             RefreshCommands();
@@ -267,7 +274,15 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(IsSelectTool));
             OnPropertyChanged(nameof(IsRectTool));
             OnPropertyChanged(nameof(IsBrushTool));
+            OnPropertyChanged(nameof(IsTextTool));
             if (value != EditorTool.Select) Selection = null;
+            if (value is EditorTool.Rect or EditorTool.Brush)
+            {
+                // 塗る道具に替えたら文字の入力を確定して選択を外す（文字枠は選択・文字の道具で触る）。
+                CommitTextEditing();
+                SelectedTextId = null;
+            }
+            OnTextStateChanged();
         }
     }
 
@@ -302,6 +317,12 @@ public sealed partial class MainViewModel : ObservableObject
         private set
         {
             if (!SetProperty(ref _selection, value)) return;
+            if (value is not null && _selectedTextId is not null)
+            {
+                _selectedTextId = null;
+                OnPropertyChanged(nameof(SelectedTextId));
+                OnTextStateChanged();
+            }
             DeleteSelectionCommand.RaiseCanExecuteChanged();
             CanvasChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -566,6 +587,9 @@ public sealed partial class MainViewModel : ObservableObject
     private void Rotate(int turns)
     {
         if (SelectedPage is not { } p) return;
+        EndTextEditing();
+        // 文字枠は回せない（横書き）ので回転で消える。消える前に確かめる（元に戻すで戻せる）。手動マスク・候補は一緒に回る。
+        if (p.State.Texts.Count > 0 && !_dialogs.Confirm(Strings.RotateTextsConfirmTitle, Strings.RotateTextsConfirmMessage)) return;
         if (turns > 0) p.State.RotateClockwise();
         else p.State.RotateCounterClockwise();
         Selection = null;
@@ -631,6 +655,7 @@ public sealed partial class MainViewModel : ObservableObject
     public MaskSelection? SelectAt(NormPoint point)
     {
         Selection = SelectedPage is { } p ? MaskHitTest.Hit(p.State, point) : null;
+        if (Selection is null && SelectedTextId is not null) SelectText(null);
         return Selection;
     }
 
@@ -646,6 +671,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>選択を消す。手動矩形は削除、候補は OFF にする（候補自体は一覧に残す＝あとで戻せる）。</summary>
     private void DeleteSelection()
     {
+        if (SelectedTextId is not null && SelectedText is not null)
+        {
+            DeleteSelectedText();
+            return;
+        }
         if (SelectedPage is not { } p || IsBusy || Selection is not { } s) return;
         if (s.Kind == SelectionKind.ManualRect) p.State.RemoveRect(s.RectIndex);
         else p.State.SetCandidateOn(s.CandidateId, false);
@@ -676,6 +706,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void AfterHistoryMove()
     {
         Selection = null;
+        DropStaleTextSelection();
         OnPropertyChanged(nameof(SelectedDocumentType));
         RebuildSidePane();
         AfterEdit();
@@ -684,6 +715,9 @@ public sealed partial class MainViewModel : ObservableObject
     private void AfterEdit()
     {
         SelectedPage?.Refresh();
+        DropStaleTextSelection();
+        OnPropertyChanged(nameof(EditingTextId));
+        OnTextStateChanged();
         RebuildGrid();
         RebuildCandidates();
         RefreshCommands();
@@ -734,18 +768,25 @@ public sealed partial class MainViewModel : ObservableObject
         RotateRightCommand.RaiseCanExecuteChanged();
         CropCommand.RaiseCanExecuteChanged();
         RereadTextCommand.RaiseCanExecuteChanged();
+        DuplicateTextCommand.RaiseCanExecuteChanged();
+        FitTextToFrameCommand.RaiseCanExecuteChanged();
+        PickTextColorCommand.RaiseCanExecuteChanged();
         RefreshLibraryCommands();
     }
 
     // ---- 書き出し（確認シートを必ず通す） ----
 
     /// <summary>書き出しシート用の ViewModel を作る（ページ順は現在のレールの順）。</summary>
-    public ExportViewModel CreateExportViewModel() =>
-        new(Pages.Select(p => p.State).ToList(), _presets, _rasterizer, _exporter, _dialogs, _now, _english);
+    public ExportViewModel CreateExportViewModel()
+    {
+        EndTextEditing();
+        return new(Pages.Select(p => p.State).ToList(), _presets, _rasterizer, _exporter, _dialogs, _now, _english, TextMetrics);
+    }
 
     private void OpenExport()
     {
         if (Pages.Count == 0) return;
+        if (SelectedPage?.State.EditingTextId is not null) CommitTextEditing();
         var vm = CreateExportViewModel();
         _dialogs.ShowExport(vm);
         if (vm.SavedSummary is { } saved) StatusMessage = saved;

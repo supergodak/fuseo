@@ -52,4 +52,9 @@ public interface IDialogService
 
     /// <summary>ローカルのフォルダをエクスプローラーで開く（URL は渡さない・<see cref="FolderLauncher"/>）。</summary>
     void OpenFolder(string path);
+
+    /// <summary>
+    /// 文字の「その他の色」（v0.3）。Windows 標準の色の設定（ChooseColor）を開く。選んだ色・取り消しなら null。
+    /// </summary>
+    Fuseo.Core.Model.TextColor? AskColor(Fuseo.Core.Model.TextColor initial);
 }

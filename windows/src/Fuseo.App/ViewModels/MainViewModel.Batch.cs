@@ -111,7 +111,7 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// 一覧のサムネイル（いまの向き・切り抜き後の画像を縮小し、確定マスク＝ON の候補＋手動を黒で重ねたもの）を、
+    /// 一覧のサムネイル（いまの向き・切り抜き後の画像を縮小し、文字入れの文字と確定マスク＝ON の候補＋手動を黒で重ねたもの）を、
     /// 中身が変わっていれば別スレッドで作り直す。**表示専用**（書き出しは書き出しシートの BurnIn → IExporter だけ）。
     /// </summary>
     private void EnsureGridThumbnail(PageViewModel page)
@@ -121,15 +121,18 @@ public sealed partial class MainViewModel
         page.GridThumbnailKey = snapshot;
         var state = page.State;
         var masks = PageState.ConfirmedMasksOf(snapshot);
-        var (rasterizer, gate) = (_rasterizer, _gridThumbGate);
+        var texts = snapshot.Texts ?? [];
+        var (rasterizer, gate, metrics) = (_rasterizer, _gridThumbGate, TextMetrics);
         var task = Task.Run(async () =>
         {
             await gate.WaitAsync().ConfigureAwait(false);
             try
             {
-                var small = PixelOps.DownscaleToFit(state.BaseFor(snapshot.Crop, snapshot.Rotation), GridThumbnailMaxSide);
-                // 縮小した画像に黒を重ねる（マスクは正規化座標なので縮小後に塗ってよい）。
-                return BitmapConvert.ToBitmapSource(rasterizer.BurnIn(small, masks).Bitmap);
+                var full = state.BaseFor(snapshot.Crop, snapshot.Rotation);
+                var small = PixelOps.DownscaleToFit(full, GridThumbnailMaxSide);
+                // 縮小した画像に文字（文字入れ・書き出しと同じ描画を縮尺して）→ 黒を重ねる（マスクは正規化座標なので縮小後に塗ってよい）。
+                var withTexts = TextPainter.Compose(small, texts, full.Width, full.Height, metrics);
+                return BitmapConvert.ToBitmapSource(rasterizer.BurnIn(withTexts, masks).Bitmap);
             }
             finally
             {

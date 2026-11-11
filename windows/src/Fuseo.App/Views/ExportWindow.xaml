@@ -47,6 +47,13 @@
             <TextBlock Text="{x:Static p:Strings.ExportPreviewHeading}" FontWeight="SemiBold"/>
             <TextBlock Text="{x:Static p:Strings.ExportPreviewNote}" TextWrapping="Wrap" FontSize="12" Foreground="#555"/>
             <TextBlock Text="{Binding SummaryText}" Margin="0,6,0,0" AutomationProperties.AutomationId="export.summary"/>
+            <!-- 文字入れ（v0.3）: 書いた量の確認と、枠からはみ出している文字（切り取らずにそのまま書き出す）。 -->
+            <TextBlock Text="{Binding TextSummaryText}" Margin="0,2,0,0"
+                       Visibility="{Binding HasTexts, Converter={StaticResource BoolToVis}}"
+                       AutomationProperties.AutomationId="export.textSummary"/>
+            <TextBlock Text="{Binding TextOverflowText}" Foreground="#C62828" TextWrapping="Wrap" Margin="0,2,0,0"
+                       Visibility="{Binding HasOverflowingTexts, Converter={StaticResource BoolToVis}}"
+                       AutomationProperties.AutomationId="export.textOverflow"/>
         </StackPanel>
 
         <Border Grid.Row="2" BorderBrush="#CCC" BorderThickness="1" Background="#E8E8E8">

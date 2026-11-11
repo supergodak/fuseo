@@ -46,16 +46,26 @@ public static class WorkDocumentJson
         o.Converters.Add(new BrushStrokeConverter());
         o.Converters.Add(new ManualMaskConverter());
         o.Converters.Add(new MaskCandidateConverter());
+        o.Converters.Add(new TextBoxConverter());
         o.MakeReadOnly(populateMissingResolver: true);
         return o;
     }
 
-    /// <summary>JSON 文字列にする（書く前にも <see cref="Validate"/> を通す＝壊れた物を保存しない）。</summary>
+    /// <summary>
+    /// JSON 文字列にする（書く前にも <see cref="Validate"/> を通す＝壊れた物を保存しない）。
+    /// 版は**中身から決める**（文字枠が 1 つでもあれば <see cref="WorkDocument.SchemaVersionWithTexts"/>、無ければ
+    /// <see cref="WorkDocument.CurrentSchemaVersion"/>）。呼び出し側が版を間違えても文字入りを古い版の番号で書かない。
+    /// </summary>
     public static string Serialize(WorkDocument doc)
     {
+        ArgumentNullException.ThrowIfNull(doc);
         Validate(doc);
-        return JsonSerializer.Serialize(doc, Options);
+        return JsonSerializer.Serialize(doc with { SchemaVersion = SchemaVersionFor(doc) }, Options);
     }
+
+    /// <summary>書くときの版（文字枠があるときだけ 1 つ上げる・§11.3）。</summary>
+    public static string SchemaVersionFor(WorkDocument doc) =>
+        doc.Pages.Any(p => p.Texts.Count > 0) ? WorkDocument.SchemaVersionWithTexts : WorkDocument.CurrentSchemaVersion;
 
     public static byte[] SerializeToUtf8(WorkDocument doc) => Encoding.UTF8.GetBytes(Serialize(doc));
 
@@ -92,7 +102,8 @@ public static class WorkDocumentJson
     public static void Validate(WorkDocument doc)
     {
         Require(doc is not null, "document が null");
-        Require(doc!.SchemaVersion == WorkDocument.CurrentSchemaVersion, $"版が違う: {doc.SchemaVersion}");
+        Require(doc!.SchemaVersion is WorkDocument.CurrentSchemaVersion or WorkDocument.SchemaVersionWithTexts,
+                $"版が違う: {doc.SchemaVersion}");
         Require(doc.Origin == WorkDocument.OriginTopLeft, $"原点が違う: {doc.Origin}");
         Require(doc.Id != Guid.Empty, "id が空");
         Require(doc.Title is not null, "title が null");
@@ -153,6 +164,14 @@ public static class WorkDocumentJson
         foreach (var r in p.RawFaces!) Require(IsValidRect(r), $"{at}.rawFaces が範囲外");
         Require(p.SourceDocId != Guid.Empty, $"{at}.sourceDocId が空");
         Require(p.Ocr is not null, $"{at}.ocr が null");
+        Require(p.Texts is not null, $"{at}.texts が null");
+        foreach (var t in p.Texts!)
+        {
+            Require(t is not null, $"{at}.texts に null");
+            Require(t!.Id != Guid.Empty, $"{at}.texts の id が空");
+            Require(IsValidRect(t.Box), $"{at}.texts の box が範囲外");
+            Require(t.Text is not null, $"{at}.texts の text が null");
+        }
         if (p.ManualQuad is { } q)
             Require(q.Corners.All(c => c.X >= -Epsilon && c.X <= 1 + Epsilon && c.Y >= -Epsilon && c.Y <= 1 + Epsilon) && q.IsConvex,
                     $"{at}.manualQuad が範囲外か凸四角形でない");
@@ -430,6 +449,107 @@ public static class WorkDocumentJson
             else writer.WriteNull("confidence");
             writer.WriteBoolean("isOn", value.IsOn);
             writer.WriteString("basis", value.Basis);
+            writer.WriteEndObject();
+        }
+    }
+
+    /// <summary>
+    /// 文字枠（Mac の TextBox と同じ項目名）: id・box・text・fontSizePt・lineSpacing・letterSpacing・font・color{r,g,b}・hAlign・vAlign・cells。
+    /// 読み込みは**欠けた設定を既定値で読む**（§11.3・Mac で試用中に踏んだ事故の対策）: 必須は id と box だけ。
+    /// 知らない書体・揃えの名前は既定値、色は {r,g,b} のほか名前（"blue" / "black"・Mac の試用版の形）も読む。範囲外の値は丸める。
+    /// </summary>
+    private sealed class TextBoxConverter : JsonConverter<TextBox>
+    {
+        public override TextBox Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            Guid? id = null;
+            NormRect? box = null;
+            string? text = null;
+            var d = TextStyle.Default;
+            var style = d;
+            BeginObject(ref reader);
+            while (NextProperty(ref reader, out var name))
+            {
+                switch (name)
+                {
+                    case "id": id = reader.GetGuid(); break;
+                    case "box": box = JsonSerializer.Deserialize<NormRect>(ref reader, options); break;
+                    case "text": text = reader.TokenType == JsonTokenType.Null ? null : reader.GetString(); break;
+                    case "fontSizePt": style = style with { FontSizePt = NumberOr(ref reader, d.FontSizePt) }; break;
+                    case "lineSpacing": style = style with { LineSpacing = NumberOr(ref reader, d.LineSpacing) }; break;
+                    case "letterSpacing": style = style with { LetterSpacing = NumberOr(ref reader, d.LetterSpacing) }; break;
+                    case "cells": style = style with { Cells = reader.TokenType == JsonTokenType.Null ? d.Cells : reader.GetInt32() }; break;
+                    case "font": style = style with { Font = NameOr(ref reader, d.Font) }; break;
+                    case "hAlign": style = style with { HAlign = NameOr(ref reader, d.HAlign) }; break;
+                    case "vAlign": style = style with { VAlign = NameOr(ref reader, d.VAlign) }; break;
+                    case "color": style = style with { Color = ReadColor(ref reader, d.Color) }; break;
+                    default: reader.Skip(); break;
+                }
+            }
+            if (id is null || box is null) throw new JsonException("文字枠に id/box が無い");
+            return new TextBox(id.Value, box.Value, text ?? "", style);
+        }
+
+        private static double NumberOr(ref Utf8JsonReader reader, double fallback) =>
+            reader.TokenType == JsonTokenType.Null ? fallback : reader.GetDouble();
+
+        /// <summary>camelCase の名前 → 列挙。知らない名前・文字列以外は既定値（Mac の try? と同じ）。</summary>
+        private static T NameOr<T>(ref Utf8JsonReader reader, T fallback) where T : struct, Enum
+        {
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                reader.Skip();
+                return fallback;
+            }
+            var s = reader.GetString();
+            foreach (var v in Enum.GetValues<T>())
+                if (string.Equals(JsonNamingPolicy.CamelCase.ConvertName(v.ToString()), s, StringComparison.Ordinal)) return v;
+            return fallback;
+        }
+
+        private static TextColor ReadColor(ref Utf8JsonReader reader, TextColor fallback)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+                return reader.GetString() == "blue" ? TextColor.Blue : TextColor.Black;
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                reader.Skip();
+                return fallback;
+            }
+            double? r = null, g = null, b = null;
+            while (NextProperty(ref reader, out var name))
+            {
+                switch (name)
+                {
+                    case "r": r = reader.GetDouble(); break;
+                    case "g": g = reader.GetDouble(); break;
+                    case "b": b = reader.GetDouble(); break;
+                    default: reader.Skip(); break;
+                }
+            }
+            return r is null || g is null || b is null ? fallback : new TextColor(r.Value, g.Value, b.Value);
+        }
+
+        public override void Write(Utf8JsonWriter writer, TextBox value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("id", value.Id);
+            writer.WritePropertyName("box");
+            JsonSerializer.Serialize(writer, value.Box, options);
+            writer.WriteString("text", value.Text);
+            writer.WriteNumber("fontSizePt", value.FontSizePt);
+            writer.WriteNumber("lineSpacing", value.LineSpacing);
+            writer.WriteNumber("letterSpacing", value.LetterSpacing);
+            writer.WriteString("font", JsonNamingPolicy.CamelCase.ConvertName(value.Font.ToString()));
+            writer.WritePropertyName("color");
+            writer.WriteStartObject();
+            writer.WriteNumber("r", value.Color.R);
+            writer.WriteNumber("g", value.Color.G);
+            writer.WriteNumber("b", value.Color.B);
+            writer.WriteEndObject();
+            writer.WriteString("hAlign", JsonNamingPolicy.CamelCase.ConvertName(value.HAlign.ToString()));
+            writer.WriteString("vAlign", JsonNamingPolicy.CamelCase.ConvertName(value.VAlign.ToString()));
+            writer.WriteNumber("cells", value.Cells);
             writer.WriteEndObject();
         }
     }

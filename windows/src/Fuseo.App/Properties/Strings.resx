@@ -14,7 +14,7 @@
   <data name="OpenFilesTip" xml:space="preserve"><value>画像か PDF を開きます（複数選択可・Ctrl+O）。ウィンドウへのドラッグ＆ドロップでも取り込めます。</value></data>
   <data name="ToolLabel" xml:space="preserve"><value>ツール:</value></data>
   <data name="ToolSelect" xml:space="preserve"><value>選択</value></data>
-  <data name="ToolSelectTip" xml:space="preserve"><value>マスクを選んで移動・削除します（V）</value></data>
+  <data name="ToolSelectTip" xml:space="preserve"><value>マスク・文字の枠を選んで移動・削除します（V）</value></data>
   <data name="ToolRect" xml:space="preserve"><value>矩形</value></data>
   <data name="ToolRectTip" xml:space="preserve"><value>ドラッグで四角く塗ります（R）</value></data>
   <data name="ToolBrush" xml:space="preserve"><value>ブラシ</value></data>
@@ -187,7 +187,7 @@
   <data name="CropApply" xml:space="preserve"><value>適用</value></data>
   <data name="CropInvalid" xml:space="preserve"><value>四隅が交差しているか、内側にへこんでいます。つまみの位置を直してください。</value></data>
   <data name="CropConfirmTitle" xml:space="preserve"><value>切り抜きを変更</value></data>
-  <data name="CropConfirmMessage" xml:space="preserve"><value>切り抜きを変えると、このページで手で塗った箇所は消えます。QR コードは切り抜いた画像で探し直します。
+  <data name="CropConfirmMessage" xml:space="preserve"><value>切り抜きを変えると、このページで手で塗った箇所は消えます。入力した文字も消えます。QR コードは切り抜いた画像で探し直します。
 「元に戻す」で切り抜く前に戻せます。</value></data>
   <data name="CropErrorTitle" xml:space="preserve"><value>切り抜きできませんでした</value></data>
   <data name="StatusCropping" xml:space="preserve"><value>切り抜いています…</value></data>
@@ -230,4 +230,60 @@
   <data name="ExportSeparateCompleted" xml:space="preserve"><value>{0} 件を保存しました。</value></data>
   <data name="ExportOpenSavedFolder" xml:space="preserve"><value>保存先のフォルダを開く</value></data>
   <data name="StatusExportedSeparate" xml:space="preserve"><value>{0} 件を保存しました（保存先: {1}）</value></data>
+  <!-- v0.3: 文字入れ -->
+  <data name="ToolText" xml:space="preserve"><value>文字</value></data>
+  <data name="ToolTextTip" xml:space="preserve"><value>ドラッグで枠を作って文字を打ちます。クリックだけなら既定の大きさの枠（T）</value></data>
+  <data name="TextPanelHeading" xml:space="preserve"><value>文字</value></data>
+  <data name="TextPanelSelected" xml:space="preserve"><value>選択中の枠</value></data>
+  <data name="TextPanelNext" xml:space="preserve"><value>次に作る枠の設定</value></data>
+  <data name="TextFontLabel" xml:space="preserve"><value>書体</value></data>
+  <data name="TextFontGothic" xml:space="preserve"><value>ゴシック</value></data>
+  <data name="TextFontMincho" xml:space="preserve"><value>明朝</value></data>
+  <data name="TextSizeLabel" xml:space="preserve"><value>サイズ</value></data>
+  <data name="TextStepUp" xml:space="preserve"><value>増やす</value></data>
+  <data name="TextStepDown" xml:space="preserve"><value>減らす</value></data>
+  <data name="TextLineSpacingLabel" xml:space="preserve"><value>行間</value></data>
+  <data name="TextLineSpacingTip" xml:space="preserve"><value>改行した行と行の間隔（文字サイズの何倍か）。0.8〜3.0、既定 1.2</value></data>
+  <data name="TextTimesUnit" xml:space="preserve"><value>倍</value></data>
+  <data name="TextLetterSpacingLabel" xml:space="preserve"><value>字間</value></data>
+  <data name="TextLetterSpacingTip" xml:space="preserve"><value>文字と文字の間に足す量（文字サイズの何倍か）。0 が標準、0.5 で半文字分あきます</value></data>
+  <data name="TextLetterSpacingCellsTip" xml:space="preserve"><value>マス目の欄では字間を使いません（枠の幅とマス数で位置が決まります）</value></data>
+  <data name="TextCharUnit" xml:space="preserve"><value>字</value></data>
+  <data name="TextHAlignLabel" xml:space="preserve"><value>横</value></data>
+  <data name="TextAlignLeft" xml:space="preserve"><value>左</value></data>
+  <data name="TextAlignCenter" xml:space="preserve"><value>中央</value></data>
+  <data name="TextAlignRight" xml:space="preserve"><value>右</value></data>
+  <data name="TextVAlignLabel" xml:space="preserve"><value>縦</value></data>
+  <data name="TextAlignTop" xml:space="preserve"><value>上</value></data>
+  <data name="TextAlignMiddle" xml:space="preserve"><value>中央</value></data>
+  <data name="TextAlignBottom" xml:space="preserve"><value>下</value></data>
+  <data name="TextCellsLabel" xml:space="preserve"><value>マス数</value></data>
+  <data name="TextCellsTip" xml:space="preserve"><value>枠の幅を N 等分して 1 マスに 1 文字ずつ置きます（個人番号・郵便番号など）。マスの位置は枠の幅と左右の端で合わせてください</value></data>
+  <data name="TextCellsNote" xml:space="preserve"><value>0 = マス目なし</value></data>
+  <data name="TextColorLabel" xml:space="preserve"><value>色</value></data>
+  <data name="TextColorCustom" xml:space="preserve"><value>その他</value></data>
+  <data name="TextColorCustomTip" xml:space="preserve"><value>その他の色（Windows の色の設定）</value></data>
+  <data name="TextColor_Black" xml:space="preserve"><value>黒</value></data>
+  <data name="TextColor_Blue" xml:space="preserve"><value>青</value></data>
+  <data name="TextColor_Red" xml:space="preserve"><value>赤</value></data>
+  <data name="TextColor_Green" xml:space="preserve"><value>緑</value></data>
+  <data name="TextColor_Brown" xml:space="preserve"><value>茶</value></data>
+  <data name="TextColor_Gray" xml:space="preserve"><value>灰</value></data>
+  <data name="TextFrameHeading" xml:space="preserve"><value>位置と大きさ（mm・ページ左上から）</value></data>
+  <data name="TextFrameWidth" xml:space="preserve"><value>幅</value></data>
+  <data name="TextFrameHeight" xml:space="preserve"><value>高さ</value></data>
+  <data name="TextFitToFrame" xml:space="preserve"><value>枠の高さに合わせる</value></data>
+  <data name="TextFitToFrameTip" xml:space="preserve"><value>行数と行間から、文字が枠の高さの 9 割になる文字サイズを 1 回だけ計算して入れます（自動では追従しません）</value></data>
+  <data name="TextListHeading" xml:space="preserve"><value>文字</value></data>
+  <data name="TextDelete" xml:space="preserve"><value>この文字を削除</value></data>
+  <data name="TextRow" xml:space="preserve"><value>文字 {0}: {1}</value></data>
+  <data name="TextRowMultiLine" xml:space="preserve"><value>文字 {0}: {1}（{2} 行）</value></data>
+  <data name="TextRowEditing" xml:space="preserve"><value>文字 {0}（入力中）</value></data>
+  <data name="TextEditorTip" xml:space="preserve"><value>Enter で確定・Shift+Enter で改行・Esc で取り消し</value></data>
+  <data name="TextEditorName" xml:space="preserve"><value>文字の入力</value></data>
+  <data name="RotateTextsConfirmTitle" xml:space="preserve"><value>回転</value></data>
+  <data name="RotateTextsConfirmMessage" xml:space="preserve"><value>回転すると、このページで入力した文字は消えます（手で塗った箇所と候補は一緒に回ります）。
+「元に戻す」で回転する前に戻せます。</value></data>
+  <data name="ExportTextSummary" xml:space="preserve"><value>文字 {0} 箇所</value></data>
+  <data name="ExportTextOverflow" xml:space="preserve"><value>枠からはみ出している文字が {0} 箇所あります（はみ出したまま書き出します）。</value></data>
 </root>

@@ -6,12 +6,13 @@ using Fuseo.App.Services;
 using Fuseo.App.State;
 using Fuseo.Core.Contracts;
 using Fuseo.Core.Model;
+using Fuseo.Core.Rendering;
 
 namespace Fuseo.App.ViewModels;
 
 /// <summary>
 /// 書き出しシート（**絶対条件: 保存前の確認 UI を外さない**）。
-/// 流れ: 全ページを BurnIn → その結果画像をプレビュー → 注意書きの再掲 → 利用者が「保存」→ 保存ダイアログ →
+/// 流れ: 全ページを（文字入れの文字を描いてから）BurnIn → その結果画像をプレビュー → 注意書きの再掲 → 利用者が「保存」→ 保存ダイアログ →
 /// **プレビューしたのと同じ BurnedPage** を IExporter へ渡す（見せた物と書く物を一致させる）。
 /// </summary>
 public sealed class ExportViewModel : ObservableObject
@@ -30,10 +31,13 @@ public sealed class ExportViewModel : ObservableObject
     private bool _separate;
     private bool _isCompleted;
 
+    private readonly WpfTextMetrics _textMetrics;
+
     public ExportViewModel(IReadOnlyList<PageState> pages, IReadOnlyDictionary<DocumentType, DocumentPreset> presets,
                            IMaskRasterizer rasterizer, IExporter exporter, IDialogService dialogs, Func<DateTime> now,
-                           bool? english = null)
+                           bool? english = null, WpfTextMetrics? textMetrics = null)
     {
+        _textMetrics = textMetrics ?? WpfTextMetrics.Instance;
         var useEnglish = english ?? Strings.IsEnglish;
         _pages = pages;
         _presets = presets;
@@ -52,6 +56,11 @@ public sealed class ExportViewModel : ObservableObject
         var auto = pages.Sum(p => p.ActiveCandidateCount);
         var manual = pages.Sum(p => p.ManualMaskCount);
         SummaryText = string.Format(Strings.ExportSummary, auto + manual, auto, manual, pages.Count);
+        // 文字入れ（v0.3）: 書いた量の確認（空の枠は描かないので数えない）と、枠からはみ出している文字（切り取らずにそのまま描く）。
+        TextCount = pages.Sum(p => p.TextCount);
+        OverflowingTextCount = pages.Sum(p => p.Texts.Count(t => TextLayout.Overflows(t, p.Base.Width, p.Base.Height, _textMetrics)));
+        TextSummaryText = TextCount > 0 ? string.Format(Strings.ExportTextSummary, TextCount) : "";
+        TextOverflowText = OverflowingTextCount > 0 ? string.Format(Strings.ExportTextOverflow, OverflowingTextCount) : "";
         HasPdfSource = pages.Any(p => p.FromPdf);
 
         // 書類のまとまり（W9-4）: SourceDocId ごと・画面に初めて出てくる順。書類内のページ順は画面のページ順。
@@ -151,6 +160,16 @@ public sealed class ExportViewModel : ObservableObject
     public string SummaryText { get; }
     public bool HasPdfSource { get; }
 
+    /// <summary>書き出しで描かれる文字枠の数（文字入れ・v0.3）。マスクの数には入れない。</summary>
+    public int TextCount { get; }
+    public int OverflowingTextCount { get; }
+    public bool HasTexts => TextCount > 0;
+    public bool HasOverflowingTexts => OverflowingTextCount > 0;
+    /// <summary>「文字 N 箇所」。</summary>
+    public string TextSummaryText { get; }
+    /// <summary>「枠からはみ出している文字が N 箇所あります（はみ出したまま書き出します）。」</summary>
+    public string TextOverflowText { get; }
+
     /// <summary>保存できたときの案内（メイン画面のステータスに出す）。未保存なら null。</summary>
     public string? SavedSummary { get; private set; }
 
@@ -204,8 +223,11 @@ public sealed class ExportViewModel : ObservableObject
         IsPreparing = true;
         try
         {
-            var work = _pages.Select(p => (p.Base, Masks: p.BuildConfirmedMasks())).ToList();
-            var burned = await Task.Run(() => work.Select(w => _rasterizer.BurnIn(w.Base, w.Masks)).ToList());
+            // 焼き込み順は 基準の画像 → 文字 → マスク（form-fill-design §2）: 文字を描いた複製を BurnIn に渡し、マスクは常にその上に塗る。
+            var work = _pages.Select(p => (p.Base, Texts: p.Texts.ToList(), Masks: p.BuildConfirmedMasks())).ToList();
+            var metrics = _textMetrics;
+            var burned = await Task.Run(() => work.Select(w =>
+                _rasterizer.BurnIn(TextPainter.Compose(w.Base, w.Texts, w.Base.Width, w.Base.Height, metrics), w.Masks)).ToList());
             _burned = burned;
             Previews.Clear();
             for (var i = 0; i < burned.Count; i++) Previews.Add(new PreviewItem(i + 1, burned[i]));

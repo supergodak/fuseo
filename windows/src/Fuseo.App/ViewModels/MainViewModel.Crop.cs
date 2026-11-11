@@ -9,7 +9,7 @@ namespace Fuseo.App.ViewModels;
 /// <summary>
 /// 手動 4 隅切り抜き（W4.5）。切り抜き画面には「切り抜く前の元画像をいまの向きに回したもの」を出し、
 /// 返ってきた四隅を回転 0 の向きに戻して <see cref="State.PageState.ApplyCrop"/> に渡す（画像と四隅を同じ回数だけ回す）。
-/// 切り抜くと画像が変わるので、手動マスクは消え（確認あり・元に戻すで戻せる）、QR／バーコード・顔は新しい画像で検出し直し、
+/// 切り抜くと画像が変わるので、手動マスクと文字枠は消え（確認あり・元に戻すで戻せる）、QR／バーコード・顔は新しい画像で検出し直し、
 /// 文字はいまの向きで読み直す（種別が自動のままなら判定結果に置き換える・§10.15）。
 /// </summary>
 public sealed partial class MainViewModel
@@ -38,7 +38,9 @@ public sealed partial class MainViewModel
         var state = page.State;
         Quad? next = crop.IsFullImage ? null : crop;
         if (next == state.Crop) return;
-        if (state.ManualMaskCount > 0 && !_dialogs.Confirm(Strings.CropConfirmTitle, Strings.CropConfirmMessage)) return;
+        EndTextEditing(page);
+        // 手で塗ったマスクと文字枠は基準の画像が変わるので消える。どちらかあれば確かめる（元に戻すで戻せる）。
+        if (state.HasTextsOrManualMasks && !_dialogs.Confirm(Strings.CropConfirmTitle, Strings.CropConfirmMessage)) return;
 
         IsBusy = true;
         StatusMessage = Strings.StatusCropping;

@@ -16,10 +16,13 @@ namespace Fuseo.App.State;
 /// - <see cref="Findings"/>: 自動検出の材料（QR・顔の生の箱は R0 = 切り抜いた画像の回転 0、OCR は OcrTurns の向き。§10.15）。
 ///   切り抜き・読み直しで変わるので、それらと一緒に戻せるようここに持つ（null = 空）。
 /// - <see cref="TypeIsManual"/>: 利用者が種別を選んだか（true なら以後の再解析で自動判定に戻さない＝Mac の forcedType）。
+/// - <see cref="Texts"/>: 文字入れの文字枠（v0.3・§11）。座標は手動マスクと同じく Rotation で回した画像の上（null = 空）。
+///   マスクの数には数えない。回転・切り抜きで基準の画像が変わると破棄する（種別の変更・読み直しでは保持）。
 /// </summary>
 public sealed record EditSnapshot(
     ManualMask Manual, IReadOnlyList<MaskCandidate> Candidates, int Rotation = 0,
-    DocumentType Type = DocumentType.Generic, Quad? Crop = null, PageFindings? Findings = null, bool TypeIsManual = false)
+    DocumentType Type = DocumentType.Generic, Quad? Crop = null, PageFindings? Findings = null, bool TypeIsManual = false,
+    IReadOnlyList<TextBox>? Texts = null)
 {
     public static readonly EditSnapshot Empty = new(new ManualMask(), []);
 }
@@ -36,7 +39,7 @@ public sealed record EditSnapshot(
 /// - 自動検出の材料 <see cref="Findings"/>（§10.15）から <see cref="CandidateBuilder"/> で候補を作る。
 ///   取り込み時の解析は Undo 履歴に積まない。切り抜き・読み直し・種別の変更はそれぞれ 1 回の変更。回転では読み直さない。
 /// </summary>
-public sealed class PageState
+public sealed partial class PageState
 {
     /// <summary>1 ページあたりの Undo 履歴の上限（古いものから捨てる）。</summary>
     public const int MaxHistory = 200;
@@ -86,7 +89,8 @@ public sealed class PageState
         Guid id, PageBitmap original, string sourceName, int sourcePageIndex, bool fromPdf,
         DocumentType type, int rotation, ManualMask manual, IReadOnlyList<MaskCandidate> candidates,
         IReadOnlyList<NormRect> rawQr, IEnumerable<string> checkedRuleIds,
-        Quad? crop = null, IReadOnlyList<NormRect>? rawFaces = null, bool typeIsManual = false, Guid? sourceDocId = null)
+        Quad? crop = null, IReadOnlyList<NormRect>? rawFaces = null, bool typeIsManual = false, Guid? sourceDocId = null,
+        IReadOnlyList<TextBox>? texts = null)
     {
         if (rotation is < 0 or > 3) throw new ArgumentOutOfRangeException(nameof(rotation), "回転は 0..3");
         if (crop is { } q && !q.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
@@ -94,7 +98,7 @@ public sealed class PageState
         state._current = new EditSnapshot(
             new ManualMask { Rects = [.. manual.Rects], Strokes = [.. manual.Strokes] },
             candidates.ToList(), rotation, type, NormalizeCrop(crop),
-            new PageFindings(0, null, rawQr.ToList(), (rawFaces ?? []).ToList()), typeIsManual);
+            new PageFindings(0, null, rawQr.ToList(), (rawFaces ?? []).ToList()), typeIsManual, (texts ?? []).ToList());
         foreach (var r in checkedRuleIds) state.CheckedRuleIds.Add(r);
         return state;
     }
@@ -189,17 +193,33 @@ public sealed class PageState
     public bool CanRedo => _redo.Count > 0;
 
     public int ManualMaskCount => Manual.Rects.Count + Manual.Strokes.Count;
+
+    /// <summary>文字入れの文字枠（v0.3）。入力中は入力した文字がそのまま入っている（画面に即反映するため）。</summary>
+    public IReadOnlyList<TextBox> Texts => _current.Texts ?? [];
+
+    /// <summary>
+    /// 回転・切り抜きの前に確認が要る編集（手で塗ったマスク・文字）。回転では手動マスクは一緒に回るので、
+    /// 回転の確認は <see cref="Texts"/> だけで判断する（呼び出し側）。
+    /// </summary>
+    public bool HasTextsOrManualMasks => ManualMaskCount > 0 || Texts.Count > 0;
     public int ActiveCandidateCount => Candidates.Count(c => c.IsOn);
     public int MaskCount => ManualMaskCount + ActiveCandidateCount;
 
-    public void AddRect(NormRect rect) =>
+    public void AddRect(NormRect rect)
+    {
+        CommitTextEditing();
         Commit(_current with { Manual = Manual with { Rects = [.. Manual.Rects, rect] } });
+    }
 
-    public void AddStroke(BrushStroke stroke) =>
+    public void AddStroke(BrushStroke stroke)
+    {
+        CommitTextEditing();
         Commit(_current with { Manual = Manual with { Strokes = [.. Manual.Strokes, stroke] } });
+    }
 
     public void RemoveRect(int index)
     {
+        CommitTextEditing();
         if (index < 0 || index >= Manual.Rects.Count) return;
         var rects = new List<NormRect>(Manual.Rects);
         rects.RemoveAt(index);
@@ -208,6 +228,7 @@ public sealed class PageState
 
     public void ReplaceRect(int index, NormRect rect)
     {
+        CommitTextEditing();
         if (index < 0 || index >= Manual.Rects.Count || Manual.Rects[index] == rect) return;
         var rects = new List<NormRect>(Manual.Rects) { [index] = rect };
         Commit(_current with { Manual = Manual with { Rects = rects } });
@@ -215,6 +236,7 @@ public sealed class PageState
 
     public void SetCandidateOn(Guid candidateId, bool isOn)
     {
+        CommitTextEditing();
         var i = IndexOfCandidate(candidateId);
         if (i < 0 || Candidates[i].IsOn == isOn) return;
         var list = new List<MaskCandidate>(Candidates) { [i] = Candidates[i] with { IsOn = isOn } };
@@ -222,8 +244,11 @@ public sealed class PageState
     }
 
     /// <summary>候補を差し替える。Undo で戻せる。</summary>
-    public void ReplaceCandidates(IEnumerable<MaskCandidate> candidates) =>
+    public void ReplaceCandidates(IEnumerable<MaskCandidate> candidates)
+    {
+        CommitTextEditing();
         Commit(_current with { Candidates = candidates.ToList() });
+    }
 
     /// <summary>
     /// 取り込み時の解析結果を入れ、初期の向き・種別（自動判定）と候補を決める（§10.15）。
@@ -249,7 +274,7 @@ public sealed class PageState
 
     /// <summary>
     /// 4 隅切り抜きを変える（W4.5・§10.15）。<paramref name="crop"/> は**元画像（回転 0）の上**の四隅（null・全体 = 切り抜きなし）。
-    /// 画像が変わるので**手動マスクは消し**、候補は新しい画像での検出の材料 <paramref name="findings"/> から
+    /// 画像が変わるので**手動マスクと文字枠は消し**、候補は新しい画像での検出の材料 <paramref name="findings"/> から
     /// <paramref name="type"/>（呼び出し側が決める: 手動なら今の種別、自動なら判定結果）の defaultOn で作り直す。
     /// 回転はそのまま。1 回の変更として Undo で戻せる（消したマスクも戻る）。
     /// <paramref name="cropped"/> は呼び出し側が検出のために作った台形補正済みの画像（あればキャッシュに入れて作り直さない）。
@@ -259,11 +284,15 @@ public sealed class PageState
     {
         if (crop is { } c && !c.IsConvex) throw new ArgumentException("切り抜きの四隅が凸四角形でない", nameof(crop));
         ArgumentNullException.ThrowIfNull(findings);
+        CommitTextEditing();
         var next = NormalizeCrop(crop);
         if (next is { } q && cropped is not null)
             lock (_baseLock) _croppedCache = (q, cropped);
         var candidates = CandidateBuilder.Build(preset, findings, Rotation, CardFramedFor(next), english);
-        Commit(_current with { Crop = next, Findings = findings, Type = type, Manual = new ManualMask(), Candidates = candidates });
+        Commit(_current with
+        {
+            Crop = next, Findings = findings, Type = type, Manual = new ManualMask(), Candidates = candidates, Texts = [],
+        });
     }
 
     /// <summary>
@@ -273,6 +302,7 @@ public sealed class PageState
     public void ApplyReread(PageFindings findings, DocumentType type, DocumentPreset? preset, bool english = false)
     {
         ArgumentNullException.ThrowIfNull(findings);
+        CommitTextEditing();
         var candidates = CandidateBuilder.Build(preset, findings, Rotation, CardFramed, english);
         Commit(_current with { Findings = findings, Type = type, Candidates = candidates });
     }
@@ -291,12 +321,16 @@ public sealed class PageState
     public void ChangeType(DocumentType type, DocumentPreset? preset, bool english = false, PageFindings? findings = null)
     {
         if (type == Type) return;
+        CommitTextEditing();
         var f = findings ?? Findings;
         var candidates = CandidateBuilder.Build(preset, f, Rotation, CardFramed, english);
         Commit(_current with { Type = type, TypeIsManual = true, Findings = f, Candidates = candidates });
     }
 
-    /// <summary>時計回りに 90° 回す（画像・手動マスク・候補を同じ回数だけ回す）。Undo で戻せる。</summary>
+    /// <summary>
+    /// 時計回りに 90° 回す（画像・手動マスク・候補を同じ回数だけ回す）。Undo で戻せる。
+    /// **文字枠は破棄する**（横書きの文字は回せない＝基準の画像が変わるので座標の意味がなくなる・Mac と同じ）。確認は呼び出し側。
+    /// </summary>
     public void RotateClockwise() => RotateBy(+1);
 
     /// <summary>反時計回りに 90° 回す。Undo で戻せる。</summary>
@@ -304,11 +338,13 @@ public sealed class PageState
 
     private void RotateBy(int turns)
     {
+        CommitTextEditing();
         var next = _current with
         {
             Manual = QuarterTurn.Rotate(Manual, turns),
             Candidates = Candidates.Select(c => QuarterTurn.Rotate(c, turns)).ToList(),
             Rotation = QuarterTurn.Normalize(Rotation + turns),
+            Texts = [],
         };
         Commit(next);
     }
@@ -322,6 +358,7 @@ public sealed class PageState
 
     public bool Undo()
     {
+        CommitTextEditing();
         if (_undo.Last is not { } last) return false;
         _undo.RemoveLast();
         _redo.Push(_current);
@@ -331,6 +368,7 @@ public sealed class PageState
 
     public bool Redo()
     {
+        CommitTextEditing();
         if (_redo.Count == 0) return false;
         PushUndo(_current);
         _current = _redo.Pop();

@@ -24,8 +24,15 @@ public enum WorkStatus
 /// <summary>1 件の作業（= 開いていたページ一式）。<c>&lt;root&gt;/&lt;id&gt;/document.json</c> に保存する。</summary>
 public sealed record WorkDocument
 {
-    /// <summary>保存形式の版。読み込み側は違う版を拒否する（「読めない作業」扱い）。</summary>
+    /// <summary>保存形式の版。読み込み側は知らない版を拒否する（「読めない作業」扱い）。</summary>
     public const string CurrentSchemaVersion = "fuseo-win/1";
+
+    /// <summary>
+    /// 文字入れ（v0.3・§11.3）の文字枠が 1 つでもある作業の版。**文字が無ければ <see cref="CurrentSchemaVersion"/> のまま**書く
+    /// （0.2.x でも開ける）。文字入りは 0.2.x が知らない版として拒否する＝古い版で開いて保存し文字が黙って消える事故を防ぐ。
+    /// 版は書くときに中身から決める（<see cref="WorkDocumentJson.Serialize"/>）。読み込みは両方を受け付ける。
+    /// </summary>
+    public const string SchemaVersionWithTexts = "fuseo-win/2";
 
     /// <summary>座標の原点（Mac 版は左下原点なので、将来 Mac 側で読むときの判別子として明示する）。</summary>
     public const string OriginTopLeft = "topLeft";
@@ -95,6 +102,20 @@ public sealed record WorkPage
     /// <summary>手動 4 隅切り抜き（W4.5・Mac と同じ項目名。座標は左上原点＝<see cref="WorkDocument.Origin"/>）。null = 切り抜きなし。</summary>
     public Quad? ManualQuad { get; init; }
     public JsonElement? AnalysisOptions { get; init; }
+
+    /// <summary>
+    /// 文字入れの文字枠（v0.3・§11.3・任意項目）。座標は他のマスクと同じ「<see cref="ManualRotation"/> で回した画像の上」の左上原点。
+    /// **空なら JSON に書かない**（文字の無い作業は 0.2.x と同じ中身・同じ版のまま）。無ければ空として読む。
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<TextBox> Texts { get; init; } = [];
+
+    [JsonInclude, JsonPropertyName("texts"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    private IReadOnlyList<TextBox>? TextsJson
+    {
+        get => Texts.Count == 0 ? null : Texts;
+        init => Texts = value ?? [];
+    }
 }
 
 /// <summary>document.json の中身が受け付けられない（壊れている・版が違う・値が範囲外）。</summary>

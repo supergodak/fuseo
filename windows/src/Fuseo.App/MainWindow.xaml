@@ -17,9 +17,8 @@
         <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportCommand}"/>
         <KeyBinding Key="L" Modifiers="Control" Command="{Binding RotateLeftCommand}"/>
         <KeyBinding Key="R" Modifiers="Control" Command="{Binding RotateRightCommand}"/>
-        <KeyBinding Key="V" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}"/>
-        <KeyBinding Key="R" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rect}"/>
-        <KeyBinding Key="B" Command="{Binding SetToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}"/>
+        <KeyBinding Key="D" Modifiers="Control" Command="{Binding DuplicateTextCommand}"/>
+        <!-- 道具の 1 文字キー（V/R/B/T）と矢印キーは MainWindow.OnKeyDown で扱う（文字の入力欄に打った文字を横取りしないため）。 -->
     </Window.InputBindings>
 
     <Grid>
@@ -65,6 +64,9 @@
                         <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
                                      Content="{x:Static p:Strings.ToolBrush}" IsChecked="{Binding IsBrushTool}" Padding="8,4"
                                      ToolTip="{x:Static p:Strings.ToolBrushTip}" AutomationProperties.AutomationId="tool.brush"/>
+                        <RadioButton Style="{StaticResource {x:Type ToggleButton}}" GroupName="tool"
+                                     Content="{x:Static p:Strings.ToolText}" IsChecked="{Binding IsTextTool}" Padding="8,4" Margin="2,0,0,0"
+                                     ToolTip="{x:Static p:Strings.ToolTextTip}" AutomationProperties.AutomationId="tool.text"/>
                     </StackPanel>
                     <StackPanel>
                         <TextBlock Text="{x:Static p:Strings.BrushSizeLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -160,6 +162,163 @@
             </Border>
             <ScrollViewer VerticalScrollBarVisibility="Auto" IsEnabled="{Binding HasPages}">
                 <StackPanel Margin="12">
+                    <!-- 文字入れ（v0.3）の「文字」パネル: 文字の道具のとき、または文字枠を選んでいるとき。選んでいればその枠、いなければ次に作る枠の設定。 -->
+                    <Border Background="#EEF4FB" CornerRadius="6" Padding="8" Margin="0,0,0,16"
+                            Visibility="{Binding IsTextPanelVisible, Converter={StaticResource BoolToVis}}"
+                            AutomationProperties.AutomationId="text.panel">
+                        <StackPanel>
+                            <StackPanel.Resources>
+                                <Style x:Key="StepButton" TargetType="Button">
+                                    <Setter Property="Width" Value="22"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="2,0,0,0"/>
+                                    <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                                    <Setter Property="FontSize" Value="9"/>
+                                </Style>
+                                <Style x:Key="NumberBox" TargetType="TextBox">
+                                    <Setter Property="Width" Value="56"/>
+                                    <Setter Property="TextAlignment" Value="Right"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                    <EventSetter Event="PreviewKeyDown" Handler="OnPanelNumberKeyDown"/>
+                                </Style>
+                                <Style x:Key="SegButton" TargetType="RadioButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                    <Setter Property="Padding" Value="8,2"/>
+                                    <Setter Property="Margin" Value="0,0,2,0"/>
+                                </Style>
+                            </StackPanel.Resources>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding TextPanelTarget}" FontSize="11" Foreground="#666"
+                                           VerticalAlignment="Center" AutomationProperties.AutomationId="text.panel.target"/>
+                                <TextBlock Text="{x:Static p:Strings.TextPanelHeading}" FontWeight="SemiBold"/>
+                            </DockPanel>
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock Text="{x:Static p:Strings.TextFontLabel}" Width="48" VerticalAlignment="Center"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textFont" Content="{x:Static p:Strings.TextFontGothic}"
+                                             IsChecked="{Binding IsTextGothic}" AutomationProperties.AutomationId="text.font.gothic"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textFont" Content="{x:Static p:Strings.TextFontMincho}"
+                                             IsChecked="{Binding IsTextMincho}" AutomationProperties.AutomationId="text.font.mincho"/>
+                            </WrapPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="{x:Static p:Strings.TextSizeLabel}" Width="48" VerticalAlignment="Center"/>
+                                <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextFontSize, StringFormat=0.##}"
+                                         AutomationProperties.AutomationId="text.size"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70E;" Command="{Binding StepTextCommand}" CommandParameter="size+"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepUp}" AutomationProperties.AutomationId="text.size.up"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70D;" Command="{Binding StepTextCommand}" CommandParameter="size-"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepDown}" AutomationProperties.AutomationId="text.size.down"/>
+                                <TextBlock Text="pt" Foreground="#666" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" ToolTip="{x:Static p:Strings.TextLineSpacingTip}">
+                                <TextBlock Text="{x:Static p:Strings.TextLineSpacingLabel}" Width="48" VerticalAlignment="Center"/>
+                                <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextLineSpacing, StringFormat=0.0#}"
+                                         AutomationProperties.AutomationId="text.lineSpacing"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70E;" Command="{Binding StepTextCommand}" CommandParameter="line+"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepUp}" AutomationProperties.AutomationId="text.lineSpacing.up"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70D;" Command="{Binding StepTextCommand}" CommandParameter="line-"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepDown}" AutomationProperties.AutomationId="text.lineSpacing.down"/>
+                                <TextBlock Text="{x:Static p:Strings.TextTimesUnit}" Foreground="#666" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsLetterSpacingEnabled}"
+                                        ToolTip="{Binding LetterSpacingTip}" ToolTipService.ShowOnDisabled="True">
+                                <TextBlock Text="{x:Static p:Strings.TextLetterSpacingLabel}" Width="48" VerticalAlignment="Center"/>
+                                <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextLetterSpacing, StringFormat=0.0#}"
+                                         AutomationProperties.AutomationId="text.letterSpacing"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70E;" Command="{Binding StepTextCommand}" CommandParameter="letter+"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepUp}" AutomationProperties.AutomationId="text.letterSpacing.up"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70D;" Command="{Binding StepTextCommand}" CommandParameter="letter-"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepDown}" AutomationProperties.AutomationId="text.letterSpacing.down"/>
+                                <TextBlock Text="{x:Static p:Strings.TextCharUnit}" Foreground="#666" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock Text="{x:Static p:Strings.TextHAlignLabel}" Width="48" VerticalAlignment="Center"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textHAlign" Content="{x:Static p:Strings.TextAlignLeft}"
+                                             IsChecked="{Binding IsTextAlignLeft}" AutomationProperties.AutomationId="text.hAlign.left"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textHAlign" Content="{x:Static p:Strings.TextAlignCenter}"
+                                             IsChecked="{Binding IsTextAlignCenter}" AutomationProperties.AutomationId="text.hAlign.center"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textHAlign" Content="{x:Static p:Strings.TextAlignRight}"
+                                             IsChecked="{Binding IsTextAlignRight}" AutomationProperties.AutomationId="text.hAlign.right"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,4,0,0">
+                                <TextBlock Text="{x:Static p:Strings.TextVAlignLabel}" Width="48" VerticalAlignment="Center"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textVAlign" Content="{x:Static p:Strings.TextAlignTop}"
+                                             IsChecked="{Binding IsTextVAlignTop}" AutomationProperties.AutomationId="text.vAlign.top"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textVAlign" Content="{x:Static p:Strings.TextAlignMiddle}"
+                                             IsChecked="{Binding IsTextVAlignCenter}" AutomationProperties.AutomationId="text.vAlign.center"/>
+                                <RadioButton Style="{StaticResource SegButton}" GroupName="textVAlign" Content="{x:Static p:Strings.TextAlignBottom}"
+                                             IsChecked="{Binding IsTextVAlignBottom}" AutomationProperties.AutomationId="text.vAlign.bottom"/>
+                            </WrapPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0" ToolTip="{x:Static p:Strings.TextCellsTip}">
+                                <TextBlock Text="{x:Static p:Strings.TextCellsLabel}" Width="48" VerticalAlignment="Center"/>
+                                <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextCells}" AutomationProperties.AutomationId="text.cells"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70E;" Command="{Binding StepTextCommand}" CommandParameter="cells+"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepUp}" AutomationProperties.AutomationId="text.cells.up"/>
+                                <Button Style="{StaticResource StepButton}" Content="&#xE70D;" Command="{Binding StepTextCommand}" CommandParameter="cells-"
+                                        AutomationProperties.Name="{x:Static p:Strings.TextStepDown}" AutomationProperties.AutomationId="text.cells.down"/>
+                                <TextBlock Text="{x:Static p:Strings.TextCellsNote}" FontSize="11" Foreground="#666" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="{x:Static p:Strings.TextColorLabel}" Width="48" VerticalAlignment="Center"/>
+                                <ItemsControl ItemsSource="{Binding TextColorOptions}" AutomationProperties.AutomationId="text.colors">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding DataContext.SetTextColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" ToolTip="{Binding Name}" Margin="0,0,3,0" Padding="0"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    AutomationProperties.Name="{Binding Name}" AutomationProperties.AutomationId="{Binding AutomationId}">
+                                                <Grid Width="20" Height="20">
+                                                    <Ellipse Fill="{Binding Brush}" Stroke="#99A" StrokeThickness="1"/>
+                                                    <Ellipse Stroke="#1565C0" StrokeThickness="2.5" Margin="-2"
+                                                             Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}"/>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Command="{Binding PickTextColorCommand}" Padding="4,0" Margin="2,0,0,0"
+                                        ToolTip="{x:Static p:Strings.TextColorCustomTip}" AutomationProperties.AutomationId="text.color.custom">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Grid Width="14" Height="14" Margin="0,0,4,0">
+                                            <Rectangle Fill="{Binding CustomTextColorBrush}" Stroke="#99A"/>
+                                            <Rectangle Stroke="#1565C0" StrokeThickness="2" Margin="-2"
+                                                       Visibility="{Binding IsCustomTextColor, Converter={StaticResource BoolToVis}}"/>
+                                        </Grid>
+                                        <TextBlock Text="{x:Static p:Strings.TextColorCustom}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasSelectedText, Converter={StaticResource BoolToVis}}" Margin="0,8,0,0">
+                                <Separator/>
+                                <TextBlock Text="{x:Static p:Strings.TextFrameHeading}" FontSize="11" Foreground="#666" Margin="0,4,0,4"/>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="X" Width="28" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextFrameX, StringFormat=0.0}" AutomationProperties.AutomationId="text.frame.x"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="Y" Width="28" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextFrameY, StringFormat=0.0}" AutomationProperties.AutomationId="text.frame.y"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{x:Static p:Strings.TextFrameWidth}" Width="28" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextFrameWidth, StringFormat=0.0}" AutomationProperties.AutomationId="text.frame.width"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{x:Static p:Strings.TextFrameHeight}" Width="28" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding TextFrameHeight, StringFormat=0.0}" AutomationProperties.AutomationId="text.frame.height"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <Button Content="{x:Static p:Strings.TextFitToFrame}" Command="{Binding FitTextToFrameCommand}" HorizontalAlignment="Left"
+                                        Padding="10,3" Margin="0,8,0,0" ToolTip="{x:Static p:Strings.TextFitToFrameTip}"
+                                        AutomationProperties.AutomationId="text.fit"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="{x:Static p:Strings.DocumentTypeLabel}" FontWeight="SemiBold"/>
                     <DockPanel Margin="0,4,0,0">
                         <!-- 自動判定の種類のまま（利用者が選んでいない）なら「自動」 -->
@@ -220,6 +379,37 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- 文字入れ（v0.3）: このページの文字の一覧（選ぶ・消す）。マスクの数には入れない。 -->
+                    <StackPanel Visibility="{Binding HasTextItems, Converter={StaticResource BoolToVis}}" Margin="0,16,0,0">
+                        <TextBlock Text="{x:Static p:Strings.TextListHeading}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <ItemsControl ItemsSource="{Binding TextItems}" AutomationProperties.AutomationId="text.list">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,2">
+                                        <Button DockPanel.Dock="Right" Content="&#xE74D;" FontFamily="Segoe MDL2 Assets" Command="{Binding DeleteCommand}"
+                                                Background="Transparent" BorderThickness="0" Padding="6,2"
+                                                ToolTip="{x:Static p:Strings.TextDelete}" AutomationProperties.Name="{x:Static p:Strings.TextDelete}"
+                                                AutomationProperties.AutomationId="text.row.delete"/>
+                                        <Button Command="{Binding SelectCommand}" HorizontalContentAlignment="Left" Padding="6,3"
+                                                BorderThickness="0" AutomationProperties.AutomationId="text.row">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Background" Value="#DCE8F7"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                        </Button>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
           </DockPanel>
@@ -321,6 +511,15 @@
                                AutomationProperties.AutomationId="main.pageImage"/>
                         <v:MaskOverlay x:Name="Overlay" IsHitTestVisible="False"/>
                     </Grid>
+                    <!-- 文字入れ（v0.3）の入力欄: 枠のすぐ下（余地が無ければ上）に普通の文字で出す。枠の中には焼き込みと同じ描画を毎回出す。
+                         Enter で確定・Shift+Enter で改行・Esc で取り消し。ズームしても大きさは変えない（拡大縮小の外に置く）。 -->
+                    <TextBox x:Name="TextEditor" Visibility="Collapsed" AcceptsReturn="True" TextWrapping="NoWrap" FontSize="14"
+                             MinWidth="220" MaxHeight="180" VerticalScrollBarVisibility="Auto" Padding="2"
+                             BorderBrush="#1565C0" BorderThickness="2"
+                             PreviewKeyDown="OnTextEditorPreviewKeyDown" TextChanged="OnTextEditorTextChanged"
+                             LostKeyboardFocus="OnTextEditorLostFocus" SizeChanged="OnTextEditorSizeChanged"
+                             ToolTip="{x:Static p:Strings.TextEditorTip}" AutomationProperties.Name="{x:Static p:Strings.TextEditorName}"
+                             AutomationProperties.AutomationId="text.editor"/>
                 </Canvas>
                 <!-- 空の画面: 案内＋「作業中の書類」一覧（W5）。一覧以外は当たり判定なし（ドロップはウィンドウで受ける）。 -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"

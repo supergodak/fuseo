@@ -253,4 +253,5 @@ sealed class Dialogs : IDialogService
     public void OpenFolder(string path) { }
     public string? AskFolder(string title) => null;
     public Quad? AskCrop(CropRequest request) => null;
+    public Fuseo.Core.Model.TextColor? AskColor(Fuseo.Core.Model.TextColor initial) => null;
 }

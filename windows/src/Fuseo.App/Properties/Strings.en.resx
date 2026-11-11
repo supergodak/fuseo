@@ -14,7 +14,7 @@
   <data name="OpenFilesTip" xml:space="preserve"><value>Open images or PDFs (multiple selection allowed, Ctrl+O). You can also drag and drop files onto the window.</value></data>
   <data name="ToolLabel" xml:space="preserve"><value>Tool:</value></data>
   <data name="ToolSelect" xml:space="preserve"><value>Select</value></data>
-  <data name="ToolSelectTip" xml:space="preserve"><value>Select a mask to move or delete it (V)</value></data>
+  <data name="ToolSelectTip" xml:space="preserve"><value>Select a mask or text box to move or delete it (V)</value></data>
   <data name="ToolRect" xml:space="preserve"><value>Rectangle</value></data>
   <data name="ToolRectTip" xml:space="preserve"><value>Drag to paint a rectangle (R)</value></data>
   <data name="ToolBrush" xml:space="preserve"><value>Brush</value></data>
@@ -187,7 +187,7 @@
   <data name="CropApply" xml:space="preserve"><value>Apply</value></data>
   <data name="CropInvalid" xml:space="preserve"><value>The corners cross or bend inward. Move the handles to fix the shape.</value></data>
   <data name="CropConfirmTitle" xml:space="preserve"><value>Change crop</value></data>
-  <data name="CropConfirmMessage" xml:space="preserve"><value>Changing the crop removes the areas you painted by hand on this page. QR codes are searched again on the cropped image.
+  <data name="CropConfirmMessage" xml:space="preserve"><value>Changing the crop removes the areas you painted by hand on this page. The text you typed is removed too. QR codes are searched again on the cropped image.
 Use Undo to go back to before the crop.</value></data>
   <data name="CropErrorTitle" xml:space="preserve"><value>Could not crop</value></data>
   <data name="StatusCropping" xml:space="preserve"><value>Cropping…</value></data>
@@ -230,4 +230,60 @@ Use Undo to go back to before the crop.</value></data>
   <data name="ExportSeparateCompleted" xml:space="preserve"><value>Saved {0} documents.</value></data>
   <data name="ExportOpenSavedFolder" xml:space="preserve"><value>Open destination folder</value></data>
   <data name="StatusExportedSeparate" xml:space="preserve"><value>Saved {0} documents (folder: {1})</value></data>
+  <!-- v0.3: 文字入れ -->
+  <data name="ToolText" xml:space="preserve"><value>Text</value></data>
+  <data name="ToolTextTip" xml:space="preserve"><value>Drag to make a box and type text. A click makes a box of the default size (T)</value></data>
+  <data name="TextPanelHeading" xml:space="preserve"><value>Text</value></data>
+  <data name="TextPanelSelected" xml:space="preserve"><value>Selected box</value></data>
+  <data name="TextPanelNext" xml:space="preserve"><value>Settings for the next box</value></data>
+  <data name="TextFontLabel" xml:space="preserve"><value>Font</value></data>
+  <data name="TextFontGothic" xml:space="preserve"><value>Gothic</value></data>
+  <data name="TextFontMincho" xml:space="preserve"><value>Mincho</value></data>
+  <data name="TextSizeLabel" xml:space="preserve"><value>Size</value></data>
+  <data name="TextStepUp" xml:space="preserve"><value>Increase</value></data>
+  <data name="TextStepDown" xml:space="preserve"><value>Decrease</value></data>
+  <data name="TextLineSpacingLabel" xml:space="preserve"><value>Line</value></data>
+  <data name="TextLineSpacingTip" xml:space="preserve"><value>Distance between lines, as a multiple of the font size (0.8 to 3.0, default 1.2)</value></data>
+  <data name="TextTimesUnit" xml:space="preserve"><value>×</value></data>
+  <data name="TextLetterSpacingLabel" xml:space="preserve"><value>Spacing</value></data>
+  <data name="TextLetterSpacingTip" xml:space="preserve"><value>Extra space between characters, as a multiple of the font size. 0 is normal; 0.5 adds half a character</value></data>
+  <data name="TextLetterSpacingCellsTip" xml:space="preserve"><value>Letter spacing is not used for boxes with cells (the box width and cell count decide the positions)</value></data>
+  <data name="TextCharUnit" xml:space="preserve"><value>em</value></data>
+  <data name="TextHAlignLabel" xml:space="preserve"><value>Horiz.</value></data>
+  <data name="TextAlignLeft" xml:space="preserve"><value>Left</value></data>
+  <data name="TextAlignCenter" xml:space="preserve"><value>Center</value></data>
+  <data name="TextAlignRight" xml:space="preserve"><value>Right</value></data>
+  <data name="TextVAlignLabel" xml:space="preserve"><value>Vert.</value></data>
+  <data name="TextAlignTop" xml:space="preserve"><value>Top</value></data>
+  <data name="TextAlignMiddle" xml:space="preserve"><value>Middle</value></data>
+  <data name="TextAlignBottom" xml:space="preserve"><value>Bottom</value></data>
+  <data name="TextCellsLabel" xml:space="preserve"><value>Cells</value></data>
+  <data name="TextCellsTip" xml:space="preserve"><value>Splits the box width into N cells and puts one character in each (for numbers such as postal codes). Match the cells by adjusting the box width and edges</value></data>
+  <data name="TextCellsNote" xml:space="preserve"><value>0 = no cells</value></data>
+  <data name="TextColorLabel" xml:space="preserve"><value>Color</value></data>
+  <data name="TextColorCustom" xml:space="preserve"><value>Other</value></data>
+  <data name="TextColorCustomTip" xml:space="preserve"><value>Other color (Windows color dialog)</value></data>
+  <data name="TextColor_Black" xml:space="preserve"><value>Black</value></data>
+  <data name="TextColor_Blue" xml:space="preserve"><value>Blue</value></data>
+  <data name="TextColor_Red" xml:space="preserve"><value>Red</value></data>
+  <data name="TextColor_Green" xml:space="preserve"><value>Green</value></data>
+  <data name="TextColor_Brown" xml:space="preserve"><value>Brown</value></data>
+  <data name="TextColor_Gray" xml:space="preserve"><value>Gray</value></data>
+  <data name="TextFrameHeading" xml:space="preserve"><value>Position and size (mm, from the top left of the page)</value></data>
+  <data name="TextFrameWidth" xml:space="preserve"><value>W</value></data>
+  <data name="TextFrameHeight" xml:space="preserve"><value>H</value></data>
+  <data name="TextFitToFrame" xml:space="preserve"><value>Fit to box height</value></data>
+  <data name="TextFitToFrameTip" xml:space="preserve"><value>Calculates once the font size that makes the text 90% of the box height, from the number of lines and line spacing (it does not follow later changes)</value></data>
+  <data name="TextListHeading" xml:space="preserve"><value>Text</value></data>
+  <data name="TextDelete" xml:space="preserve"><value>Delete this text</value></data>
+  <data name="TextRow" xml:space="preserve"><value>Text {0}: {1}</value></data>
+  <data name="TextRowMultiLine" xml:space="preserve"><value>Text {0}: {1} ({2} lines)</value></data>
+  <data name="TextRowEditing" xml:space="preserve"><value>Text {0} (typing)</value></data>
+  <data name="TextEditorTip" xml:space="preserve"><value>Enter to finish, Shift+Enter for a new line, Esc to cancel</value></data>
+  <data name="TextEditorName" xml:space="preserve"><value>Text input</value></data>
+  <data name="RotateTextsConfirmTitle" xml:space="preserve"><value>Rotate</value></data>
+  <data name="RotateTextsConfirmMessage" xml:space="preserve"><value>Rotating removes the text you typed on this page (painted areas and candidates rotate with the page).
+Use Undo to go back to before the rotation.</value></data>
+  <data name="ExportTextSummary" xml:space="preserve"><value>Text: {0}</value></data>
+  <data name="ExportTextOverflow" xml:space="preserve"><value>{0} text box(es) overflow their frame (they are exported as they are).</value></data>
 </root>

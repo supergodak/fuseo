@@ -65,6 +65,8 @@ public static class WorkMapper
                 TypeIsManual = s.TypeIsManual,
                 SourceDocId = s.SourceDocId,
                 ManualQuad = s.Crop,
+                // 文字入れ（v0.3）: 空の枠（入力しかけ）は保存しない。文字が無ければ JSON に書かず、版も上げない（§11.3）。
+                Texts = s.Texts.Where(t => t.Text.Length > 0).ToList(),
             });
         }
         var doc = new WorkDocument
@@ -92,7 +94,8 @@ public static class WorkMapper
             var id = WorkPaths.PageIdFromImageFile(p.ImageFile) ?? Guid.NewGuid();
             result.Add(PageState.Restore(
                 id, work.Images[i], p.SourceName, p.SourcePageIndex, p.FromPdf, p.DocumentType, p.ManualRotation,
-                p.Manual, p.Candidates, QrBoxes(p), p.CheckedRuleIds, p.ManualQuad, p.RawFaces, p.TypeIsManual, docIds[i]));
+                p.Manual, p.Candidates, QrBoxes(p), p.CheckedRuleIds, p.ManualQuad, p.RawFaces, p.TypeIsManual, docIds[i],
+                p.Texts));
         }
         return result;
     }

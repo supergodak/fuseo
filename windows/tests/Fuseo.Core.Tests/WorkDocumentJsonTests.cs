@@ -336,6 +336,7 @@ public class WorkDocumentJsonTests
             Assert.Equal(p.RawFaces, q.RawFaces);
             Assert.Equal(p.TypeIsManual, q.TypeIsManual);
             Assert.Equal(p.SourceDocId, q.SourceDocId);
+            Assert.Equal(p.Texts, q.Texts);
             Assert.Empty(q.Ocr);
             Assert.Null(q.ManualQuad);
             Assert.Null(q.AnalysisOptions);
@@ -359,7 +360,7 @@ public class WorkDocumentJsonTests
     [InlineData("\"manualRotation\": 1", "\"manualRotation\": -1")]                                    // 負の回転
     [InlineData("\"manualRotation\": 1", "\"manualRotation\": 4")]                                     // 範囲外の回転
     [InlineData("\"manualRotation\": 1", "\"manualRotation\": 1.5")]                                   // 小数の回転
-    [InlineData("\"schemaVersion\": \"fuseo-win/1\"", "\"schemaVersion\": \"fuseo-win/2\"")]          // 版違い
+    [InlineData("\"schemaVersion\": \"fuseo-win/1\"", "\"schemaVersion\": \"fuseo-win/3\"")]          // 知らない版（文字入りの fuseo-win/2 は受け付ける・§11.3）
     [InlineData("\"schemaVersion\": \"fuseo-win/1\"", "\"schemaVersion\": 1")]                         // Mac 形式の版
     [InlineData("\"origin\": \"topLeft\"", "\"origin\": \"bottomLeft\"")]                              // 原点違い
     [InlineData("\"coordinateFrame\": \"rotatedImage\"", "\"coordinateFrame\": \"original\"")]         // 座標系違い

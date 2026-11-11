@@ -83,6 +83,9 @@ public sealed class WpfDialogService(Window owner) : IDialogService
 
     public void OpenFolder(string path) => FolderLauncher.Open(path);
 
+    public Fuseo.Core.Model.TextColor? AskColor(Fuseo.Core.Model.TextColor initial) =>
+        Win32ColorDialog.Ask(new System.Windows.Interop.WindowInteropHelper(ActiveOwner()).Handle, initial);
+
     public Fuseo.Core.Geometry.Quad? AskCrop(CropRequest request) => CropWindow.Ask(owner, request);
 
     /// <summary>書き出しシート・設定が開いていればその上にメッセージを出す。</summary>

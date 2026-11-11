@@ -76,6 +76,16 @@ internal sealed class FakeDialogs : IDialogService
         return FolderHandler is { } h ? h(title) : Folder;
     }
 
+    /// <summary>「その他の色」の答え（v0.3）。</summary>
+    public Fuseo.Core.Model.TextColor? ColorResult { get; set; }
+    public List<Fuseo.Core.Model.TextColor> ColorRequests { get; } = [];
+
+    public Fuseo.Core.Model.TextColor? AskColor(Fuseo.Core.Model.TextColor initial)
+    {
+        ColorRequests.Add(initial);
+        return ColorResult;
+    }
+
     public Quad? CropResult { get; set; }
     public List<CropRequest> CropRequests { get; } = [];
 
