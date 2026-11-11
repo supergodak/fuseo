@@ -7,7 +7,26 @@ import Foundation
 public struct TextBox: Codable, Sendable, Equatable, Identifiable {
 
     public enum Font: String, Codable, Sendable, CaseIterable { case gothic, mincho }
-    public enum Color: String, Codable, Sendable, CaseIterable { case black, blue }
+    /// 文字の色（sRGB・各 0〜1。1/255 単位に丸める）。パレットの色か、色選択で選んだ任意の色。
+    public struct Color: Codable, Sendable, Equatable, Hashable {
+        public var r: Double
+        public var g: Double
+        public var b: Double
+        public init(r: Double, g: Double, b: Double) {
+            func q(_ v: Double) -> Double { v.isFinite ? (min(max(v, 0), 1) * 255).rounded() / 255 : 0 }
+            self.r = q(r); self.g = q(g); self.b = q(b)
+        }
+        public static let black = Color(r: 0, g: 0, b: 0)
+        public static let blue = Color(r: 13 / 255.0, g: 51 / 255.0, b: 158 / 255.0)     // ボールペンの青
+        public static let red = Color(r: 200 / 255.0, g: 28 / 255.0, b: 28 / 255.0)
+        public static let green = Color(r: 20 / 255.0, g: 120 / 255.0, b: 50 / 255.0)
+        public static let brown = Color(r: 115 / 255.0, g: 65 / 255.0, b: 25 / 255.0)
+        public static let gray = Color(r: 110 / 255.0, g: 110 / 255.0, b: 110 / 255.0)
+        /// 右パネルに並べる色（この順）。名前は画面の表示とアクセシビリティ用。
+        public static let palette: [(name: String, color: Color)] = [
+            ("黒", .black), ("青", .blue), ("赤", .red), ("緑", .green), ("茶", .brown), ("灰", .gray),
+        ]
+    }
     public enum HAlign: String, Codable, Sendable, CaseIterable { case left, center, right }
     public enum VAlign: String, Codable, Sendable, CaseIterable { case top, center, bottom }
 
@@ -17,6 +36,9 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
     /// 行間（行の送り＝文字サイズ×倍率）の範囲と刻み。
     public static let lineSpacingRange: ClosedRange<Double> = 0.8...3.0
     public static let lineSpacingStep = 0.05
+    /// 字間（文字サイズに対する割合。0 = 標準）の範囲と刻み。マス目では使わない。
+    public static let letterSpacingRange: ClosedRange<Double> = -0.2...2.0
+    public static let letterSpacingStep = 0.05
     /// マス数の上限（0 = マス目なし）。
     public static let maxCells = 40
     /// pt → px の換算に使う解像度（書き出し PDF の 300dpi 換算と同じ。0.2.4 で揃えた）。
@@ -31,6 +53,8 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
     public var fontSizePt: Double
     /// 行間の倍率（行の送り = 文字サイズ × lineSpacing）。
     public var lineSpacing: Double
+    /// 字間（文字と文字の間に足す量 = 文字サイズ × letterSpacing。0 = 標準）。マス目（cells ≥ 1）では使わない。
+    public var letterSpacing: Double
     public var font: Font
     public var color: Color
     public var hAlign: HAlign
@@ -45,6 +69,7 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
         self.text = text
         self.fontSizePt = style.fontSizePt
         self.lineSpacing = style.lineSpacing
+        self.letterSpacing = style.letterSpacing
         self.font = style.font
         self.color = style.color
         self.hAlign = style.hAlign
@@ -56,16 +81,19 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
     public struct Style: Codable, Sendable, Equatable {
         public var fontSizePt: Double
         public var lineSpacing: Double
+        public var letterSpacing: Double
         public var font: Font
         public var color: Color
         public var hAlign: HAlign
         public var vAlign: VAlign
         public var cells: Int
 
-        public init(fontSizePt: Double = 10.5, lineSpacing: Double = 1.2, font: Font = .gothic,
+        public init(fontSizePt: Double = 10.5, lineSpacing: Double = 1.2, letterSpacing: Double = 0,
+                    font: Font = .gothic,
                     color: Color = .black, hAlign: HAlign = .left, vAlign: VAlign = .center, cells: Int = 0) {
             self.fontSizePt = fontSizePt
             self.lineSpacing = lineSpacing
+            self.letterSpacing = letterSpacing
             self.font = font
             self.color = color
             self.hAlign = hAlign
@@ -80,17 +108,20 @@ public struct TextBox: Codable, Sendable, Equatable, Identifiable {
             var s = self
             s.fontSizePt = TextBox.snap(fontSizePt, range: TextBox.fontSizeRange, step: TextBox.fontSizeStep)
             s.lineSpacing = TextBox.snap(lineSpacing, range: TextBox.lineSpacingRange, step: TextBox.lineSpacingStep)
+            s.letterSpacing = TextBox.snap(letterSpacing, range: TextBox.letterSpacingRange, step: TextBox.letterSpacingStep)
             s.cells = min(max(0, cells), TextBox.maxCells)
             return s
         }
     }
 
     public var style: Style {
-        get { Style(fontSizePt: fontSizePt, lineSpacing: lineSpacing, font: font, color: color,
+        get { Style(fontSizePt: fontSizePt, lineSpacing: lineSpacing, letterSpacing: letterSpacing,
+                    font: font, color: color,
                     hAlign: hAlign, vAlign: vAlign, cells: cells) }
         set {
             let s = newValue.clamped()
-            fontSizePt = s.fontSizePt; lineSpacing = s.lineSpacing; font = s.font; color = s.color
+            fontSizePt = s.fontSizePt; lineSpacing = s.lineSpacing; letterSpacing = s.letterSpacing
+            font = s.font; color = s.color
             hAlign = s.hAlign; vAlign = s.vAlign; cells = s.cells
         }
     }

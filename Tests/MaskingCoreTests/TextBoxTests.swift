@@ -146,9 +146,66 @@ final class TextBoxTests: XCTestCase {
         XCTAssertEqual(b.fontSizePt, 72)
         XCTAssertEqual(b.lineSpacing, 1.25, accuracy: 1e-9)
         XCTAssertEqual(b.cells, TextBox.maxCells)
-        b.style = TextBox.Style(fontSizePt: 10.3, lineSpacing: 0.1)
+        b.style = TextBox.Style(fontSizePt: 10.3, lineSpacing: 0.1, letterSpacing: 9)
         XCTAssertEqual(b.fontSizePt, 10.5)
         XCTAssertEqual(b.lineSpacing, 0.8, accuracy: 1e-9)
+        XCTAssertEqual(b.letterSpacing, 2.0, accuracy: 1e-9)
+        b.style = TextBox.Style(letterSpacing: 0.333)
+        XCTAssertEqual(b.letterSpacing, 0.35, accuracy: 1e-9)
+    }
+
+    func test_letterSpacing_widensLineByGapsOnly_andAlignsWithoutTrailingGap() {
+        let r = NormRect(x: 0.1, y: 0.4, w: 0.8, h: 0.05)
+        let frame = CoordinateSpace.pixelRect(r, in: a4)
+        let plain = TextBoxRenderer.layout(box("ABCDE", r) { $0.fontSizePt = 12 }, imageSize: a4).lines[0]
+        let spaced = TextBoxRenderer.layout(box("ABCDE", r) { $0.fontSizePt = 12; $0.letterSpacing = 0.5 }, imageSize: a4).lines[0]
+        let kern = CGFloat(12 * 300.0 / 72 * 0.5)
+        XCTAssertEqual(spaced.width - plain.width, kern * 4, accuracy: 0.5, "5 文字の間は 4 か所（最後の文字の後ろは数えない）")
+        let right = TextBoxRenderer.layout(box("ABCDE", r) { $0.fontSizePt = 12; $0.letterSpacing = 0.5; $0.hAlign = .right },
+                                           imageSize: a4).lines[0]
+        XCTAssertEqual(right.origin.x + right.width, frame.maxX, accuracy: 0.01)
+        let tight = TextBoxRenderer.layout(box("ABCDE", r) { $0.fontSizePt = 12; $0.letterSpacing = -0.1 }, imageSize: a4).lines[0]
+        XCTAssertLessThan(tight.width, plain.width)
+    }
+
+    func test_letterSpacing_overflowUsesSpacedWidth() {
+        let r = NormRect(x: 0.1, y: 0.4, w: 0.06, h: 0.05)   // 149px: 2 文字 100px は入り、字間 2.0 で 200px は出る
+        XCTAssertFalse(TextBoxRenderer.layout(box("見本", r) { $0.fontSizePt = 12 }, imageSize: a4).overflows)
+        XCTAssertTrue(TextBoxRenderer.layout(box("見本", r) { $0.fontSizePt = 12; $0.letterSpacing = 2.0 }, imageSize: a4).overflows)
+    }
+
+    func test_letterSpacing_isIgnoredInCells() throws {
+        let size = CGSize(width: 1200, height: 300)
+        let r = NormRect(x: 0.05, y: 0.2, w: 0.9, h: 0.6)
+        func render(_ ls: Double) throws -> [UInt8] {
+            let b = box("1234", r) { $0.cells = 4; $0.fontSizePt = 20; $0.letterSpacing = ls }
+            return pixels(try RasterMaskRenderer().burnIn(page: PageImage(cgImage: white(size), sourceURL: nil,
+                                                                          rectified: true, quadConfidence: 1),
+                                                          texts: [b], masks: [], strokes: [])).data
+        }
+        XCTAssertEqual(try render(0), try render(1.5), "マス目では字間を使わない（出力が同じ）")
+    }
+
+    func test_color_paletteAndCustom_roundTripAndRender() throws {
+        XCTAssertEqual(TextBox.Color.palette.count, 6)
+        XCTAssertEqual(TextBox.Color.palette.first?.color, .black)
+        let custom = TextBox.Color(r: 0.5, g: 0.123456, b: 2)
+        XCTAssertEqual(custom.b, 1, "範囲外は丸める")
+        XCTAssertEqual(custom.g * 255, (0.123456 * 255).rounded(), accuracy: 1e-9, "1/255 単位")
+        let t = box("色", NormRect(x: 0, y: 0, w: 1, h: 1)) { $0.color = custom }
+        let back = try JSONDecoder().decode(TextBox.self, from: try JSONEncoder().encode(t))
+        XCTAssertEqual(back.color, custom)
+
+        let size = CGSize(width: 400, height: 200)
+        let red = box("■■■■", NormRect(x: 0.05, y: 0.1, w: 0.9, h: 0.8)) { $0.fontSizePt = 30; $0.color = .red }
+        let px = pixels(try RasterMaskRenderer().burnIn(page: PageImage(cgImage: white(size), sourceURL: nil, rectified: true,
+                                                                        quadConfidence: 1),
+                                                        texts: [red], masks: [], strokes: []))
+        var reddish = 0
+        for i in stride(from: 0, to: px.data.count, by: 4) where px.data[i] > 150 && px.data[i + 1] < 80 && px.data[i + 2] < 80 {
+            reddish += 1
+        }
+        XCTAssertGreaterThan(reddish, 100, "赤で描かれている")
     }
 
     // MARK: - ② 焼き込み
@@ -219,7 +276,7 @@ final class TextBoxTests: XCTestCase {
 
     func test_schema_withTexts_isV2_andRoundTrips() throws {
         let t = box("見本\n二行目", NormRect(x: 0.1, y: 0.2, w: 0.3, h: 0.05)) {
-            $0.fontSizePt = 11.5; $0.lineSpacing = 1.45; $0.font = .mincho; $0.color = .blue
+            $0.fontSizePt = 11.5; $0.lineSpacing = 1.45; $0.letterSpacing = 0.25; $0.font = .mincho; $0.color = .blue
             $0.hAlign = .right; $0.vAlign = .bottom; $0.cells = 0
         }
         let doc = WorkDocument(title: "t", createdAt: Date(timeIntervalSince1970: 0),

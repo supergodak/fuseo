@@ -271,6 +271,16 @@ final class TextEditingTests: XCTestCase {
         XCTAssertEqual(state.nextTextStyle.color, .blue)
         XCTAssertEqual(state.nextTextStyle.cells, 0, "マス数は引き継がない（設計 §1: 書体・サイズ・行間・揃え・色）")
 
+        // 字間と任意の色も引き継ぐ（0.3.0 で追加）
+        let custom = TextBox.Color(r: 0.3, g: 0.6, b: 0.9)
+        step(undo) { state.applyTextStyle(page: page, undo: undo) { $0.letterSpacing = 0.5; $0.color = custom } }
+        XCTAssertEqual(page.text(id)?.letterSpacing, 0.5)
+        XCTAssertEqual(state.nextTextStyle.letterSpacing, 0.5)
+        XCTAssertEqual(state.nextTextStyle.color, custom)
+        undo.undo()
+        XCTAssertEqual(page.text(id)?.letterSpacing, 0, "字間の変更も 1 手で戻る")
+        XCTAssertEqual(page.text(id)?.color, .blue)
+
         undo.undo()
         XCTAssertEqual(page.text(id)?.font, .gothic, "設定の変更は 1 回 = 1 手")
         XCTAssertEqual(page.text(id)?.cells, 12)

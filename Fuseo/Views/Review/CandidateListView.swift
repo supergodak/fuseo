@@ -200,6 +200,12 @@ struct CandidateListView: View {
                           step: TextBox.fontSizeStep, unit: "pt", id: "review.textPanel.size")
                 numberRow("行間", value: styleBinding(\.lineSpacing), range: TextBox.lineSpacingRange,
                           step: TextBox.lineSpacingStep, unit: "倍", id: "review.textPanel.lineSpacing")
+                numberRow("字間", value: styleBinding(\.letterSpacing), range: TextBox.letterSpacingRange,
+                          step: TextBox.letterSpacingStep, unit: "字", id: "review.textPanel.letterSpacing")
+                    .disabled(currentStyle.cells > 0)
+                    .help(currentStyle.cells > 0
+                          ? "マス目の欄では字間を使いません（枠の幅とマス数で位置が決まります）"
+                          : "文字と文字の間に足す量（文字サイズの何倍か）。0 が標準、0.5 で半文字分あきます")
 
                 Picker("横", selection: styleBinding(\.hAlign)) {
                     Text("左").tag(TextBox.HAlign.left)
@@ -230,12 +236,7 @@ struct CandidateListView: View {
                 }
                 .help("枠の幅を N 等分して 1 マスに 1 文字ずつ置きます（個人番号・郵便番号など）。マスの位置は枠の幅と左右の端で合わせてください")
 
-                Picker("色", selection: styleBinding(\.color)) {
-                    Text("黒").tag(TextBox.Color.black)
-                    Text("青").tag(TextBox.Color.blue)
-                }
-                .pickerStyle(.segmented)
-                .accessibilityIdentifier("review.textPanel.color")
+                colorRow
 
                 if let selected {
                     Divider()
@@ -263,6 +264,46 @@ struct CandidateListView: View {
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("review.textPanel")
         }
+    }
+
+    private var currentStyle: TextBox.Style { page.selectedText?.style ?? appState.nextTextStyle }
+
+    /// 色: パレット（黒・青・赤・緑・茶・灰）＋「その他」（Mac 標準の色選択）。
+    private var colorRow: some View {
+        let current = currentStyle.color
+        return HStack(spacing: 6) {
+            Text("色").frame(width: 44, alignment: .leading)
+            ForEach(Array(TextBox.Color.palette.enumerated()), id: \.offset) { index, entry in
+                Button {
+                    styleBinding(\.color).wrappedValue = entry.color
+                } label: {
+                    Circle()
+                        .fill(Color(.sRGB, red: entry.color.r, green: entry.color.g, blue: entry.color.b))
+                        .frame(width: 18, height: 18)
+                        .overlay(Circle().strokeBorder(current == entry.color ? Color.accentColor : Color.gray.opacity(0.4),
+                                                       lineWidth: current == entry.color ? 2.5 : 1))
+                        .padding(1)
+                }
+                .buttonStyle(.plain)
+                .help(entry.name)
+                .accessibilityLabel(Text(entry.name))
+                .accessibilityAddTraits(current == entry.color ? .isSelected : [])
+                .accessibilityIdentifier("review.textPanel.color.\(index)")
+            }
+            ColorPicker("その他", selection: Binding<CGColor>(
+                get: { CGColor(srgbRed: current.r, green: current.g, blue: current.b, alpha: 1) },
+                set: { cg in
+                    guard let rgb = cg.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil),
+                          let c = rgb.components, c.count >= 3 else { return }
+                    let picked = TextBox.Color(r: Double(c[0]), g: Double(c[1]), b: Double(c[2]))
+                    if picked != current { styleBinding(\.color).wrappedValue = picked }
+                }), supportsOpacity: false)
+                .labelsHidden()
+                .help("その他の色（Mac の色選択）")
+                .accessibilityIdentifier("review.textPanel.color.custom")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("review.textPanel.color")
     }
 
     private func styleBinding<V>(_ keyPath: WritableKeyPath<TextBox.Style, V>) -> Binding<V> {

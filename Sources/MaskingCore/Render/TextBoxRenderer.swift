@@ -44,10 +44,7 @@ public enum TextBoxRenderer {
     }
 
     static func cgColor(_ color: TextBox.Color) -> CGColor {
-        switch color {
-        case .black: return CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)
-        case .blue: return CGColor(srgbRed: 0.05, green: 0.2, blue: 0.62, alpha: 1)   // ボールペンの青
-        }
+        CGColor(srgbRed: color.r, green: color.g, blue: color.b, alpha: 1)
     }
 
     /// (ascent + descent) / 文字サイズ。枠に合わせるの逆算に使う（書体ごとに一定）。
@@ -56,16 +53,20 @@ public enum TextBoxRenderer {
         return Double(CTFontGetAscent(f) + CTFontGetDescent(f)) / 100
     }
 
-    private static func makeLine(_ s: String, font: CTFont, color: CGColor) -> CTLine {
-        let attrs: [NSAttributedString.Key: Any] = [
+    /// - kern: 字間（px）。各文字の後ろに足される（CoreText の kern 属性）。
+    private static func makeLine(_ s: String, font: CTFont, color: CGColor, kern: CGFloat = 0) -> CTLine {
+        var attrs: [NSAttributedString.Key: Any] = [
             NSAttributedString.Key(kCTFontAttributeName as String): font,
             NSAttributedString.Key(kCTForegroundColorAttributeName as String): color,
         ]
+        if kern != 0 { attrs[NSAttributedString.Key(kCTKernAttributeName as String)] = kern }
         return CTLineCreateWithAttributedString(NSAttributedString(string: s, attributes: attrs))
     }
 
-    private static func width(of line: CTLine) -> CGFloat {
-        CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+    /// 見た目の幅。字間は最後の文字の後ろにも付くので、その分を引く（揃え・はみ出しを字間込みの見た目で判定する）。
+    private static func width(of line: CTLine, kern: CGFloat = 0, isEmpty: Bool = false) -> CGFloat {
+        let w = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        return isEmpty ? w : max(0, w - kern)
     }
 
     // MARK: - 配置
@@ -96,6 +97,7 @@ public enum TextBoxRenderer {
             return Layout(lines: placed, inkBounds: ink, overflows: overflow)
         }
 
+        let kern = size * CGFloat(box.letterSpacing)
         let texts = box.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let n = max(1, texts.count)
         let top = baselineY(frame: frame, lineCount: n, advance: advance,
@@ -103,7 +105,7 @@ public enum TextBoxRenderer {
         var placed: [PlacedLine] = []
         var maxW: CGFloat = 0
         for (i, s) in texts.enumerated() {
-            let w = width(of: makeLine(s, font: font, color: color))
+            let w = width(of: makeLine(s, font: font, color: color, kern: kern), kern: kern, isEmpty: s.isEmpty)
             maxW = max(maxW, w)
             let x: CGFloat
             switch box.hAlign {
@@ -149,9 +151,11 @@ public enum TextBoxRenderer {
             let color = cgColor(box.color)
             ctx.saveGState()
             ctx.textMatrix = .identity
+            // マス目は 1 文字ずつ置くので字間を使わない
+            let kern = box.cells > 0 ? 0 : CGFloat(box.fontSizePx * box.letterSpacing)
             for line in layout.lines where !line.text.isEmpty {
                 ctx.textPosition = line.origin
-                CTLineDraw(makeLine(line.text, font: font, color: color), ctx)
+                CTLineDraw(makeLine(line.text, font: font, color: color, kern: kern), ctx)
             }
             ctx.restoreGState()
         }
