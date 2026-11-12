@@ -277,4 +277,27 @@ public class PageAnalyzerTests
         Assert.False(PageAnalyzer.NeedsCardResample(DocumentType.Generic, 2000, 1000, t));
         Assert.False(PageAnalyzer.NeedsCardResample(DocumentType.MenkyoshoFront, 1000, 2000, t));
     }
+
+    // 0.3.2: 紙の大きさの PDF ページはカード類と判定しない（Mac 0.3.0 と同じ。「個人番号」欄のある A4 の申告書がマイナ裏になっていた）
+
+    [Theory]
+    [InlineData(true, 2480, 3508, false)]   // A4 縦
+    [InlineData(true, 3508, 2480, false)]   // A4 横
+    [InlineData(true, 2550, 3300, false)]   // レター
+    [InlineData(true, 1712, 1080, true)]    // ページの中のカードを切り抜いた
+    [InlineData(false, 2480, 3508, true)]   // 写真は従来どおり
+    public void AllowsCardTypes_TruthTable(bool flat, int w, int h, bool expected) =>
+        Assert.Equal(expected, PageAnalyzer.AllowsCardTypes(flat, w, h));
+
+    [Fact]
+    public async Task FlatA4Page_WithMyNumberLabel_IsNotACard_ButPhotoStillIs()
+    {
+        var page = new PageBitmap(248, 351, Enumerable.Repeat((byte)255, 248 * 351 * 4).ToArray());
+        var ocr = new FakeOcr(CardText) { SameForAllOrientations = true };
+        var flat = await PageAnalyzer.AnalyzeAsync(page, ocr, Presets, detectUpright: false, CancellationToken.None, flatPage: true);
+        Assert.False(flat.Classification.Type.IsId1Card());
+        Assert.Equal(DocumentType.MyNumberCardBack, flat.Classification.Ranking[0].Type);   // ranking は生スコアのまま
+        var photo = await PageAnalyzer.AnalyzeAsync(page, ocr, Presets, detectUpright: false, CancellationToken.None);
+        Assert.Equal(DocumentType.MyNumberCardBack, photo.Classification.Type);
+    }
 }

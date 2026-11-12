@@ -48,6 +48,7 @@ public sealed partial class MainViewModel
         {
             var original = state.Original;
             var rotation = state.Rotation;
+            var fromPdf = state.FromPdf;
             var (qr, face, ocr, presets) = (_detector, _faceDetector, _recognizer, _presetList);
             // 新しい画像で QR（R0）・顔（いまの向きで探して R0 に戻す）を探し直し、文字はいまの向き（Rotate(Cropped, Rotation)）で向きの判定なしに読み直す（§10.15）。
             var (cropped, findings, autoType, failed) = await Task.Run(async () =>
@@ -74,7 +75,8 @@ public sealed partial class MainViewModel
                     {
                         var oriented = rotation == 0 ? bmp : QuarterTurn.Rotate(bmp, rotation);
                         analysis = await Fuseo.Core.Analysis.PageAnalyzer.AnalyzeAsync(
-                            oriented, ocr, presets, detectUpright: false, CancellationToken.None).ConfigureAwait(false);
+                            oriented, ocr, presets, detectUpright: false, CancellationToken.None,
+                            flatPage: fromPdf).ConfigureAwait(false);
                     }
                     catch (Exception e) when (e is not OutOfMemoryException) { bad = true; Log("文字の読み取り", e); }
                 }

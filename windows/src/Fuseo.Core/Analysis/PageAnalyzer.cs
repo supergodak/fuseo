@@ -26,7 +26,7 @@ public static class PageAnalyzer
 {
     public static async Task<PageAnalysis> AnalyzeAsync(
         PageBitmap page, ITextRecognizer ocr, IReadOnlyList<DocumentPreset> presets, bool detectUpright,
-        CancellationToken ct, PipelineTuning? tuning = null)
+        CancellationToken ct, PipelineTuning? tuning = null, bool flatPage = false)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(ocr);
@@ -56,10 +56,9 @@ public static class PageAnalyzer
             items = await ocr.RecognizeAsync(page, ct).ConfigureAwait(false);
         }
 
-        var classification = KeywordClassifier.Classify(items, presets);
-
         // 選んだ向きでの寸法（90°/270° は縦横が入れ替わる）。
         var (w, h) = turns % 2 == 0 ? (page.Width, page.Height) : (page.Height, page.Width);
+        var classification = KeywordClassifier.Classify(items, presets, AllowsCardTypes(flatPage, w, h));
         if (NeedsCardResample(classification.Type, w, h, tuning))
         {
             ct.ThrowIfCancellationRequested();
@@ -76,6 +75,19 @@ public static class PageAnalyzer
     /// ID-1 の再 OCR をする条件: 種別が ID-1 カード・横長（幅 &gt; 高さ）・長短比が CardAspect から許容を超えてずれている
     /// （<see cref="CardFrame.IsCardAspect"/> の否定＝境界ちょうどはずれていない扱い）。縦長の画像はしない（§10.13）。
     /// </summary>
+    /// カード類を種別の候補にしてよいか（0.3.2・Mac 0.3.0 の MaskingPipeline.allowsCardTypes と同じ規則）。
+    /// PDF 由来のページ（flatPage）で、縦横比が ID-1（85.60/53.98）から 8% 以上離れている＝紙そのもの（A4・レター等）なら false。
+    /// ページの中のカードを切り抜いたページはカードの縦横比になるので true のまま。写真は常に true。
+    internal static bool AllowsCardTypes(bool flatPage, int width, int height)
+    {
+        if (!flatPage) return true;
+        var longSide = Math.Max(width, height);
+        var shortSide = Math.Min(width, height);
+        if (shortSide <= 0) return true;
+        const double id1 = 85.60 / 53.98;
+        return Math.Abs((double)longSide / shortSide - id1) / id1 < 0.08;
+    }
+
     internal static bool NeedsCardResample(DocumentType type, int width, int height, PipelineTuning tuning) =>
         type.IsId1Card() && width > height && !CardFrame.IsCardAspect(width, height, tuning);
 }

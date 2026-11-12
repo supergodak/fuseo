@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <Company>ATI Inc.</Company>
     <Product>Fuseo for Windows</Product>
     <Copyright>Copyright (c) 2026 ATI Inc.</Copyright>

@@ -22,13 +22,16 @@ public static class DocumentTypeExtensions
 /// 照合は OCR 側・キーワード側とも <see cref="OcrText.ForKeywords"/> を通した文字列どうし。全スコア 0 なら generic。
 /// **文字の多い画像のゲート**（Mac 2026-10-09 dogfood）: 観測数が <see cref="MaxCardObservations"/> を超えたら
 /// カード類は候補にせず、それ以外も異なるキーワード 2 語以上の一致を要する。
+/// **紙の大きさの PDF ページ（0.3.2・Mac 0.3.0 と同じ）**: 呼び出し側が <c>allowCards: false</c> を渡すとカード類を候補にしない
+/// （「個人番号」欄のある A4 の申告書がマイナンバーカード（裏）になり、番号法の注意と位置推定の候補が出ていた）。
 /// </summary>
 public static class KeywordClassifier
 {
     /// <summary>カードとみなせる OCR 観測数の上限（実物カード 13〜32 観測に余裕を持たせた値・Mac と同じ）。</summary>
     public const int MaxCardObservations = 80;
 
-    public static ClassificationResult Classify(IReadOnlyList<OcrItem> ocr, IReadOnlyList<DocumentPreset> presets)
+    public static ClassificationResult Classify(IReadOnlyList<OcrItem> ocr, IReadOnlyList<DocumentPreset> presets,
+                                                bool allowCards = true)
     {
         var textHeavy = ocr.Count > MaxCardObservations;
         // OrderByDescending は安定（同点はプリセットの順のまま）。
@@ -38,6 +41,7 @@ public static class KeywordClassifier
         foreach (var c in scored)
         {
             if (c.Score <= 0) continue;
+            if (!allowCards && c.Type.IsId1Card()) continue;
             if (textHeavy && (c.Type.IsId1Card() || c.Hits < 2)) continue;
             return new ClassificationResult(c.Type, c.Score, ranking);
         }

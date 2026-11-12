@@ -131,4 +131,15 @@ public class KeywordClassifierTests
     [InlineData(DocumentType.JuminhyoMyNumber, false)]
     [InlineData(DocumentType.Generic, false)]
     public void IsId1Card_MatchesMac(DocumentType type, bool expected) => Assert.Equal(expected, type.IsId1Card());
+
+    [Fact]
+    public void AllowCardsFalse_SkipsCardTypes_RankingUnchanged()
+    {
+        var presets = new[] { Preset(DocumentType.MyNumberCardBack, [("個人番号", 6)]), Preset(DocumentType.Generic, []) };
+        var ocr = new[] { Item("個人番号", 0.1, 0.1, w: 0.3) };
+        Assert.Equal(DocumentType.MyNumberCardBack, KeywordClassifier.Classify(ocr, presets).Type);
+        var gated = KeywordClassifier.Classify(ocr, presets, allowCards: false);
+        Assert.Equal(DocumentType.Generic, gated.Type);
+        Assert.Equal(DocumentType.MyNumberCardBack, gated.Ranking[0].Type);
+    }
 }

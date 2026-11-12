@@ -57,10 +57,10 @@ public class AnalysisWiringTests
     private static bool IsRed(PageBitmap b, int x, int y) => b.GetPixel(x, y) is (0, 0, 255, 255);
 
     /// <summary>40×20 の灰色地で、左下の隅だけ赤い画像（時計回りに 1 回すと赤が左上に来る）。</summary>
-    private static PageBitmap MarkedBottomLeft()
+    private static PageBitmap MarkedBottomLeft(int height = 20)
     {
-        var bmp = PageBitmap.Solid(40, 20, 200, 200, 200);
-        for (var y = 16; y < 20; y++)
+        var bmp = PageBitmap.Solid(40, height, 200, 200, 200);
+        for (var y = height - 4; y < height; y++)
             for (var x = 0; x < 4; x++) bmp.SetPixel(x, y, 0, 0, 255, 255);
         return bmp;
     }
@@ -270,7 +270,8 @@ public class AnalysisWiringTests
     {
         // 正立の向き（赤が左上）以外では何も読めない。取り込み時は PDF（向きを判定しない）なので読めない。
         IReadOnlyList<OcrItem> Read(PageBitmap b) => IsRed(b, 1, 1) ? MyNumberBackOcr() : [];
-        var source = new FakePageSource { Handler = _ => [new SourcePage(MarkedBottomLeft(), "doc.pdf", 0, true)] };
+        // カードの縦横比（40×25＝1.6）の PDF ページ。紙の大きさの PDF ページはカード類と判定しない（0.3.2）ので、カードの形にしておく。
+        var source = new FakePageSource { Handler = _ => [new SourcePage(MarkedBottomLeft(25), "doc.pdf", 0, true)] };
         var (vm, ocr, _) = Vm(Read, source: source);
         await vm.ImportAsync(["doc.pdf"]);
         var p = vm.SelectedPage!.State;

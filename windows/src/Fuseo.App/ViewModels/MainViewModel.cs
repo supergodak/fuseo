@@ -226,7 +226,8 @@ public sealed partial class MainViewModel : ObservableObject
         var recognizer = _recognizer ?? throw new InvalidOperationException("文字認識が使えない");
         var presets = _presetList;
         var rotation = state.Rotation;
-        var analysis = await Task.Run(() => PageAnalyzer.AnalyzeAsync(state.Base, recognizer, presets, detectUpright: false, CancellationToken.None));
+        var analysis = await Task.Run(() => PageAnalyzer.AnalyzeAsync(state.Base, recognizer, presets, detectUpright: false, CancellationToken.None,
+                                                                   flatPage: state.FromPdf));
         return (state.Findings with { OcrTurns = rotation, Ocr = analysis.Ocr }, analysis.Classification.Type);
     }
 
@@ -529,7 +530,7 @@ public sealed partial class MainViewModel : ObservableObject
                     try
                     {
                         analysis = await PageAnalyzer.AnalyzeAsync(page.Bitmap, ocr, presets, detectUpright: !page.FromPdf,
-                                                                   CancellationToken.None).ConfigureAwait(false);
+                                                                   CancellationToken.None, flatPage: page.FromPdf).ConfigureAwait(false);
                     }
                     catch (Exception e) when (e is not OutOfMemoryException) { bad = true; Log("文字の読み取り", i, e); }
                 }
