@@ -64,8 +64,8 @@ public struct VisionRectifier: DocumentRectifier {
             rectified = Self.perspectiveCorrect(CIImage(cgImage: original), quad: Quad(observation: obs))
             isRectified = true
             confidence = obs.confidence
-        } else if options.documentDetection == .insetOnly {
-            // 平面ページ（PDF 等）: ページの中に小さな書類が無ければ、ページそのものが書類（失敗ではない）
+        } else if options.documentDetection == .insetOnly || options.documentDetection == .scanned {
+            // 平面ページ（PDF 等）・スキャナで補正済みの画像: 中に小さな書類が無ければ、画像そのものが書類（失敗ではない）
             rectified = CIImage(cgImage: original)
             isRectified = true
             confidence = nil

@@ -18,6 +18,11 @@ public struct AnalysisOptions: Sendable, Equatable, Codable {
         /// 観測がページの大半（`insetMaxArea` 超）を占める＝ページそのものが書類なら、そのまま使う。
         /// 検出なし・不採用でも「失敗」ではなく `rectified=true` として扱う（余計な警告を出さない）。
         case insetOnly
+        /// カメラのスキャナ（VisionKit）で**補正済み**の画像向け（iOS 1.2.6）。補正済みのカードにもう一度検出を掛けると、
+        /// 磁気ストライプや印刷の境目を縁と見まちがえた四角（実物 5 枚で面積 0.76〜0.94・信頼度 0.9 超）が返り、
+        /// 二重の台形補正でカードが欠ける。スキャナが広く撮りすぎたとき（書類が明らかに小さい＝面積 `scannedMaxArea` 以下。
+        /// 写真の実測は 0.15〜0.39）だけ切り抜き、それ以外は画像をそのまま使う。不採用でも `rectified=true`（警告を出さない）。
+        case scanned
         /// 検出しない（復元した基準画像など、既に切り抜き済みの入力）。
         case off
     }
@@ -31,6 +36,8 @@ public struct AnalysisOptions: Sendable, Equatable, Codable {
     /// `.insetOnly` で「ページの中の書類」とみなす面積の上限（正規化・画像全体=1）。
     /// 文字だけの A4 ページは観測が 0.9 超になる（実測 0.93）ので、それより小さいものだけ切り抜く。
     public var insetMaxArea: Double
+    /// `.scanned` で切り抜く面積の上限。補正済みの画像の誤検出（0.76 以上）と、広く撮った写真（0.39 以下）の間。
+    public static let scannedMaxArea = 0.6
 
     public init(detectUpright: Bool = true, recognizeText: Bool = true,
                 documentDetection: DocumentDetection = .auto, insetMaxArea: Double = 0.85) {
@@ -57,6 +64,8 @@ public struct AnalysisOptions: Sendable, Equatable, Codable {
     /// PDF 由来の平面ページで、文字認識も省略（長文書の高速取り込み）。
     public static let flatPageWithoutText = AnalysisOptions(detectUpright: false, recognizeText: false,
                                                             documentDetection: .insetOnly)
+    /// カメラのスキャナで撮ったページ向け: 向きの判定と文字認識はする。切り抜きは `.scanned` の規則。
+    public static let scanned = AnalysisOptions(detectUpright: true, recognizeText: true, documentDetection: .scanned)
     /// 復元した基準画像向け: 切り抜き済み・正立済みなので検出も正立判定もしない。
     public static let restored = AnalysisOptions(detectUpright: false, recognizeText: true,
                                                  documentDetection: .off)
@@ -70,6 +79,7 @@ public struct AnalysisOptions: Sendable, Equatable, Codable {
         case .off: return false
         case .auto: return confidence >= minConfidence && area >= minArea
         case .insetOnly: return confidence >= minConfidence && area >= minArea && area <= insetMaxArea
+        case .scanned: return confidence >= minConfidence && area >= minArea && area <= Self.scannedMaxArea
         }
     }
 }

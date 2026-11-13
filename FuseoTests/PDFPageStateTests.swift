@@ -198,6 +198,19 @@ final class PDFPageStateTests: XCTestCase {
         XCTAssertEqual(fake.lastOptions, .default, "画像は従来どおり正立判定も文字認識も行う")
     }
 
+    /// カメラのスキャナで撮ったページ（iOS 1.2.6）: 補正済みなので書類の再検出を控える。回転などの再解析でも同じ。
+    func test_processFiles_scannedPage_usesScannedOptions_andKeepsThemOnReanalysis() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(fake)
+        await state.processFiles([IntakeFile(url: URL(fileURLWithPath: "/tmp/scan-1.png"), isScanned: true)])
+        XCTAssertEqual(fake.lastOptions, .scanned)
+        XCTAssertFalse(state.pages[0].isFlatSource, "PDF ではない")
+        XCTAssertEqual(state.pages[0].analysisOptions, .scanned)
+
+        await state.performRotate(page: state.pages[0])
+        XCTAssertEqual(fake.lastOptions, .scanned, "回転の再解析でも再検出を控えたまま")
+    }
+
     func test_processFiles_pdfPageWithoutText_usesFlatPageWithoutText() async {
         let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
         let state = makeState(fake)

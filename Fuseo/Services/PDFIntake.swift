@@ -17,11 +17,14 @@ struct IntakeFile: Equatable, Sendable {
     /// 文字認識を行うか（WP-10b）。ページ数の多い PDF でユーザーが「文字認識せずに進む」を
     /// 選んだときだけ false になる（画像は常に true）。
     let recognizeText: Bool
+    /// カメラのスキャナ（VisionKit）で撮った補正済みの画像か（iOS）。true なら書類の再検出を控える（`.scanned`）。
+    let isScanned: Bool
 
-    init(url: URL, isFlatPage: Bool = false, recognizeText: Bool = true) {
+    init(url: URL, isFlatPage: Bool = false, recognizeText: Bool = true, isScanned: Bool = false) {
         self.url = url
         self.isFlatPage = isFlatPage
         self.recognizeText = recognizeText
+        self.isScanned = isScanned
     }
 
     /// このファイルの解析オプション（WP-10b）。
@@ -30,6 +33,7 @@ struct IntakeFile: Equatable, Sendable {
     /// （機能の欠落なし・OCR 1回で済むので約1/4の時間）。文字認識まで省く場合は
     /// `.flatPageWithoutText`。画像は従来どおり `.default`。
     var analysisOptions: AnalysisOptions {
+        if isScanned { return .scanned }
         guard isFlatPage else { return .default }
         return recognizeText ? .flatPage : .flatPageWithoutText
     }

@@ -193,6 +193,29 @@ final class DocumentDetectionPolicyTests: XCTestCase {
         XCTAssertFalse(flat.acceptsDocumentQuad(confidence: 0.99, area: 0.90), "上限（0.85）を超える観測は切り抜かない")
     }
 
+    /// カメラのスキャナで補正済みの画像（iOS 1.2.6）: 補正済みのカードへの再検出（実物 5 枚で面積 0.76〜0.94・信頼度 0.90〜0.99）は
+    /// 採らない。スキャナが広く撮りすぎて書類が小さいとき（写真の実測 0.15〜0.39）だけ切り抜く。
+    func test_scanned_rejectsRedetectionOnAlreadyCorrectedCard_butCropsSmallDocument() {
+        let scanned = AnalysisOptions.scanned
+        XCTAssertEqual(scanned.documentDetection, .scanned)
+        XCTAssertTrue(scanned.detectUpright); XCTAssertTrue(scanned.recognizeText)
+        for (conf, area) in [(0.99, 0.758), (0.94, 0.890), (0.95, 0.935), (0.90, 0.853)] {
+            XCTAssertFalse(scanned.acceptsDocumentQuad(confidence: Float(conf), area: area), "補正済みカードの再検出 area=\(area)")
+            XCTAssertTrue(AnalysisOptions.default.acceptsDocumentQuad(confidence: Float(conf), area: area), "前提: 写真の規則なら採ってしまう")
+        }
+        XCTAssertTrue(scanned.acceptsDocumentQuad(confidence: 0.99, area: 0.39), "広く撮れてカードが小さいときは切り抜く")
+        XCTAssertTrue(scanned.acceptsDocumentQuad(confidence: 0.86, area: 0.15))
+        XCTAssertFalse(scanned.acceptsDocumentQuad(confidence: 0.99, area: 0.61), "上限 0.6 を超えたら切り抜かない")
+        XCTAssertFalse(scanned.acceptsDocumentQuad(confidence: 0.00, area: 0.30), "低信頼は不採用")
+    }
+
+    func test_scanned_roundTripsThroughJSON_andCardTypesStayAllowed() throws {
+        let back = try JSONDecoder().decode(AnalysisOptions.self, from: try JSONEncoder().encode(AnalysisOptions.scanned))
+        XCTAssertEqual(back, .scanned)
+        // スキャナで撮ったカードは縦横比が規格から少しずれても、カード類の判定を止めない（PDF の紙ページの規則は当てない）
+        XCTAssertTrue(MaskingPipeline.allowsCardTypes(options: .scanned, pixelSize: CGSize(width: 2000, height: 1100)))
+    }
+
     func test_off_neverAccepts() {
         XCTAssertFalse(AnalysisOptions.restored.acceptsDocumentQuad(confidence: 0.99, area: 0.30))
         XCTAssertEqual(AnalysisOptions.restored.documentDetection, .off)
