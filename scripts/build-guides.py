@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""書類別の伏せ方ガイド（site/guide/*.html）を作る。  python3 scripts/build-guides.py
+"""書類別の伏せ方ガイド（site/guide/*.html）と使い方（site/manual/*.html）を作る。  python3 scripts/build-guides.py
+使い方は docs/user-manual*.md を HTML にする（要 markdown: uv pip install markdown。無ければ使い方だけ飛ばす）。
 内容の根拠は docs/zenn/article2-guide.md・article4-minimize.md（確認済みの整理）。site/ は git 管理外。"""
 import html, os, json
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'site', 'guide')
@@ -16,7 +17,7 @@ HEADER = '''<header class="wrap">
       <a href="../">トップ</a>
       <a href="../features.html">機能のご紹介</a>
       <a href="../guide/" aria-current="page">書類別ガイド</a>
-      <a href="https://github.com/supergodak/fuseo/blob/main/docs/user-manual.md">使い方</a>
+      <a href="../manual/">使い方</a>
       <a href="../#download">ダウンロード</a>
       <a href="https://github.com/supergodak/fuseo">GitHub</a>
     </nav>
@@ -27,7 +28,7 @@ FOOTER = '''<footer class="wrap">
     <a href="../">トップ</a>
     <a href="../features.html">機能のご紹介</a>
     <a href="../guide/">書類別の伏せ方ガイド</a>
-    <a href="https://github.com/supergodak/fuseo/blob/main/docs/user-manual.md">使い方</a>
+    <a href="../manual/">使い方</a>
     <a href="https://github.com/supergodak/fuseo">GitHub</a>
     <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシー</a>
     <a href="https://tameo.ati-mirai.co.jp">姉妹アプリ Tameo</a>
@@ -76,6 +77,12 @@ th,td{padding:10px 12px;border-bottom:1px solid #DCE6E3;text-align:left;vertical
 .card{display:block;background:var(--porcelain);border:1px solid var(--line);border-radius:10px;padding:16px 18px;color:var(--sumi)}
 .card:hover{border-color:var(--china);text-decoration:none}.card b{display:block;margin-bottom:2px}.card span{font-size:.85rem;color:var(--sumi-soft)}
 .related{font-size:.92rem}
+h3{font-size:1.05rem;margin:26px 0 8px}
+code{font-family:"SF Mono",Menlo,monospace;font-size:.88em;background:var(--porcelain);border:1px solid var(--line);border-radius:4px;padding:1px 5px;word-break:break-all}
+hr{border:0;border-top:1px solid var(--line);margin:36px 0 12px}
+.manual li>ul,.manual li>ol{margin-top:.2em}
+.pick{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}
+@media (max-width:700px){.pick{grid-template-columns:1fr}}
 footer{padding:44px 0 56px;font-size:.82rem;color:var(--sumi-soft)}
 @media (max-width:700px){.cards{grid-template-columns:1fr}}
 """
@@ -302,3 +309,87 @@ open(os.path.join(ROOT, 'index.html'), 'w').write(index())
 for p in PAGES:
     open(os.path.join(ROOT, p['slug'] + '.html'), 'w').write(page(p))
 print('pages:', 1 + len(PAGES), [p['slug'] for p in PAGES])
+
+
+# ---- 使い方（docs/user-manual*.md → site/manual/）----
+import re
+MROOT = os.path.join(ROOT, '..', 'manual')
+MBASE = 'https://fuseo.ati-mirai.co.jp/manual/'
+MANUALS = [
+    dict(src='user-manual.md', slug='mac', short='Mac 版', title='Fuseo Mac 版の使い方', sub='macOS 14 以降',
+         desc='Fuseo Mac 版の使い方。読み込み、確認画面の見かた、手で塗る、書類への文字入れ、PDF、一括処理、書き出し、作業の保存と再開。'),
+    dict(src='user-manual-windows.md', slug='windows', short='Windows 版', title='Fuseo for Windows の使い方', sub='Windows 10 / 11',
+         desc='Fuseo for Windows の使い方。入手と起動、画面の見かた、切り抜き・回転、書類への文字入れ、フォルダの一括処理、書き出し、保存先。'),
+    dict(src='user-manual-ios.md', slug='ios', short='iPhone 版', title='Fuseo iPhone 版の使い方', sub='iOS 17 以降',
+         desc='Fuseo iPhone 版の使い方。カメラ・写真・ファイルからの読み込み、確認と塗り、書き出しと共有、作業の保存と再開、設定。'),
+]
+
+def md_to_html(text):
+    import markdown
+    # サイト内のリンクに直す
+    text = text.replace('(user-manual-windows.md)', '(windows.html)').replace('(user-manual-ios.md)', '(ios.html)').replace('(user-manual.md)', '(./)')
+    text = text.replace('https://fuseo.ati-mirai.co.jp/features.html', '../features.html')
+    # 段落の直後に続く箇条書き（空行なし）を箇条書きとして読ませる
+    out, prev = [], ''
+    for line in text.split('\n'):
+        nested = re.match(r'^( +)(([-*]|\d+\.)\s.*)$', line)     # 入れ子の箇条書き: 字下げを 2 倍にする（markdown は 4 つ必要）
+        if nested:
+            line = nested.group(1) * 2 + nested.group(2)
+        is_item = re.match(r'^\s*([-*]|\d+\.)\s', line)
+        prev_item = re.match(r'^\s*([-*]|\d+\.)\s', prev) or prev.startswith(' ')
+        if is_item and prev.strip() and not prev_item:
+            out.append('')
+        out.append(line); prev = line
+    body = markdown.markdown('\n'.join(out), extensions=['tables', 'sane_lists'])
+    body = re.sub(r'<h1>.*?</h1>', '', body, count=1, flags=re.S)       # 題名はページ側で出す
+    return body.replace('<table>', '<div class="tablewrap"><table>').replace('</table>', '</table></div>')
+
+def mhead(title, desc, url):
+    return f"""<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(title)} | Fuseo</title><meta name="description" content="{html.escape(desc)}">
+<link rel="icon" type="image/png" href="../assets/icon-256.png"><link rel="canonical" href="{url}">
+<meta property="og:title" content="{html.escape(title)}"><meta property="og:description" content="{html.escape(desc)}"><meta property="og:type" content="article"><meta property="og:url" content="{url}"><meta property="og:image" content="https://fuseo.ati-mirai.co.jp/assets/icon.png">
+<link rel="stylesheet" href="../guide/guide.css"></head><body>
+{HEADER.replace('<a href="../guide/" aria-current="page">', '<a href="../guide/">').replace('<a href="../manual/">', '<a href="../manual/" aria-current="page">')}
+"""
+
+def build_manuals():
+    try:
+        import markdown  # noqa: F401
+    except ImportError:
+        print('manual: markdown が無いので飛ばした（uv pip install markdown）'); return
+    docs = os.path.join(ROOT, '..', '..', 'docs')
+    os.makedirs(MROOT, exist_ok=True)
+    others = lambda cur: ' ・ '.join(f'<a href="{m["slug"]}.html">{m["short"]}</a>' for m in MANUALS if m['slug'] != cur)
+    for m in MANUALS:
+        body = md_to_html(open(os.path.join(docs, m['src'])).read())
+        page_html = mhead(m['title'], m['desc'], MBASE + m['slug'] + '.html') + f"""<main class="wrap manual">
+<p class="crumb"><a href="../">Fuseo</a> › <a href="./">使い方</a> › {m['short']}</p>
+<div class="eyebrow"><span class="bar"></span><span class="label">MANUAL</span></div>
+<h1 class="mincho">{html.escape(m['title'])}</h1>
+<p class="crumb" style="margin-top:0">ほかの端末: {others(m['slug'])} ／ 画面つきの紹介は <a href="../features.html">機能のご紹介</a></p>
+{body}
+<p class="crumb">最終更新: {UPDATED}</p>
+</main>
+{FOOTER}
+</body></html>
+"""
+        open(os.path.join(MROOT, m['slug'] + '.html'), 'w').write(page_html)
+    cards = ''.join(f'<a class="card" href="{m["slug"]}.html"><b>{m["short"]}</b><span>{m["sub"]}</span></a>' for m in MANUALS)
+    idx = mhead('Fuseo の使い方（Mac・Windows・iPhone）', 'Fuseo の使い方ガイド。Mac 版・Windows 版・iPhone 版の操作を、端末ごとにまとめました。', MBASE) + f"""<main class="wrap">
+<p class="crumb"><a href="../">Fuseo</a> › 使い方</p>
+<div class="eyebrow"><span class="bar"></span><span class="label">MANUAL</span></div>
+<h1 class="mincho">使い方</h1>
+<p>お使いの端末を選んでください。どの端末でも、流れは「読み込む → 塗る場所を確かめる → 書き出す」です。</p>
+<div class="pick">{cards}</div>
+<p>端末ごとにできることの違いと画面は「<a href="../features.html">機能のご紹介</a>」に、書類ごとにどの欄を伏せるかは「<a href="../guide/">書類別の伏せ方ガイド</a>」にまとめています。</p>
+{NOTE}
+</main>
+{FOOTER}
+</body></html>
+"""
+    open(os.path.join(MROOT, 'index.html'), 'w').write(idx)
+    print('manual pages:', 1 + len(MANUALS))
+
+build_manuals()
