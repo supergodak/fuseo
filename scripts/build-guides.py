@@ -6,6 +6,35 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'site', 'g
 BASE = 'https://fuseo.ati-mirai.co.jp/guide/'
 UPDATED = '2026-11-14'
 
+# 共通ナビ・フッタ（トップ・機能のご紹介と同じ並び）
+HEADER = '''<header class="wrap">
+  <div class="nav">
+    <a href="../"><img src="../assets/icon-256.png" alt="" width="36" height="36"></a>
+    <a class="brand" href="../">Fuseo（ふせお）</a>
+    <span class="spacer"></span>
+    <nav class="navlinks" aria-label="サイト内">
+      <a href="../">トップ</a>
+      <a href="../features.html">機能のご紹介</a>
+      <a href="../guide/" aria-current="page">書類別ガイド</a>
+      <a href="https://github.com/supergodak/fuseo/blob/main/docs/user-manual.md">使い方</a>
+      <a href="../#download">ダウンロード</a>
+      <a href="https://github.com/supergodak/fuseo">GitHub</a>
+    </nav>
+  </div>
+</header>'''
+FOOTER = '''<footer class="wrap">
+  <div class="links">
+    <a href="../">トップ</a>
+    <a href="../features.html">機能のご紹介</a>
+    <a href="../guide/">書類別の伏せ方ガイド</a>
+    <a href="https://github.com/supergodak/fuseo/blob/main/docs/user-manual.md">使い方</a>
+    <a href="https://github.com/supergodak/fuseo">GitHub</a>
+    <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシー</a>
+    <a href="https://tameo.ati-mirai.co.jp">姉妹アプリ Tameo</a>
+  </div>
+  <div>© 2026 ATI Inc. (ATI株式会社) · MIT License</div>
+</footer>'''
+
 CSS = """
 :root{--celadon:#D5E2DF;--celadon-deep:#C2D5D0;--porcelain:#F7FAF9;--line:#B9CCC7;--china:#3B6CB4;--china-ink:#28518A;--sumi:#171B1E;--sumi-soft:#4A5359;--sand:#F3EAD4}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -14,9 +43,18 @@ body{background:var(--celadon);color:var(--sumi);font-family:"Hiragino Kaku Goth
 .wrap{max-width:760px;margin:0 auto;padding:0 24px}
 a{color:var(--china);text-decoration:none}a:hover{color:var(--china-ink);text-decoration:underline}
 :focus-visible{outline:3px solid var(--china);outline-offset:2px}
-header.wrap{padding:28px 24px 8px;max-width:960px}
-.nav{display:flex;align-items:center;gap:12px}.nav img{width:36px;height:36px;border-radius:8px}
-.nav .brand{font-weight:700;letter-spacing:.06em;color:var(--sumi)}.nav .spacer{flex:1}.nav a.sub{font-size:.9rem;color:var(--sumi-soft)}
+header.wrap{max-width:960px;padding:28px 24px 12px}
+/* 共通ナビ（トップ・機能のご紹介・書類別ガイドで同じ並び。いまのページは太字＋下線） */
+.nav{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
+.nav img{width:36px;height:36px;border-radius:8px;display:block}
+.nav .brand{font-weight:700;font-size:1.05rem;letter-spacing:.06em;color:var(--sumi)}
+.nav a.brand:hover{text-decoration:none;color:var(--sumi)}
+.nav .spacer{flex:1}
+.navlinks{display:flex;flex-wrap:wrap;align-items:center;gap:2px 18px;font-size:.9rem}
+.navlinks a{color:var(--sumi-soft);padding:4px 0;border-bottom:2px solid transparent}
+.navlinks a:hover{color:var(--china-ink);text-decoration:none;border-bottom-color:var(--line)}
+.navlinks a[aria-current="page"]{color:var(--sumi);font-weight:700;border-bottom-color:var(--sumi)}
+footer .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:10px}
 .crumb{font-size:.82rem;color:var(--sumi-soft);margin:26px 0 10px}
 .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .eyebrow .bar{width:34px;height:.85em;background:var(--sumi);border-radius:2px}.eyebrow .label{font-size:.78rem;letter-spacing:.26em;color:var(--sumi-soft)}
@@ -38,7 +76,7 @@ th,td{padding:10px 12px;border-bottom:1px solid #DCE6E3;text-align:left;vertical
 .card{display:block;background:var(--porcelain);border:1px solid var(--line);border-radius:10px;padding:16px 18px;color:var(--sumi)}
 .card:hover{border-color:var(--china);text-decoration:none}.card b{display:block;margin-bottom:2px}.card span{font-size:.85rem;color:var(--sumi-soft)}
 .related{font-size:.92rem}
-footer{padding:44px 0 56px;font-size:.82rem;color:var(--sumi-soft)}footer .links{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:10px}
+footer{padding:44px 0 56px;font-size:.82rem;color:var(--sumi-soft)}
 @media (max-width:700px){.cards{grid-template-columns:1fr}}
 """
 
@@ -204,7 +242,7 @@ def page(p):
 <link rel="stylesheet" href="guide.css">
 <script type="application/ld+json">{ld}</script>
 </head><body>
-<header class="wrap"><div class="nav"><a href="../"><img src="../assets/icon-256.png" alt="" width="36" height="36"></a><a class="brand" href="../">Fuseo（ふせお）</a><span class="spacer"></span><a class="sub" href="./">書類別ガイド</a><a class="sub" href="../features.html">機能のご紹介</a></div></header>
+{HEADER}
 <main class="wrap">
 <p class="crumb"><a href="../">Fuseo</a> › <a href="./">書類別の伏せ方ガイド</a> › {html.escape(p['short'])}</p>
 <div class="eyebrow"><span class="bar"></span><span class="label">GUIDE</span></div>
@@ -218,7 +256,7 @@ def page(p):
 <ul class="related">{related}</ul>
 <p class="crumb">最終更新: {UPDATED}</p>
 </main>
-<footer class="wrap"><div class="links"><a href="../">トップ</a><a href="./">書類別ガイド</a><a href="../features.html">機能のご紹介</a><a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシー</a></div><div>© 2026 ATI Inc. (ATI株式会社)</div></footer>
+{FOOTER}
 </body></html>
 """
 
@@ -232,7 +270,7 @@ def index():
 <link rel="icon" type="image/png" href="../assets/icon-256.png"><link rel="canonical" href="{BASE}">
 <meta property="og:title" content="{t}"><meta property="og:description" content="{d}"><meta property="og:type" content="website"><meta property="og:url" content="{BASE}"><meta property="og:image" content="https://fuseo.ati-mirai.co.jp/assets/icon.png">
 <link rel="stylesheet" href="guide.css"></head><body>
-<header class="wrap"><div class="nav"><a href="../"><img src="../assets/icon-256.png" alt="" width="36" height="36"></a><a class="brand" href="../">Fuseo（ふせお）</a><span class="spacer"></span><a class="sub" href="../features.html">機能のご紹介</a></div></header>
+{HEADER}
 <main class="wrap">
 <p class="crumb"><a href="../">Fuseo</a> › 書類別の伏せ方ガイド</p>
 <div class="eyebrow"><span class="bar"></span><span class="label">GUIDE</span></div>
@@ -254,7 +292,7 @@ def index():
 {CTA.format(fit='書類の種類を判定して、上の表の欄を塗る候補として示します。')}
 <p class="crumb">最終更新: {UPDATED}</p>
 </main>
-<footer class="wrap"><div class="links"><a href="../">トップ</a><a href="../features.html">機能のご紹介</a><a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシー</a></div><div>© 2026 ATI Inc. (ATI株式会社)</div></footer>
+{FOOTER}
 </body></html>
 """
 
