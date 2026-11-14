@@ -77,7 +77,7 @@ Windows 10（1809 以降）/ Windows 11。x64 版と ARM64 版があります。
   Fuseo.exe に含まれる Microsoft の部品（Windows SDK for .NET・文字認識と顔検出の呼び出しに使用）は MIT の対象外で、
   Microsoft の Windows SDK のライセンス条項に従います。Fuseo.exe を使う・配る場合はその条項にも従ってください。
 - Web: https://fuseo.ati-mirai.co.jp
-- 不具合・セキュリティの連絡: fuseo@ati-mirai.co.jp
+- 不具合の報告: https://github.com/supergodak/fuseo/issues
 - ソースコード: https://github.com/supergodak/fuseo
 ATI株式会社
 
@@ -135,4 +135,4 @@ License: MIT (LICENSE.txt). Bundled components: THIRD-PARTY-NOTICES.txt.
 The Microsoft components inside Fuseo.exe (Windows SDK for .NET, used to call text recognition and face detection)
 are not covered by the MIT License; they are subject to Microsoft's Windows SDK license terms, which also apply
 when you use or redistribute Fuseo.exe.
-Web: https://fuseo.ati-mirai.co.jp  Contact: fuseo@ati-mirai.co.jp  ATI Inc.
+Web: https://fuseo.ati-mirai.co.jp  Issues: https://github.com/supergodak/fuseo/issues  ATI Inc.

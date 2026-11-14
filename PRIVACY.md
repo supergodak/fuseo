@@ -64,7 +64,7 @@ Updated versions of this policy are published with each release and dated above.
 
 ### 12. Contact
 
-ATI Inc. (ATI株式会社) — https://fuseo.ati-mirai.co.jp · security & privacy contact: fuseo@ati-mirai.co.jp
+ATI Inc. (ATI株式会社) — https://fuseo.ati-mirai.co.jp · contact: https://github.com/supergodak/fuseo/issues (security reports: see SECURITY.md)
 
 ---
 
@@ -123,4 +123,4 @@ Fuseo のコアはオープンソース（MIT）です。書類の処理にネ�
 
 ### 12. 連絡先
 
-ATI株式会社 — https://fuseo.ati-mirai.co.jp ・セキュリティ／プライバシー連絡先：fuseo@ati-mirai.co.jp
+ATI株式会社 — https://fuseo.ati-mirai.co.jp ・連絡先：https://github.com/supergodak/fuseo/issues （セキュリティの報告は SECURITY.md の手順で）

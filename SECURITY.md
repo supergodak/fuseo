@@ -4,8 +4,7 @@
 
 Fuseo handles ID-document data entirely on-device, but security reports are always welcome — especially anything that could cause a redaction to be recoverable or a document to leave the device.
 
-- **Preferred:** open a [private security advisory](https://github.com/supergodak/fuseo/security/advisories/new) on GitHub.
-- Or email: fuseo@ati-mirai.co.jp
+- Open a [private security advisory](https://github.com/supergodak/fuseo/security/advisories/new) on GitHub.
 
 Please **do not** open a public issue for security problems. We aim to acknowledge reports within a few days.
 
@@ -28,8 +27,7 @@ Fuseo is pre-1.0; only the latest release is supported. Please update before rep
 
 Fuseo は本人確認書類のデータを端末内のみで扱いますが、セキュリティ報告は歓迎します。特に「黒塗りが復元できてしまう」「書類が端末外に出てしまう」たぐいの問題は最優先で対応します。
 
-- **推奨:** GitHub の [非公開セキュリティ勧告](https://github.com/supergodak/fuseo/security/advisories/new) を作成してください。
-- またはメール: fuseo@ati-mirai.co.jp
+- GitHub の [非公開セキュリティ勧告](https://github.com/supergodak/fuseo/security/advisories/new) を作成してください。
 
 セキュリティ問題は**公開 Issue にしないで**ください。数日以内の応答を目指します。報告時はバージョン（About の `v0.1.0 (build N)`）・macOS バージョン・再現手順を添えてください。
 

@@ -113,4 +113,4 @@ PowerShell で `Get-FileHash .\Fuseo-win-<版>-x64.zip` を実行し、表示さ
 - Fuseo.exe に含まれる Microsoft の部品（Windows SDK for .NET）は MIT の対象外で、Microsoft の Windows SDK のライセンス条項に従います
 
 ---
-Fuseo は無料・オープンソースのソフトウェアです（© ATI株式会社）。不具合の連絡: fuseo@ati-mirai.co.jp
+Fuseo は無料・オープンソースのソフトウェアです（© ATI株式会社）。
