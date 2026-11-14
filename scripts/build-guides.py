@@ -17,6 +17,7 @@ HEADER = '''<header class="wrap">
       <a href="../">トップ</a>
       <a href="../features.html">機能のご紹介</a>
       <a href="../guide/" aria-current="page">書類別ガイド</a>
+      <a href="../collect/">集める方へ</a>
       <a href="../manual/">使い方</a>
       <a href="../#download">ダウンロード</a>
       <a href="https://github.com/supergodak/fuseo">GitHub</a>
@@ -28,6 +29,7 @@ FOOTER = '''<footer class="wrap">
     <a href="../">トップ</a>
     <a href="../features.html">機能のご紹介</a>
     <a href="../guide/">書類別の伏せ方ガイド</a>
+    <a href="../collect/">書類を集める方へ</a>
     <a href="../manual/">使い方</a>
     <a href="https://github.com/supergodak/fuseo">GitHub</a>
     <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシー</a>
@@ -81,6 +83,12 @@ h3{font-size:1.05rem;margin:26px 0 8px}
 code{font-family:"SF Mono",Menlo,monospace;font-size:.88em;background:var(--porcelain);border:1px solid var(--line);border-radius:4px;padding:1px 5px;word-break:break-all}
 hr{border:0;border-top:1px solid var(--line);margin:36px 0 12px}
 .manual li>ul,.manual li>ol{margin-top:.2em}
+.dlrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.tpl{background:var(--porcelain);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+.tpl h3{margin:0 0 4px}.tpl p{margin:.3em 0;font-size:.92rem;color:var(--sumi-soft)}
+.tpl details{margin-top:10px}.tpl summary{cursor:pointer;color:var(--china);font-size:.9rem}
+.tpl pre{white-space:pre-wrap;font-family:inherit;font-size:.86rem;line-height:1.8;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:8px}
+.btn.small{padding:7px 14px;font-size:.88rem;margin:0}
 .pick{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}
 @media (max-width:700px){.pick{grid-template-columns:1fr}}
 footer{padding:44px 0 56px;font-size:.82rem;color:var(--sumi-soft)}
@@ -393,3 +401,212 @@ def build_manuals():
     print('manual pages:', 1 + len(MANUALS))
 
 build_manuals()
+
+
+# ---- 書類を集める方へ（site/collect/）----
+CROOT = os.path.join(ROOT, '..', 'collect')
+CBASE = 'https://fuseo.ati-mirai.co.jp/collect/'
+TPL_FOOT = """
+――――――――――
+このひな形は、ATI株式会社が無償で公開しているものです（https://fuseo.ati-mirai.co.jp/collect/）。
+自由に書き換えて、社内外に配布していただけます。この注記は消してかまいません。
+一般的な整理であり、法的な助言ではありません。必要な欄は手続きごとに違いますので、貴社の手続きに合わせて直してください。"""
+
+TEMPLATES = [
+ dict(slug='nyusha', name='入社・社内手続き用（人事・総務）', file='fuseo-template-nyusha',
+  lead='入社手続きや社内の届出で、書類の写しを出してもらうときの案内文です。',
+  text="""【ご提出書類についてのお願い】
+
+[会社名] [部署名]
+
+[入社手続き／○○の届出]にあたり、次の書類の写しをご提出いただきます。
+当社でお預かりする情報を必要な範囲にとどめるため、ご提出の前に、下の「伏せていただきたい欄」を隠してください。
+
+■ ご提出いただく書類と、伏せていただきたい欄
+（※貴社の手続きに合わせて、不要な行は消し、必要な行を足してください）
+
+1. 身元確認の書類（運転免許証・マイナンバーカードの表面 など）
+   ・伏せる: 運転免許証の裏面の「臓器提供意思表示欄」／マイナンバーカード表面の「臓器提供意思表示欄」
+   ・伏せない: 氏名、住所、生年月日、顔写真、有効期限、免許証裏面の備考欄（住所変更の記載）
+   ・マイナンバーカードの裏面（個人番号の面）は、この書類としては提出しないでください
+
+2. 住所確認の書類（住民票の写し など）
+   ・「個人番号」「本籍」「続柄」の記載がないものを取得してください
+   ・すでに記載のある写しを出す場合は、その欄を伏せてください
+
+3. 健康保険証・資格確認書の写し（身元確認として出す場合）
+   ・伏せる: 保険者番号、記号・番号、QR コード
+   ・伏せない: 氏名、生年月日
+
+4. 給与振込口座の確認（通帳やキャッシュカードの写し）
+   ・必要なのは、金融機関名・支店名・口座種別・口座番号・名義です
+   ・残高や取引の履歴が写ったページは提出しないでください
+
+■ マイナンバー（個人番号）のご提出について
+・マイナンバーは、[当社指定の方法（例: 専用フォーム／封をした書面）]でのみご提出ください
+・メールやチャットに、番号の写った画像を貼り付けないでください
+・上の 1〜4 の書類に、マイナンバーが写り込まないようにしてください
+
+■ 伏せ方
+・紙の場合: 原本の該当箇所に付箋や紙片を重ねてからコピーしてください（原本に直接書き込まないでください）
+・画像や PDF の場合: 上から図形を重ねるだけでは、あとで外せることがあります。画像そのものを黒く塗りつぶし、新しいファイルとして保存してください
+  （例: 無料ソフト「Fuseo」 https://fuseo.ati-mirai.co.jp/ ／スマートフォンの写真編集でも、塗りつぶして別名で保存すれば可）
+
+■ ご不明な点
+どの欄が必要か迷う場合は、伏せる前に[担当: ○○／連絡先]までお問い合わせください。
+"""),
+ dict(slug='moushikomi', name='お申込み・ご契約用（本人確認書類のお願い）', file='fuseo-template-moushikomi',
+  lead='お客様や会員に、本人確認書類の写しを出してもらうときの案内文です（入居申込、会員登録、各種の申込みなど）。',
+  text="""【本人確認書類のご提出についてのお願い】
+
+[事業者名]
+
+[お申込み／ご契約]にあたり、ご本人であることの確認のため、次のいずれかの書類の写し（画像）をご提出ください。
+お預かりする情報を必要な範囲にとどめるため、ご提出の前に、下の「伏せていただきたい欄」を隠してください。
+
+■ ご提出いただける書類と、伏せていただきたい欄
+（※貴社で確認に使う欄に合わせて、書き換えてください）
+
+・運転免許証（表・裏）
+   伏せる: 裏面の「臓器提供意思表示欄」[／免許証番号（当社では確認に使いません）]
+   伏せない: 氏名、住所、生年月日、顔写真、有効期限、裏面の備考欄
+
+・マイナンバーカード（表面のみ）
+   伏せる: 「臓器提供意思表示欄」[／性別]
+   裏面（個人番号の面）は提出しないでください。当社は個人番号をお預かりできません
+
+・健康保険証・資格確認書
+   伏せる: 保険者番号、記号・番号、QR コード
+   伏せない: 氏名、生年月日、住所欄
+
+・住民票の写し（補助書類として）
+   「個人番号」「本籍」「続柄」の記載がないものをご用意ください
+
+■ 伏せ方
+・紙の場合: 原本の該当箇所に付箋や紙片を重ねてからコピーしてください
+・画像や PDF の場合: 上から図形を重ねるだけでは、あとで外せることがあります。画像そのものを黒く塗りつぶし、新しいファイルとして保存してください
+  （例: 無料ソフト「Fuseo」 https://fuseo.ati-mirai.co.jp/ ）
+
+■ 伏せてはいけない欄を伏せた場合
+確認ができないため、再提出をお願いすることがあります。迷う場合は、伏せる前に[窓口／連絡先]までお問い合わせください。
+"""),
+ dict(slug='tantousha', name='担当者用: 受け取った書類に余計な情報が写っていたとき', file='fuseo-template-tantousha',
+  lead='届いた写しに、マイナンバーや保険証の記号・番号などが写っていたときの、社内の手順のたたき台です。',
+  text="""【受け取った書類に、不要な情報が写っていたときの手順（担当者用）】
+
+[会社名] [部署名]　制定: [日付]
+
+■ 対象
+本人確認などの目的で受け取った書類の写し（紙・画像・PDF）に、その手続きでは使わない次の情報が写っていた場合。
+・個人番号（マイナンバー）　※番号を扱う手続き（税・社会保険）で、所定の方法により受け取ったものは除く
+・健康保険証・資格確認書の保険者番号、記号・番号、QR コード
+・[その他、当社で受け取らないと決めた欄: 本籍、続柄、臓器提供意思表示欄 など]
+
+■ 手順
+1. 気づいた時点で、そのファイル（紙）を、共有フォルダやチャットなどに転送・複製しない
+2. 次のどちらかで対応する
+   (a) 該当の欄を、復元できない形で塗りつぶした写しを作り、元のファイル（紙）は削除（裁断）する
+   (b) 元のファイル（紙）を削除（裁断）し、提出者に、該当の欄を伏せた写しの再提出をお願いする
+3. メールに添付されて届いた場合は、受信したメールの添付ファイルも削除する
+4. 対応した日付と内容を、[台帳／管理表]に記録する
+
+■ 塗りつぶすときの注意
+・PDF や画像の上に、図形や注釈を重ねるだけにしない（あとで外せます）
+・塗りつぶした結果を、新しいファイルとして保存する。元のファイルを上書きせず、確認してから元を削除する
+・社外のサービスに書類をアップロードして加工しない
+  （例: 端末内だけで処理する無料ソフト「Fuseo」 https://fuseo.ati-mirai.co.jp/ 。フォルダごとまとめて処理できます）
+
+■ 再発を防ぐために
+・提出のお願いに、伏せていただきたい欄を書いておく（ひな形: https://fuseo.ati-mirai.co.jp/collect/）
+"""),
+]
+
+def write_docx(path, title, text):
+    try:
+        import docx
+        from docx.shared import Pt
+        from docx.oxml.ns import qn
+    except ImportError:
+        return False
+    d = docx.Document()
+    st = d.styles['Normal']; st.font.name = 'Yu Gothic'; st.font.size = Pt(10.5)
+    st.element.rPr.rFonts.set(qn('w:eastAsia'), '游ゴシック')
+    lines = text.strip().split('\n')
+    for i, line in enumerate(lines):
+        par = d.add_paragraph()
+        run = par.add_run(line)
+        par.paragraph_format.space_after = Pt(0)
+        if i == 0:
+            run.bold = True; run.font.size = Pt(14)
+        elif line.startswith('■'):
+            run.bold = True
+    d.core_properties.author = ''; d.core_properties.title = title; d.core_properties.comments = ''
+    d.save(path); return True
+
+def build_collect():
+    files = os.path.join(CROOT, 'files'); os.makedirs(files, exist_ok=True)
+    blocks = ''
+    for t in TEMPLATES:
+        full = t['text'].strip() + '\n' + TPL_FOOT
+        open(os.path.join(files, t['file'] + '.txt'), 'w', encoding='utf-8-sig').write(full.replace('\n', '\r\n'))
+        has_docx = write_docx(os.path.join(files, t['file'] + '.docx'), t['name'], full)
+        word = f'<a class="btn small" href="files/{t["file"]}.docx" download>Word 形式</a>' if has_docx else ''
+        blocks += f"""<div class="tpl" id="{t['slug']}">
+<h3>{html.escape(t['name'])}</h3>
+<p>{html.escape(t['lead'])}</p>
+<div class="dlrow">{word}<a class="btn small ghost" href="files/{t['file']}.txt" download>テキスト形式</a></div>
+<details><summary>内容を見る</summary><pre>{html.escape(full)}</pre></details>
+</div>
+"""
+    title = '書類を集める方へ — 提出前に伏せてもらう案内文のひな形（無料）'
+    desc = '人事・総務や窓口のご担当者向け。本人確認書類の写しを集めるときに、マイナンバーや保険証の記号・番号など、受け取らなくてよい欄を提出前に伏せてもらうための案内文のひな形と、受け取った後の手順をまとめました。'
+    head = mhead(title, desc, CBASE).replace('<a href="../manual/" aria-current="page">', '<a href="../manual/">').replace('<a href="../collect/">集める方へ</a>', '<a href="../collect/" aria-current="page">集める方へ</a>')
+    page_html = head + f"""<main class="wrap">
+<p class="crumb"><a href="../">Fuseo</a> › 書類を集める方へ</p>
+<div class="eyebrow"><span class="bar"></span><span class="label">FOR COLLECTORS</span></div>
+<h1 class="mincho">書類を集める方へ</h1>
+<div class="answer"><b>受け取らなくてよい情報は、提出の前に伏せてもらう。</b>そのための案内文のひな形を、無料で公開しています。入社手続きや申込みで本人確認書類の写しを集める、人事・総務や窓口のご担当者向けです。自由に書き換えて配布できます。</div>
+
+<h2>なぜ、出す前に伏せてもらうのか</h2>
+<ul>
+<li><b>受け取ってはいけない情報がある</b>: 個人番号（マイナンバー）は、番号法で、法令に定めのある場合以外の収集・保管が禁じられています。本人確認のために受け取った写しに番号が写っていると、受け取った側の問題になります。健康保険証の保険者番号と記号・番号も、保険の給付と関係のない場面で告知を求めることが制限されています</li>
+<li><b>受け取った後の手間が減る</b>: 番号の写った写しが届くと、担当者が塗りつぶすか、出し直しをお願いすることになります。最初の案内に書いておけば、その往復が減ります</li>
+<li><b>漏えいしたときの影響を小さくできる</b>: 預かる情報が少ないほど、万一のときに外へ出る情報も、説明の負担も小さくなります</li>
+</ul>
+<p>どの欄が必要かは、手続きごとに違います。ひな形は、<b>貴社で確認に使う欄に合わせて書き換える前提</b>で作っています。書類ごとの考え方は「<a href="../guide/">書類別の伏せ方ガイド</a>」をご覧ください。</p>
+
+<h2>案内文のひな形</h2>
+<p>Word 形式とテキスト形式があります。［　］の部分を書き換えてお使いください。Fuseo の名前や末尾の注記は、消してかまいません。</p>
+{blocks}
+
+<h2>受け取った後に、担当者が伏せる</h2>
+<p>すでに届いた写しに不要な情報が写っている場合は、保管する前に担当者が塗りつぶす方法もあります。<b>Fuseo</b> は、そのための無料の道具としても使えます。</p>
+<ul>
+<li>フォルダごと読み込んで、一覧で確かめながら、まとめて処理できます（Mac・Windows）</li>
+<li>マイナンバー、保険証の記号・番号、QR コードなどを、塗る候補として示します。候補は外れることがあるので、保存の前に必ず担当者が確かめます</li>
+<li>塗った部分は画素そのものを黒に置き換えて書き出します。元のファイルは上書きしません</li>
+</ul>
+<p>操作は「<a href="../manual/">使い方</a>」、画面は「<a href="../features.html">機能のご紹介</a>」にあります。</p>
+
+<h2>社内で使う前に確かめたいこと</h2>
+<div class="tablewrap"><table><tbody>
+<tr><th>通信</th><td>通信機能がありません。書類の画像や内容を、外部に送信しません（Mac・Windows・iPhone とも）</td></tr>
+<tr><th>データの保存先</th><td>作業中の書類は、その端末の中だけに保存します（Windows: <code>%LOCALAPPDATA%\\Fuseo</code>）。アプリの一覧から削除できます。書き出したファイルは、利用者が選んだ場所だけに保存します</td></tr>
+<tr><th>費用・ライセンス</th><td>無料です。Mac 版・Windows 版はオープンソース（MIT License）で、業務でも使えます。アカウント登録や広告はありません</td></tr>
+<tr><th>導入</th><td>Mac: 公証済みのアプリ（macOS 14 以降）。Windows: インストーラなし。zip を展開して起動します（Windows 10 / 11）。レジストリは使いません</td></tr>
+<tr><th>Windows 版の電子署名</th><td>電子署名をしていません。初回の起動で SmartScreen の警告が出ます（「詳細情報」→「実行」で起動）。社内の規程で署名のないソフトを使えない場合は、Mac 版をご検討ください。配布ファイルの SHA-256 は<a href="https://github.com/supergodak/fuseo/releases">リリースページ</a>に記載しています</td></tr>
+<tr><th>ソースコード</th><td><a href="https://github.com/supergodak/fuseo">GitHub</a> で公開しています。プライバシーの方針は <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">PRIVACY.md</a> にあります</td></tr>
+</tbody></table></div>
+
+<div class="note">このページとひな形は一般的な整理で、<b>法的な助言ではありません</b>。必要な欄や保存の義務は、手続きや業種によって違います。Fuseo の自動の検出は外れることがあり、漏えいを防ぐものでも、法令への対応を保証するものでもありません。ひな形は自由に改変・再配布できます（出典の表示は不要です）。</div>
+
+<a class="btn" href="../#download">Fuseo を入手する（無料）</a><a class="btn ghost" href="../guide/">書類別の伏せ方ガイド</a>
+<p class="crumb">最終更新: {UPDATED}</p>
+</main>
+{FOOTER}
+</body></html>
+"""
+    open(os.path.join(CROOT, 'index.html'), 'w').write(page_html)
+    print('collect: 1 page,', len(TEMPLATES), 'templates')
+
+build_collect()
