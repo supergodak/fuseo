@@ -21,7 +21,7 @@ sync_tree() {
   echo "==> sync → $VM:$REMOTE"
   # cmd の `if ... & ...` は後続まで if の中に入るので、PowerShell で作り直す。
   "${SSH[@]}" "powershell -NoProfile -Command \"Remove-Item -Recurse -Force '$REMOTE\\windows' -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force '$REMOTE' | Out-Null\"" >/dev/null
-  COPYFILE_DISABLE=1 tar -c --exclude 'bin' --exclude 'obj' --exclude 'publish' --exclude 'TestResults' \
+  COPYFILE_DISABLE=1 tar -c --exclude 'bin' --exclude 'obj' --exclude 'publish' --exclude 'publish-testing' --exclude 'TestResults' \
       windows Sources/MaskingCore/Resources/Presets LICENSE \
     | "${SSH[@]}" "tar -x -f - -C $REMOTE"
 }
@@ -47,8 +47,8 @@ e2e() {
   prlctl status "$PRL_VM" | grep -q running || prlctl resume "$PRL_VM"
   sync_tree
   if [ "$publish" = 1 ]; then
-    run "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\publish.ps1 -Rids win-$arch"
-    "${SSH[@]}" "powershell -NoProfile -Command \"New-Item -ItemType Directory -Force '$E2E_ROOT\\app' | Out-Null; Copy-Item -Force '$REMOTE\\windows\\publish\\Fuseo-win-*-$arch\\Fuseo.exe' '$E2E_ROOT\\app\\Fuseo.exe'\""
+    run "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\publish.ps1 -Rids win-$arch -Testing"
+    "${SSH[@]}" "powershell -NoProfile -Command \"New-Item -ItemType Directory -Force '$E2E_ROOT\\app' | Out-Null; Copy-Item -Force '$REMOTE\\windows\\publish-testing\\Fuseo-win-*-$arch-TESTING\\Fuseo.exe' '$E2E_ROOT\\app\\Fuseo.exe'\""
   fi
   run "dotnet build tests\\Fuseo.E2E\\Fuseo.E2E.csproj -c Release -nologo -v q"
   echo "==> e2e（ログオン中のデスクトップで実行・その間 VM の画面に触らない）"

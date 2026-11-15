@@ -6,14 +6,17 @@
 # exe は自己完結・単一ファイル。pdfium.dll と WPF のネイティブ DLL も exe の中に入れる（起動時に一時フォルダへ展開される）。
 # 署名はしない（費用ゼロ方針）。通信する部品は入れない。
 param(
-    [string[]]$Rids = @('win-x64', 'win-arm64')
+    [string[]]$Rids = @('win-x64', 'win-arm64'),
+    # E2E 用の exe（試験用の口 FUSEO_DATA_DIR が効く）を作る。出力は publish-testing\ の *-TESTING。配布には使わない
+    [switch]$Testing
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot          # windows\
 $repo = Split-Path -Parent $root                  # リポジトリ直下（LICENSE）
 $version = ([xml](Get-Content -Raw "$root\Directory.Build.props")).Project.PropertyGroup.Version
 if (-not $version) { throw 'Directory.Build.props に Version が無い' }
-$out = Join-Path $root 'publish'
+$out = Join-Path $root ($(if ($Testing) { 'publish-testing' } else { 'publish' }))
+$testingProp = if ($Testing) { '-p:FuseoTesting=true' } else { '-p:FuseoTesting=false' }
 if (Test-Path $out) { Remove-Item -Recurse -Force $out }
 New-Item -ItemType Directory -Force $out | Out-Null
 
@@ -27,10 +30,22 @@ foreach ($rid in $Rids) {
     $arch = $rid -replace '^win-', ''
     $bin = Join-Path $out "bin-$arch"
     Write-Host "==> publish $rid ($version)"
+    # 配布用と E2E 用（FuseoTesting）を切り替えても、MSBuild の差分ビルドは定義の違いでは作り直さない。
+    # 前の版の Fuseo.dll が混ざらないよう、アプリの中間・出力を毎回消してから作る（点検は下で行う）。
+    Remove-Item -Recurse -Force "$root\src\Fuseo.App\obj\Release", "$root\src\Fuseo.App\bin\Release" -ErrorAction SilentlyContinue
     dotnet publish "$root\src\Fuseo.App\Fuseo.App.csproj" -c Release -r $rid --self-contained true `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
-        -p:DebugType=None -p:DebugSymbols=false -p:GenerateDocumentationFile=false -o $bin -nologo -v q
+        -p:DebugType=None -p:DebugSymbols=false -p:GenerateDocumentationFile=false $testingProp -o $bin -nologo -v q
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish に失敗: $rid" }
+
+    # 配布用の exe に試験用の口が入っていないこと（exe は圧縮されて文字列が見えないので、元の Fuseo.dll を調べる）
+    $dll = Get-ChildItem "$root\src\Fuseo.App\obj\Release" -Recurse -Filter Fuseo.dll | Where-Object { $_.FullName -like "*\$rid\*" } | Sort-Object LastWriteTime | Select-Object -Last 1
+    if (-not $dll) { throw "点検用の Fuseo.dll が見つからない: $rid" }
+    $bytes = [System.IO.File]::ReadAllBytes($dll.FullName)
+    $hasHook = [System.Text.Encoding]::Unicode.GetString($bytes).Contains('FUSEO_DATA_DIR')
+    if ($Testing -and -not $hasHook) { throw "E2E 用なのに FUSEO_DATA_DIR が入っていない: $rid" }
+    if (-not $Testing -and $hasHook) { throw "配布用の exe に試験用の口（FUSEO_DATA_DIR）が入っている: $rid" }
+    Write-Host "    試験用の口: $(if ($hasHook) { 'あり（E2E 用）' } else { 'なし（配布用）' })"
 
     # exe 1 つだけのはず（pdfium.dll などが横に出ていたら単一ファイル化の失敗）
     $emitted = @(Get-ChildItem $bin -File -Recurse)
@@ -38,7 +53,7 @@ foreach ($rid in $Rids) {
         throw "exe 以外が出力された: $(($emitted | ForEach-Object { $_.Name }) -join ', ')"
     }
 
-    $name = "Fuseo-win-$version-$arch"
+    $name = "Fuseo-win-$version-$arch" + $(if ($Testing) { '-TESTING' } else { '' })
     $stage = Join-Path $out $name
     New-Item -ItemType Directory -Force $stage | Out-Null
     Copy-Item "$bin\Fuseo.exe" $stage

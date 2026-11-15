@@ -14,6 +14,11 @@
     <!-- 依存（WPF ランタイム等）のサテライトは ja/en だけ持つ（配布サイズを抑える。自前の en サテライトには影響しない）。 -->
     <SatelliteResourceLanguages>ja;en</SatelliteResourceLanguages>
   </PropertyGroup>
+  <!-- 試験用の口（FUSEO_DATA_DIR など）は E2E 用の exe（publish.ps1 -Testing ＝ -p:FuseoTesting=true）だけに入れる。
+       配布用の exe では効かない（ほかのプログラムが細工した環境変数で起動し、保存先を変えるのを防ぐ・2026-11-15）。 -->
+  <PropertyGroup Condition="'$(FuseoTesting)' == 'true'">
+    <DefineConstants>$(DefineConstants);FUSEO_TESTING</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <!-- バージョン情報に出すライセンス本文（W6）。 -->
     <EmbeddedResource Include="..\..\..\LICENSE" LogicalName="Fuseo.LICENSE.txt" Link="Properties\LICENSE" />

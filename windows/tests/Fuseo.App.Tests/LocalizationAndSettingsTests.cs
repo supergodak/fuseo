@@ -314,7 +314,7 @@ public class SettingsTests
     [Fact]
     public void DataDir_NotSet_IsLocalAppDataFuseo()
     {
-        Assert.Null(Environment.GetEnvironmentVariable(AppDataLocation.EnvironmentVariable)); // 通常のテスト実行では設定しない
+        Assert.Null(Environment.GetEnvironmentVariable("FUSEO_DATA_DIR")); // 通常のテスト実行では設定しない
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.Equal(Path.Combine(local, "Fuseo"), AppDataLocation.Root);
         Assert.Equal(Path.Combine(@"C:\Users\u\AppData\Local", "Fuseo"), AppDataLocation.Resolve(null, @"C:\Users\u\AppData\Local"));

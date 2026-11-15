@@ -191,3 +191,14 @@ Mimita の改訂版を元に、Fuseo に合わせて変える点だけを示す�
 - Windows の配布物の exe に `FUSEO_DATA_DIR` の文字列があるか（1 ファイルに圧縮されていて、単純な検索では見えない）
 - Sparkle が UserDefaults の確認先を優先する動き（資料による推測）
 - iOS の App Store の使用許諾の設定
+
+## 追記（2026-11-15 夜）: 対応の結果と、新たに見つかったこと
+
+- **C（プライバシーポリシー）**: 直して push 済み（40b3076）。Mac の使い方（docs/user-manual.md と site/manual/mac.html）にも「アプリを消す前に『すべての作業を削除』」を足し、mac.html だけ本番に反映
+- **A・D（Mac）**: `#if DEBUG` で試験用の口を囲み、ファイル名のログを `.private` に（da2b6d7・未 push）。Release ビルドの Mac・iOS のバイナリに `--uitest`・`UITEST_`・`fuseo-uitest`・`XCTestConfigurationFilePath` が 0 件であることを確認。`release.sh` に同じ点検を追加。テスト: swift test 127・Mac アプリ層 108＋UI 9・iOS 83＋UI 8（1 スキップ）全緑。Mac 0.3.1 で配布する
+- **B（Windows）**: `FUSEO_TESTING` を定義した E2E 用の exe（`publish.ps1 -Testing` → `publish-testing\*-TESTING`）だけが `FUSEO_DATA_DIR` を読むように。vm-win.sh と ~/fuseo-spike の E2E 用の cmd を -Testing に。Windows 0.3.3 で配布する
+- **E（利用条件）**: 下書き docs/legal/TERMS_DRAFT.md（未公開・弁護士の確認待ち）
+- **新たに見つかったこと F（オープンソースのライセンスの表示）**: Mac 版のアプリに同梱している Sparkle（MIT 系のライセンス）の著作権表示とライセンスの本文が、配布物（Fuseo.app・DMG）に入っていない（`find` で確認済み）。MIT 系は、複製物に表示を含めることを条件にしている。Windows 版は THIRD-PARTY-NOTICES.txt とバージョン情報で表示済み。推奨: Mac 0.3.1 で、アプリの Resources に THIRD-PARTY-NOTICES を入れ、「Fuseo について」のクレジットから見られるようにする
+- **B の確認（11/16）**: Windows の単体テスト 731・E2E 56/56（E2E 用の exe）合格。定数 `FUSEO_DATA_DIR` も `#if FUSEO_TESTING` の中に移し、配布用の exe には文字列も残さないように。`publish.ps1` が、元の Fuseo.dll に文字列が「配布用は無い／E2E 用は有る」ことを点検して、違えば止まる。配布用 → E2E 用 → 配布用の順に作って 3 回とも正しいことを確認
+- **点検で見つかった落とし穴**: MSBuild の差分ビルドは、定義（FuseoTesting）の切り替えでは作り直さない。E2E 用を作った直後に配布用を作ると、試験用の口が入ったまま配布物になりうる → `publish.ps1` で毎回アプリの obj・bin を消してから作るように直した
+- 1 回目の E2E は 27 件失敗したが、原因は VM の Windows の「ライセンス認証」のウィンドウが前面に出ていたこと（竹屋さんが閉じて再実行で全件合格）
