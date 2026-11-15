@@ -21,9 +21,16 @@ struct FuseoApp: App {
     @State private var updater: UpdaterController?
 
     /// テストホストとして起動されたか（副作用の抑制判定に使う）。
+    /// 試験用の口（`--uitest` 系の引数・XCTest の環境変数）は **Debug ビルドだけ**で効く。
+    /// 配布版（Release）では常に偽で、引数の文字列もバイナリに入らない
+    /// （ほかのプログラムが細工した引数で起動し、読み込むファイルや保存先を変えるのを防ぐ・2026-11-15）。
     static var isRunningTests: Bool {
+        #if DEBUG
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             || CommandLine.arguments.contains("--uitest")
+        #else
+        false
+        #endif
     }
 
     init() {
@@ -42,7 +49,8 @@ struct FuseoApp: App {
         // 終了時の一時ファイル掃除・自動保存の確定（applicationWillTerminate）のため、通常起動でも参照を渡す。
         AppDelegate.appState = state
 
-        // UIテスト時のみ、AppDelegate が提示するビュー（環境注入済み）を準備する。
+        // UIテスト時のみ、AppDelegate が提示するビュー（環境注入済み）を準備する（Debug ビルドだけ）。
+        #if DEBUG
         if Self.isRunningTests {
             if CommandLine.arguments.contains("--uitest-open-settings") {
                 AppDelegate.settingsContent = AnyView(
@@ -59,6 +67,7 @@ struct FuseoApp: App {
                 }
             }
         }
+        #endif
 
         _settings = State(initialValue: settings)
         _appState = State(initialValue: state)
@@ -92,12 +101,14 @@ struct FuseoApp: App {
     /// `--uitest-fixture <path>` が渡されていれば、その画像を1枚ロードして Review まで進める
     /// （通常の WindowGroup 経路。AppDelegate 経路でも別途ロードする）。
     private func bootstrapFixtureIfNeeded() async {
-        guard appState.stage == .empty else { return }
+        #if DEBUG
+        guard Self.isRunningTests, appState.stage == .empty else { return }
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--uitest-fixture"), i + 1 < args.count else { return }
         // フォルダも受ける（一括処理の検証・スクリーンショット用）。PDF も同経路で展開する。
         let urls = FileIntake.expand([URL(fileURLWithPath: args[i + 1])])
         await appState.importFiles(urls, writer: appState.makeTempPageWriter())
+        #endif
     }
 }
 

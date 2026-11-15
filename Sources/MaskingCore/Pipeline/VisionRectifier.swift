@@ -50,7 +50,7 @@ public struct VisionRectifier: DocumentRectifier {
         let isRectified: Bool
         let confidence: Float?
         if let manualQuad {
-            MaskingLog.rectifier.info("手動指定の四隅で台形補正: \(url.lastPathComponent, privacy: .public)")
+            MaskingLog.rectifier.info("手動指定の四隅で台形補正: \(url.lastPathComponent, privacy: .private)")
             rectified = Self.perspectiveCorrect(CIImage(cgImage: original), quad: manualQuad)
             isRectified = true
             confidence = nil
@@ -71,7 +71,7 @@ public struct VisionRectifier: DocumentRectifier {
             confidence = nil
         } else {
             // 書類セグメンテーション失敗・不採用 → 全面フォールバック（throwしない。core-design.md §3）
-            MaskingLog.rectifier.notice("書類検出なし/不採用。全面フォールバックで続行: \(url.lastPathComponent, privacy: .public)")
+            MaskingLog.rectifier.notice("書類検出なし/不採用。全面フォールバックで続行: \(url.lastPathComponent, privacy: .private)")
             rectified = CIImage(cgImage: original)
             isRectified = false
             confidence = nil

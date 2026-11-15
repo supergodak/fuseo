@@ -19,11 +19,13 @@ enum WorkLibraryLocation {
                                                  in: .userDomainMask,
                                                  appropriateFor: nil, create: true))
             ?? FileManager.default.temporaryDirectory
+        #if DEBUG
         if testing {
             // UI テストは実ユーザーのライブラリを汚さない（起動のたびに作り直す）。
             return FileManager.default.temporaryDirectory
                 .appendingPathComponent("fuseo-uitest-library", isDirectory: true)
         }
+        #endif
         #if os(macOS)
         return base.appendingPathComponent("Fuseo/Library", isDirectory: true)
         #else

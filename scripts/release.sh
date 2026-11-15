@@ -45,6 +45,14 @@ else
 fi
 codesign --verify --strict --verbose=2 "$APP"
 
+# 試験用の口（--uitest 系の引数・UI テストのフィクスチャ・テスト用の保存先）が配布物に残っていないこと。
+# Debug ビルドだけで効くようにしてある（FuseoApp.isRunningTests・2026-11-15）。残っていたら止める。
+if strings -a "$APP/Contents/MacOS/Fuseo" | grep -E -- '--uitest|UITEST_|fuseo-uitest|XCTestConfigurationFilePath'; then
+  echo "ERROR: test-only hooks found in the release binary (see above)" >&2
+  exit 1
+fi
+echo "==> No test-only hooks in the release binary"
+
 echo "==> Creating DMG (with drag-to-Applications)…"
 STAGE="$(mktemp -d)"
 cp -R "$APP" "$STAGE/"
