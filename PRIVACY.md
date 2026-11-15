@@ -24,7 +24,7 @@ Fuseo is a local-only tool for redacting ID documents. It opens your document ph
 
 ### 3. Where it is processed and stored
 
-All processing happens **on your device**. Fuseo keeps no hidden copies: the only files it writes are the exports you explicitly save, your settings, and the work-in-progress library described in section 8 — which you can see and delete at any time inside the app. Your original photo files are left untouched. Nothing is synced to iCloud, uploaded to any server, or shared with ATI Inc. or any third party.
+All processing happens **on your device**. Fuseo keeps no hidden copies: the only files it writes are the exports you explicitly save, your settings, and the work-in-progress library described in section 8 — which you can see and delete at any time inside the app. When you open a PDF, its pages are written as images to a temporary folder, which is deleted when the app quits (any left behind by a crash are cleaned up at the next launch). Your original photo files are left untouched. Nothing is synced to iCloud, uploaded to any server, or shared with ATI Inc. or any third party.
 
 ### 4. Redaction is irreversible by design
 
@@ -36,7 +36,7 @@ Fuseo contains **no analytics, telemetry, advertising, or identifiers**. It does
 
 ### 6. Network access
 
-Fuseo's document processing works **fully offline**. The only network activity is the **update check in the Mac app** (Sparkle): it contacts ATI's update feed (fuseo.ati-mirai.co.jp) to see whether a newer version exists. The app asks whether to check automatically; if you decline, it checks only when you choose "Check for Updates…" from the menu. As with any download, this reveals your IP address and the app version to the update server — but **no document data, image data, personal data, usage data, or identifiers are ever sent**. The iPhone app has no update check of its own (updates come through the App Store).
+Fuseo's document processing works **fully offline**. The only network activity is the **update check in the Mac app** (Sparkle): it contacts ATI's update feed (fuseo.ati-mirai.co.jp) to see whether a newer version exists. When you install an update, the installer file is downloaded from GitHub (github.com). The app asks whether to check automatically; if you decline, it checks only when you choose "Check for Updates…" from the menu. As with any download, this reveals your IP address and the app version to these servers — but **no document data, image data, personal data, usage data, or identifiers are ever sent**. The iPhone app has no update check of its own (updates come through the App Store).
 
 **Fuseo for Windows has no network features at all** — not even an update check. To get a new version, download it again from the website or a software library site.
 
@@ -46,7 +46,7 @@ Fuseo is a tool that helps you redact, but it does not decide what is legal to s
 
 ### 8. Data retention and deletion
 
-Fuseo keeps your work only where you can see it. Documents you are working on are saved automatically in the app's "Documents in progress" list so you can resume them later; nothing else is retained. They stay on this device (excluded from iCloud backup), are never transmitted, and can be deleted one by one from the list or all at once from Settings. Removing the app deletes the library and its settings.
+Fuseo keeps your work only where you can see it. Documents you are working on are saved automatically in the app's "Documents in progress" list so you can resume them later; nothing else is retained. They stay on this device (excluded from iCloud backup), are never transmitted, and can be deleted one by one from the list or all at once from Settings. **On iPhone**, removing the app deletes the library and its settings. **On Mac**, removing the app does *not* delete them: documents in progress (including the images before redaction) remain in `~/Library/Application Support/Fuseo`. Before removing the app, choose "すべての作業を削除" (Delete all work) in Settings.
 
 **On Windows**, documents in progress (including the images before redaction) are stored only in `%LOCALAPPDATA%\Fuseo\Library` and settings in `%LOCALAPPDATA%\Fuseo\settings.json`. They stay there until you delete them from the list or in Settings. Fuseo for Windows has no installer and uses no registry entries, so deleting `Fuseo.exe` does not remove that folder — delete `%LOCALAPPDATA%\Fuseo` yourself to remove everything. The folder `%TEMP%\.net\Fuseo` contains only unpacked program files, never documents.
 
@@ -83,7 +83,7 @@ Fuseo は完全ローカルの本人確認書類・黒塗りツールです。�
 
 ### 3. 処理・保存の場所
 
-処理はすべて**お使いの端末の中**で行います。Fuseo が隠しコピーを持つことはありません。書き込むファイルは、あなたが明示的に保存した書き出しファイル、あなた自身の設定、そして第8項の「作業中の書類」だけで、作業中の書類はアプリ内でいつでも確認・削除できます。元の写真ファイルはそのまま残します。iCloud 同期も、サーバーへのアップロードも、ATI株式会社や第三者への共有も行いません。
+処理はすべて**お使いの端末の中**で行います。Fuseo が隠しコピーを持つことはありません。書き込むファイルは、あなたが明示的に保存した書き出しファイル、あなた自身の設定、そして第8項の「作業中の書類」だけで、作業中の書類はアプリ内でいつでも確認・削除できます。PDF を読み込むときは、ページの画像を一時フォルダに書き、アプリの終了時に消します（異常終了で残った分は、次に起動したときに消します）。元の写真ファイルはそのまま残します。iCloud 同期も、サーバーへのアップロードも、ATI株式会社や第三者への共有も行いません。
 
 ### 4. 黒塗りは設計上、復元できません
 
@@ -95,7 +95,7 @@ Fuseo には**解析・テレメトリ・広告・識別子は一切含まれま
 
 ### 6. ネットワーク
 
-書類の処理は**完全オフライン**で動作します。唯一の通信は、**Mac 版のアップデート確認**（Sparkle）です：ATI のアップデートフィード（fuseo.ati-mirai.co.jp）へ新しい版の有無を確認します。自動で確認するかどうかは、初回にアプリが尋ねます。許可しない場合は、メニューの「アップデートを確認…」を選んだときだけ確認します。一般的なダウンロードと同様 IP とバージョンが伝わりますが、**書類データ・画像データ・個人情報・利用状況・識別子は一切送信しません**。iPhone 版には独自のアップデート確認はありません（更新は App Store から）。
+書類の処理は**完全オフライン**で動作します。唯一の通信は、**Mac 版のアップデート確認**（Sparkle）です：ATI のアップデートフィード（fuseo.ati-mirai.co.jp）へ新しい版の有無を確認します。新しい版を入れるときは、GitHub（github.com）から配布ファイルをダウンロードします。自動で確認するかどうかは、初回にアプリが尋ねます。許可しない場合は、メニューの「アップデートを確認…」を選んだときだけ確認します。一般的なダウンロードと同様、これらのサーバーに IP とバージョンが伝わりますが、**書類データ・画像データ・個人情報・利用状況・識別子は一切送信しません**。iPhone 版には独自のアップデート確認はありません（更新は App Store から）。
 
 **Windows 版（Fuseo for Windows）には、アップデート確認を含めて通信機能が一切ありません。** 新しい版は Web サイトやソフトウェア紹介サイトから改めてダウンロードしてください。
 
@@ -105,7 +105,7 @@ Fuseo は黒塗りを手伝う道具であり、何を提出してよいかを�
 
 ### 8. 保持と削除
 
-Fuseo が書類を保持するのは、あなたに見える場所だけです。作業中の書類はあとから再開できるようアプリ内の「作業中の書類」一覧に自動保存され、それ以外は保持しません。保存先はこの端末の中だけ（iCloud バックアップ対象外）で、外部に送信されることはなく、一覧から1件ずつ、または設定から一括で削除できます。アプリを削除するとライブラリと設定も削除されます。
+Fuseo が書類を保持するのは、あなたに見える場所だけです。作業中の書類はあとから再開できるようアプリ内の「作業中の書類」一覧に自動保存され、それ以外は保持しません。保存先はこの端末の中だけ（iCloud バックアップ対象外）で、外部に送信されることはなく、一覧から1件ずつ、または設定から一括で削除できます。**iPhone 版**は、アプリを削除するとライブラリと設定も削除されます。**Mac 版**は、アプリを削除しても、作業中の書類（黒塗り前の画像を含みます）が `~/Library/Application Support/Fuseo` に残ります。アプリを削除する前に、設定の「すべての作業を削除」を選んでください。
 
 **Windows 版**では、作業中の書類（黒塗り前の画像を含みます）は `%LOCALAPPDATA%\Fuseo\Library`、設定は `%LOCALAPPDATA%\Fuseo\settings.json` にだけ保存し、一覧や設定から削除するまで残ります。Windows 版はインストーラを使わずレジストリにも書き込まないため、`Fuseo.exe` を削除してもこのフォルダは残ります。すべて消すには `%LOCALAPPDATA%\Fuseo` フォルダを削除してください。`%TEMP%\.net\Fuseo` にはプログラムの部品だけが展開され、書類は入りません。
 
