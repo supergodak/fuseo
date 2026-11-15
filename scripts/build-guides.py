@@ -79,6 +79,8 @@ th,td{padding:10px 12px;border-bottom:1px solid #DCE6E3;text-align:left;vertical
 .card{display:block;background:var(--porcelain);border:1px solid var(--line);border-radius:10px;padding:16px 18px;color:var(--sumi)}
 .card:hover{border-color:var(--china);text-decoration:none}.card b{display:block;margin-bottom:2px}.card span{font-size:.85rem;color:var(--sumi-soft)}
 .related{font-size:.92rem}
+blockquote{background:var(--sand);border:1px solid #E2D2AC;border-radius:10px;padding:12px 18px;margin:14px 0;color:#4c4633}
+blockquote p{margin:.3em 0}
 h3{font-size:1.05rem;margin:26px 0 8px}
 code{font-family:"SF Mono",Menlo,monospace;font-size:.88em;background:var(--porcelain);border:1px solid var(--line);border-radius:4px;padding:1px 5px;word-break:break-all}
 hr{border:0;border-top:1px solid var(--line);margin:36px 0 12px}
@@ -111,7 +113,7 @@ HOW = """
 CTA = """
 <div class="cta">
 <h2 class="mincho">道具を使うなら</h2>
-<p><b>Fuseo（ふせお）</b>は、この整理をそのまま道具にした無料アプリです（Mac・Windows・iPhone）。{fit}
+<p><b>Fuseo（ふせお）</b>は、この整理をそのまま道具にした無料アプリです（Mac・iPhone。Windows 版は近日公開）。{fit}
 塗る場所は、書き出す前に必ず自分で確かめます。塗った部分は画素に焼き込み、メタデータは引き継ぎません。処理はすべて端末の中で完結し、書類がどこかへ送られることはありません。</p>
 <p>自動の検出は外れることがあります。漏えいを防ぐ道具ではなく、出す前に写っている情報を減らすための道具です。</p>
 <a class="btn" href="../#download">Fuseo を入手する（無料）</a><a class="btn ghost" href="../features.html">機能のご紹介</a>
@@ -326,7 +328,7 @@ MBASE = 'https://fuseo.ati-mirai.co.jp/manual/'
 MANUALS = [
     dict(src='user-manual.md', slug='mac', short='Mac 版', title='Fuseo Mac 版の使い方', sub='macOS 14 以降',
          desc='Fuseo Mac 版の使い方。読み込み、確認画面の見かた、手で塗る、書類への文字入れ、PDF、一括処理、書き出し、作業の保存と再開。'),
-    dict(src='user-manual-windows.md', slug='windows', short='Windows 版', title='Fuseo for Windows の使い方', sub='Windows 10 / 11',
+    dict(src='user-manual-windows.md', slug='windows', short='Windows 版', title='Fuseo for Windows の使い方', sub='近日公開（電子署名の準備中）',
          desc='Fuseo for Windows の使い方。入手と起動、画面の見かた、切り抜き・回転、書類への文字入れ、フォルダの一括処理、書き出し、保存先。'),
     dict(src='user-manual-ios.md', slug='ios', short='iPhone 版', title='Fuseo iPhone 版の使い方', sub='iOS 17 以降',
          desc='Fuseo iPhone 版の使い方。カメラ・写真・ファイルからの読み込み、確認と塗り、書き出しと共有、作業の保存と再開、設定。'),
@@ -582,7 +584,7 @@ def build_collect():
 <h2>受け取った後に、担当者が伏せる</h2>
 <p>すでに届いた写しに不要な情報が写っている場合は、保管する前に担当者が塗りつぶす方法もあります。<b>Fuseo</b> は、そのための無料の道具としても使えます。</p>
 <ul>
-<li>フォルダごと読み込んで、一覧で確かめながら、まとめて処理できます（Mac・Windows）</li>
+<li>フォルダごと読み込んで、一覧で確かめながら、まとめて処理できます（Mac。Windows 版は近日公開）</li>
 <li>マイナンバー、保険証の記号・番号、QR コードなどを、塗る候補として示します。候補は外れることがあるので、保存の前に必ず担当者が確かめます</li>
 <li>塗った部分は画素そのものを黒に置き換えて書き出します。元のファイルは上書きしません</li>
 </ul>
@@ -590,11 +592,11 @@ def build_collect():
 
 <h2>社内で使う前に確かめたいこと</h2>
 <div class="tablewrap"><table><tbody>
-<tr><th>通信</th><td>通信機能がありません。書類の画像や内容を、外部に送信しません（Mac・Windows・iPhone とも）</td></tr>
-<tr><th>データの保存先</th><td>作業中の書類は、その端末の中だけに保存します（Windows: <code>%LOCALAPPDATA%\\Fuseo</code>）。アプリの一覧から削除できます。書き出したファイルは、利用者が選んだ場所だけに保存します</td></tr>
-<tr><th>費用・ライセンス</th><td>無料です。Mac 版・Windows 版はオープンソース（MIT License）で、業務でも使えます。アカウント登録や広告はありません</td></tr>
-<tr><th>導入</th><td>Mac: 公証済みのアプリ（macOS 14 以降）。Windows: インストーラなし。zip を展開して起動します（Windows 10 / 11）。レジストリは使いません</td></tr>
-<tr><th>Windows 版の電子署名</th><td>電子署名をしていません。初回の起動で SmartScreen の警告が出ます（「詳細情報」→「実行」で起動）。社内の規程で署名のないソフトを使えない場合は、Mac 版をご検討ください。配布ファイルの SHA-256 は<a href="https://github.com/supergodak/fuseo/releases">リリースページ</a>に記載しています</td></tr>
+<tr><th>通信</th><td>書類の画像や内容を、外部に送信しません。Mac 版の通信は、新しい版の有無を確かめるアップデート確認だけです（自動で確かめるかは初回に尋ねます）。iPhone 版に独自の通信はありません</td></tr>
+<tr><th>データの保存先</th><td>作業中の書類は、その端末の中だけに保存します。アプリの一覧から削除できます。書き出したファイルは、利用者が選んだ場所だけに保存します</td></tr>
+<tr><th>費用・ライセンス</th><td>無料です。Mac 版はオープンソース（MIT License）で、業務でも使えます。アカウント登録や広告はありません</td></tr>
+<tr><th>導入</th><td>Mac: 公証済みのアプリ（macOS 14 以降）。iPhone: App Store（iOS 17 以降）</td></tr>
+<tr><th>Windows 版</th><td>近日公開です。電子署名（発行元の証明）を付けてから配布します。インストーラなしで、zip を展開して起動する形の予定です</td></tr>
 <tr><th>ソースコード</th><td><a href="https://github.com/supergodak/fuseo">GitHub</a> で公開しています。プライバシーの方針は <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">PRIVACY.md</a> にあります</td></tr>
 </tbody></table></div>
 

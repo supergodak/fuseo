@@ -2,12 +2,12 @@
 
 **Fuseo は、本人確認書類の写真や証明書の PDF を「提出してよい状態」にするアプリです。**
 マイナンバーや免許証番号など、提出先に見せる必要のない部分を自動で見つけて黒塗りし、
-きれいなスキャン風の PDF や画像として保存します。Mac・Windows・iPhone で使えます（どれも無料）。
+きれいなスキャン風の PDF や画像として保存します。Mac・iPhone で使えます（どれも無料）。Windows 版は近日公開です。
 
 | 端末 | 使い方 |
 |---|---|
 | **Mac** | このページ |
-| **Windows** | [Windows 版の使い方](user-manual-windows.md) |
+| **Windows**（近日公開） | [Windows 版の使い方](user-manual-windows.md) |
 | **iPhone・iPad** | [iPhone 版の使い方](user-manual-ios.md) |
 
 端末ごとにできることの違いと画面は「[機能のご紹介](https://fuseo.ati-mirai.co.jp/features.html)」にまとめています。
