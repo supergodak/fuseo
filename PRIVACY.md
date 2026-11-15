@@ -2,7 +2,7 @@
 
 _Fuseo — ID-document redaction tool for macOS, iPhone and Windows by ATI Inc. (ATI株式会社)_
 
-**Last updated: 2026-10-16**
+**Last updated: 2026-11-15**
 
 > **Fuseo processes your documents entirely on your device. Nothing is ever sent off it.**
 > **Fuseo は書類の処理をすべてお使いの端末の中だけで行います。外部へ送信することは一切ありません。**
@@ -36,7 +36,7 @@ Fuseo contains **no analytics, telemetry, advertising, or identifiers**. It does
 
 ### 6. Network access
 
-Fuseo's document processing works **fully offline**. The only network activity (when enabled in a future release) is an optional **automatic update check** via Sparkle: the app contacts ATI's update feed to see whether a newer version exists. As with any download, this reveals your IP address and the app version to the update server — but **no document data, image data, personal data, or identifiers are ever sent**. You can disable automatic update checks.
+Fuseo's document processing works **fully offline**. The only network activity is the **update check in the Mac app** (Sparkle): it contacts ATI's update feed (fuseo.ati-mirai.co.jp) to see whether a newer version exists. The app asks whether to check automatically; if you decline, it checks only when you choose "Check for Updates…" from the menu. As with any download, this reveals your IP address and the app version to the update server — but **no document data, image data, personal data, usage data, or identifiers are ever sent**. The iPhone app has no update check of its own (updates come through the App Store).
 
 **Fuseo for Windows has no network features at all** — not even an update check. To get a new version, download it again from the website or a software library site.
 
@@ -95,7 +95,7 @@ Fuseo には**解析・テレメトリ・広告・識別子は一切含まれま
 
 ### 6. ネットワーク
 
-書類の処理は**完全オフライン**で動作します。将来のリリースで有効化される唯一の通信は、任意の**自動アップデート確認**（Sparkle）です：ATI のアップデートフィードへ新バージョンの有無を確認します。一般的なダウンロードと同様 IP とバージョンが伝わりますが、**書類データ・画像データ・個人情報・識別子は一切送信しません**。自動確認は無効化できます。
+書類の処理は**完全オフライン**で動作します。唯一の通信は、**Mac 版のアップデート確認**（Sparkle）です：ATI のアップデートフィード（fuseo.ati-mirai.co.jp）へ新しい版の有無を確認します。自動で確認するかどうかは、初回にアプリが尋ねます。許可しない場合は、メニューの「アップデートを確認…」を選んだときだけ確認します。一般的なダウンロードと同様 IP とバージョンが伝わりますが、**書類データ・画像データ・個人情報・利用状況・識別子は一切送信しません**。iPhone 版には独自のアップデート確認はありません（更新は App Store から）。
 
 **Windows 版（Fuseo for Windows）には、アップデート確認を含めて通信機能が一切ありません。** 新しい版は Web サイトやソフトウェア紹介サイトから改めてダウンロードしてください。
 
