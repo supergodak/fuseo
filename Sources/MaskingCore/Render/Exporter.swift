@@ -158,6 +158,9 @@ public struct FileExporter: Exporting {
         guard let consumer = CGDataConsumer(data: out as CFMutableData) else { throw MaskingError.renderFailed }
         var aux: [CFString: Any] = [:]
         if let password {
+            guard ExportOptions.isValidPDFPassword(password) else {
+                throw MaskingError.exportFailed("パスワードは半角の英数字と記号（\(ExportOptions.pdfPasswordMaxLength) 文字まで）で入力してください")
+            }
             aux[kCGPDFContextUserPassword] = password
             aux[kCGPDFContextOwnerPassword] = password
         }

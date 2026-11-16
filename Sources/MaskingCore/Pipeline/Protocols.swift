@@ -134,6 +134,17 @@ public struct ExportOptions: Sendable {
         guard format == .pdf, let p = pdfPassword, !p.isEmpty else { return nil }
         return p
     }
+
+    /// パスワードに使える長さの上限（AES-128 の PDF は 32 バイトより後ろを読まないため）。
+    public static let pdfPasswordMaxLength = 32
+
+    /// パスワードに使えるか: **半角の英数字と記号（空白を含む ASCII の印字文字）だけ・32 文字まで**。
+    /// macOS は ASCII 以外のパスワードで PDF を作れず、作れる他の実装の PDF も、プレビュー（PDFKit）は
+    /// ASCII 以外のパスワードで開けない（2026-11-16 実測）。相手が開けない PDF を作らないための制限。Windows 版も同じ。
+    public static func isValidPDFPassword(_ password: String) -> Bool {
+        !password.isEmpty && password.count <= pdfPasswordMaxLength
+            && password.unicodeScalars.allSatisfy { $0.value >= 0x20 && $0.value <= 0x7E }
+    }
 }
 
 /// バイト数の表示（「2 MB」など。1 MB = 1,000,000 バイト＝申込みフォームの上限の書き方に合わせる）。

@@ -61,6 +61,32 @@ public sealed class BurnedPage
 {
     public PageBitmap Bitmap { get; }
     internal BurnedPage(PageBitmap bitmap) => Bitmap = bitmap;
+
+    /// <summary>
+    /// 焼き込み済みの上に層（BGRA・**プリマルチプライ**・同じ大きさ）を重ねた新しいページ（透かし・0.4.0）。
+    /// 重ねるだけなので、塗った所の下の画素が戻ることはない（黒の上の半透明は黒っぽいまま）。元のページは変えない。
+    /// </summary>
+    public BurnedPage WithLayer(byte[] premultipliedLayer)
+    {
+        ArgumentNullException.ThrowIfNull(premultipliedLayer);
+        if (premultipliedLayer.Length != Bitmap.Pixels.Length) throw new ArgumentException("層の大きさがページと合わない", nameof(premultipliedLayer));
+        var outBmp = Bitmap.Clone();
+        var o = outBmp.Pixels;
+        for (var i = 0; i < o.Length; i += 4)
+        {
+            int ta = premultipliedLayer[i + 3];
+            if (ta == 0) continue;
+            double ba = o[i + 3] / 255.0, inv = 1 - ta / 255.0;
+            var outA = ta / 255.0 + ba * inv;
+            for (var c = 0; c < 3; c++)
+            {
+                var premul = premultipliedLayer[i + c] / 255.0 + o[i + c] / 255.0 * ba * inv;
+                o[i + c] = (byte)Math.Clamp(Math.Round(outA > 0 ? premul / outA * 255 : 0), 0, 255);
+            }
+            o[i + 3] = (byte)Math.Clamp(Math.Round(outA * 255), 0, 255);
+        }
+        return new BurnedPage(outBmp);
+    }
 }
 
 /// <summary>焼き込み（W1・Fable）。新しいバッファに #000000FF で塗る。α合成・注釈・レイヤーは禁止。</summary>
@@ -74,8 +100,34 @@ public enum ExportFormat { Pdf, Jpeg, Png }
 /// <summary>PDF に埋め込む画像の圧縮。既定は JPEG（写真・スキャンで十分小さく、文字も品質 0.95 で読める）。</summary>
 public enum PdfImageEncoding { Jpeg, Flate }
 
+/// <param name="MaxBytes">ファイルの大きさの上限（バイト・0.4.0）。PDF と JPEG で有効（JPEG は 1 ファイルごと）。
+/// 収まるまで JPEG の画質と解像度を段階的に下げ、下限まで下げても収まらなければ <see cref="SizeLimitUnreachableException"/>。</param>
+/// <param name="PdfPassword">PDF を開くときのパスワード（0.4.0・PDF のみ・空なら無し）。AES-256 で暗号化する。</param>
 public sealed record ExportOptions(
-    ExportFormat Format, double JpegQuality = 0.95, PdfImageEncoding PdfImages = PdfImageEncoding.Jpeg);
+    ExportFormat Format, double JpegQuality = 0.95, PdfImageEncoding PdfImages = PdfImageEncoding.Jpeg,
+    long? MaxBytes = null, string? PdfPassword = null)
+{
+    /// <summary>実際にかけるパスワード（PDF で、空でないときだけ）。</summary>
+    public string? EffectivePdfPassword => Format == ExportFormat.Pdf && !string.IsNullOrEmpty(PdfPassword) ? PdfPassword : null;
+
+    /// <summary>パスワードの長さの上限（Mac 版と同じ）。</summary>
+    public const int PdfPasswordMaxLength = 32;
+
+    /// <summary>
+    /// パスワードに使えるか: **半角の英数字と記号（空白を含む ASCII の印字文字）だけ・32 文字まで**（Mac 版と同じ規則）。
+    /// macOS のプレビュー（PDFKit）は ASCII 以外のパスワードの PDF を開けない（2026-11-16 実測。この版の AES-256 の PDF でも同じ）。
+    /// </summary>
+    public static bool IsValidPdfPassword(string? password) =>
+        !string.IsNullOrEmpty(password) && password.Length <= PdfPasswordMaxLength && password.All(c => c >= 0x20 && c <= 0x7E);
+}
+
+/// <summary>ファイルの大きさの上限に収められない（0.4.0）。<see cref="SmallestBytes"/> は下限まで下げたときの大きさ。</summary>
+public sealed class SizeLimitUnreachableException(long limitBytes, long smallestBytes)
+    : Exception($"ファイルの大きさを {limitBytes} バイト以内にできません（下限まで下げて {smallestBytes} バイト）")
+{
+    public long LimitBytes { get; } = limitBytes;
+    public long SmallestBytes { get; } = smallestBytes;
+}
 
 /// <summary>
 /// 書き出し（W1・Fable）。焼き込み済みページだけを受け取る。

@@ -87,6 +87,11 @@ struct ExportExtrasSection: View {
                             Text("2 つのパスワードが違います。")
                                 .font(.caption).foregroundStyle(.red)
                                 .accessibilityIdentifier("export.passwordMismatch")
+                        case .invalid:
+                            Text("半角の英数字と記号（32 文字まで）で入力してください。日本語などは、相手が開けなくなることがあります。")
+                                .font(.caption).foregroundStyle(.red)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("export.passwordInvalid")
                         default:
                             EmptyView()
                         }

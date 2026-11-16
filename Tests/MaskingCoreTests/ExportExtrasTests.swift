@@ -213,4 +213,19 @@ final class ExportExtrasTests: XCTestCase {
         try FileExporter().export([page(solid(400, 300))], options: ExportOptions(format: .pdf, pdfPassword: ""), to: url)
         XCTAssertFalse(try XCTUnwrap(PDFDocument(url: url)).isEncrypted)
     }
+
+    /// macOS は ASCII 以外のパスワードで PDF を作れず、プレビューも開けない（実測）→ 半角だけ・32 文字まで。
+    func test_password_rule_asciiOnly_upTo32() throws {
+        XCTAssertTrue(ExportOptions.isValidPDFPassword("abc-1234 !~"))
+        XCTAssertTrue(ExportOptions.isValidPDFPassword(String(repeating: "a", count: 32)))
+        XCTAssertFalse(ExportOptions.isValidPDFPassword(String(repeating: "a", count: 33)))
+        XCTAssertFalse(ExportOptions.isValidPDFPassword("pässwörd"))
+        XCTAssertFalse(ExportOptions.isValidPDFPassword("パスワード"))
+        XCTAssertFalse(ExportOptions.isValidPDFPassword("ａｂｃ"))
+        XCTAssertFalse(ExportOptions.isValidPDFPassword(""))
+        let url = tempURL("pdf")
+        XCTAssertThrowsError(try FileExporter().export([page(solid(40, 30))],
+                                                       options: ExportOptions(format: .pdf, pdfPassword: "日本語"), to: url))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
 }

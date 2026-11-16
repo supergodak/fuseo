@@ -63,4 +63,40 @@ public class ExportRoundTripTests
         var bg = b.GetPixel(5, 10);
         Assert.True(bg.R > 200, $"地の色 {bg}");
     }
+
+    /// <summary>
+    /// 0.4.0: パスワード付き（AES-256・/R 6）の PDF を PDFium が読める。違うパスワードは通らず、正しいパスワードで
+    /// ページ数・寸法・黒塗りがそのまま戻る。大きさの上限と組み合わせても同じ（独立した実装での往復＝暗号化の正しさの確認）。
+    /// </summary>
+    [Theory]
+    [InlineData(null, "abc-1234")]
+    [InlineData(1_000_000L, "P@ss word~9")]
+    public async Task EncryptedPdf_OpensInPdfiumOnlyWithThePassword(long? maxBytes, string password)
+    {
+        var mask = new NormRect(0.1, 0.6, 0.5, 0.15);
+        var r = new MaskRasterizer();
+        var pages = new[] { r.BurnIn(Pattern(1240, 1754), new ConfirmedMasks([mask], [])), r.BurnIn(Pattern(1754, 1240), ConfirmedMasks.None) };
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Path, "enc.pdf");
+        using (var fs = File.Create(path))
+            new Exporter().Export(pages, new ExportOptions(ExportFormat.Pdf, MaxBytes: maxBytes, PdfPassword: password), _ => fs);
+        if (maxBytes is { } m) Assert.True(new FileInfo(path).Length <= m);
+
+        var asked = new List<PasswordRequest>();
+        var back = await new PageSource().LoadAsync([path], req =>
+        {
+            asked.Add(req);
+            return Task.FromResult<string?>(asked.Count == 1 ? "wrong" : password);
+        }, CancellationToken.None);
+        Assert.Equal(2, asked.Count);
+        Assert.False(asked[0].IsRetry);
+        Assert.True(asked[1].IsRetry);
+        Assert.Equal(2, back.Count);
+        Assert.Equal((1240, 1754), (back[0].Bitmap.Width, back[0].Bitmap.Height));
+        var pr = CoordinateSpace.ToPixel(mask, 1240, 1754);
+        var p = back[0].Bitmap.GetPixel(pr.X + pr.Width / 2, pr.Y + pr.Height / 2);
+        Assert.True(p.R <= 12 && p.G <= 12 && p.B <= 12, $"{p}");
+        if (Environment.GetEnvironmentVariable("FUSEO_SAMPLE_OUT") is { Length: > 0 } outDir)
+            File.Copy(path, Path.Combine(outDir, $"encrypted-{maxBytes?.ToString() ?? "free"}-{password.Length}.pdf"), overwrite: true);
+    }
 }

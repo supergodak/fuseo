@@ -54,4 +54,55 @@ public static class Resample
         });
         return dst;
     }
+
+    /// <summary>
+    /// 全体を <paramref name="scale"/>（0〜1）倍に縮めた新しいビットマップ（面積平均・0.4.0 の大きさの上限用）。
+    /// 縮めた後の短辺が <paramref name="minShortSide"/> を下回る倍率は使わない（番号や氏名が読めなくなるため）。
+    /// 縮めない（倍率が 1 以上になる）ときは元のビットマップをそのまま返す。
+    /// </summary>
+    public static PageBitmap Downscale(PageBitmap src, double scale, int minShortSide)
+    {
+        ArgumentNullException.ThrowIfNull(src);
+        var shortSide = Math.Min(src.Width, src.Height);
+        var floor = shortSide > 0 ? (double)minShortSide / shortSide : 1;
+        var s = Math.Min(1, Math.Max(scale, floor));
+        if (s >= 0.999) return src;
+        var dw = Math.Max(1, (int)Math.Round(src.Width * s));
+        var dh = Math.Max(1, (int)Math.Round(src.Height * s));
+        var dst = new PageBitmap(dw, dh);
+        var sp = src.Pixels;
+        var dp = dst.Pixels;
+        double fx = (double)src.Width / dw, fy = (double)src.Height / dh;
+        Parallel.For(0, dh, dy =>
+        {
+            var y0 = dy * fy;
+            var y1 = Math.Min(src.Height, (dy + 1) * fy);
+            for (var dx = 0; dx < dw; dx++)
+            {
+                var x0 = dx * fx;
+                var x1 = Math.Min(src.Width, (dx + 1) * fx);
+                double b = 0, g = 0, r = 0, a = 0, wsum = 0;
+                for (var sy = (int)y0; sy < Math.Ceiling(y1); sy++)
+                {
+                    var wy = Math.Min(sy + 1, y1) - Math.Max(sy, y0);
+                    if (wy <= 0) continue;
+                    var row = sy * src.Stride;
+                    for (var sx = (int)x0; sx < Math.Ceiling(x1); sx++)
+                    {
+                        var w = (Math.Min(sx + 1, x1) - Math.Max(sx, x0)) * wy;
+                        if (w <= 0) continue;
+                        var i = row + sx * 4;
+                        b += sp[i] * w; g += sp[i + 1] * w; r += sp[i + 2] * w; a += sp[i + 3] * w;
+                        wsum += w;
+                    }
+                }
+                var o = (dy * dw + dx) * 4;
+                dp[o] = (byte)Math.Round(b / wsum);
+                dp[o + 1] = (byte)Math.Round(g / wsum);
+                dp[o + 2] = (byte)Math.Round(r / wsum);
+                dp[o + 3] = (byte)Math.Round(a / wsum);
+            }
+        });
+        return dst;
+    }
 }

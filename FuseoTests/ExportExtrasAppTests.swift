@@ -50,6 +50,10 @@ final class ExportExtrasAppTests: XCTestCase {
         state.pdfPasswordEnabled = true
         XCTAssertEqual(state.pdfPasswordState, .empty)
         XCTAssertFalse(state.canConfirmExport)
+        state.pdfPassword = "パスワード"
+        state.pdfPasswordConfirm = "パスワード"
+        XCTAssertEqual(state.pdfPasswordState, .invalid, "半角だけ")
+        XCTAssertFalse(state.canConfirmExport)
         state.pdfPassword = "abc"
         state.pdfPasswordConfirm = "abd"
         XCTAssertEqual(state.pdfPasswordState, .mismatch)

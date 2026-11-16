@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using Fuseo.Core.Contracts;
+using Fuseo.Core.Imaging;
 
 namespace Fuseo.Core.Export;
 
@@ -16,33 +17,44 @@ public static class RasterPdfWriter
     public const string Producer = "Fuseo for Windows";
     public const double PointsPerPixel = 72.0 / 300.0;
 
-    public static void Write(IReadOnlyList<BurnedPage> pages, PdfImageEncoding encoding, double jpegQuality, Stream dest)
+    /// <param name="scale">画像を縮める倍率（0.4.0 の大きさの上限。紙の大きさ＝MediaBox は元の画素数のまま）。</param>
+    /// <param name="password">開くときのパスワード（0.4.0）。あれば AES-256（/R 6）で暗号化し、/Info は空の辞書にする。</param>
+    public static void Write(IReadOnlyList<BurnedPage> pages, PdfImageEncoding encoding, double jpegQuality, Stream dest,
+                             double scale = 1, string? password = null)
     {
         if (pages.Count == 0) throw new ArgumentException("ページがありません", nameof(pages));
+        var crypt = string.IsNullOrEmpty(password) ? null : PdfEncryption.Create(password);
         var w = new Writer(dest);
-        w.Raw("%PDF-1.4\n");
+        // AES-256 は PDF 2.0 の仕組み。1.7 の拡張（Adobe 拡張レベル 8）として書くのが互換性の高い慣例。
+        w.Raw(crypt is null ? "%PDF-1.4\n" : "%PDF-1.7\n");
         w.Bytes([(byte)'%', 0xE2, 0xE3, 0xCF, 0xD3, (byte)'\n']); // バイナリを含む印（慣例）
 
-        // 1=Catalog 2=Pages 3=Info、ページ i は 4+3i=Page, 5+3i=Contents, 6+3i=Image
-        var total = 3 + 3 * pages.Count;
+        // 1=Catalog 2=Pages 3=Info、ページ i は 4+3i=Page, 5+3i=Contents, 6+3i=Image、暗号化するときは最後に /Encrypt
+        var encryptObj = 4 + 3 * pages.Count;
+        var total = 3 + 3 * pages.Count + (crypt is null ? 0 : 1);
         var offsets = new long[total + 1];
 
-        w.Obj(offsets, 1, "<< /Type /Catalog /Pages 2 0 R >>");
+        w.Obj(offsets, 1, crypt is null
+            ? "<< /Type /Catalog /Pages 2 0 R >>"
+            : "<< /Type /Catalog /Pages 2 0 R /Extensions << /ADBE << /BaseVersion /1.7 /ExtensionLevel 8 >> >> >>");
         var kids = string.Join(" ", Enumerable.Range(0, pages.Count).Select(i => $"{4 + 3 * i} 0 R"));
         w.Obj(offsets, 2, $"<< /Type /Pages /Kids [{kids}] /Count {pages.Count} >>");
-        w.Obj(offsets, 3, $"<< /Producer ({Producer}) >>");
+        // 暗号化した PDF の文字列は暗号化が要る。文字列を一切持たないよう、/Info は空にする（Mac 版と同じ）。
+        w.Obj(offsets, 3, crypt is null ? $"<< /Producer ({Producer}) >>" : "<< >>");
 
         for (var i = 0; i < pages.Count; i++)
         {
-            var bmp = pages[i].Bitmap;
+            var original = pages[i].Bitmap;
+            var bmp = scale < 0.999 ? Resample.Downscale(original, scale, Exporter.MinShortSidePx) : original;
             int pageObj = 4 + 3 * i, contentsObj = pageObj + 1, imageObj = pageObj + 2;
-            var wPt = Num(bmp.Width * PointsPerPixel);
-            var hPt = Num(bmp.Height * PointsPerPixel);
+            var wPt = Num(original.Width * PointsPerPixel);
+            var hPt = Num(original.Height * PointsPerPixel);
             w.Obj(offsets, pageObj,
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {wPt} {hPt}] " +
                 $"/Resources << /XObject << /Im0 {imageObj} 0 R >> >> /Contents {contentsObj} 0 R >>");
 
             var content = Encoding.ASCII.GetBytes($"q {wPt} 0 0 {hPt} 0 0 cm /Im0 Do Q");
+            if (crypt is not null) content = crypt.EncryptStream(content);
             w.Stream(offsets, contentsObj, $"<< /Length {content.Length} >>", content);
 
             var rgb = RgbImage.FromBgraOnWhite(bmp);
@@ -58,17 +70,21 @@ public static class RasterPdfWriter
                 data = Deflate(rgb.Rgb);
                 filter = "/FlateDecode";
             }
+            if (crypt is not null) data = crypt.EncryptStream(data);
             w.Stream(offsets, imageObj,
                 $"<< /Type /XObject /Subtype /Image /Width {bmp.Width} /Height {bmp.Height} " +
                 $"/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter {filter} /Length {data.Length} >>", data);
         }
+
+        if (crypt is not null) w.Obj(offsets, encryptObj, crypt.Dictionary());
 
         var xref = w.Position;
         var sb = new StringBuilder();
         sb.Append(CultureInfo.InvariantCulture, $"xref\n0 {total + 1}\n");
         sb.Append("0000000000 65535 f\r\n");
         for (var n = 1; n <= total; n++) sb.Append(CultureInfo.InvariantCulture, $"{offsets[n]:D10} 00000 n\r\n");
-        sb.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {total + 1} /Root 1 0 R /Info 3 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        var extra = crypt is null ? "" : $" /Encrypt {encryptObj} 0 R /ID [<{PdfEncryption.Hex(crypt.Id)}> <{PdfEncryption.Hex(crypt.Id)}>]";
+        sb.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {total + 1} /Root 1 0 R /Info 3 0 R{extra} >>\nstartxref\n{xref}\n%%EOF\n");
         w.Raw(sb.ToString());
         w.Flush();
     }

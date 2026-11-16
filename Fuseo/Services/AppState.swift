@@ -1066,10 +1066,11 @@ final class AppState {
     }
 
     /// パスワードの入力の状態（書き出しボタンを押せるか）。
-    enum PasswordState: Equatable { case off, empty, mismatch, ok }
+    enum PasswordState: Equatable { case off, empty, invalid, mismatch, ok }
     var pdfPasswordState: PasswordState {
         guard pdfPasswordEnabled, exportOptions.format == .pdf else { return .off }
         if pdfPassword.isEmpty { return .empty }
+        if !ExportOptions.isValidPDFPassword(pdfPassword) { return .invalid }
         return pdfPassword == pdfPasswordConfirm ? .ok : .mismatch
     }
 

@@ -117,7 +117,9 @@ public static class ExportInspect
         var objs = new List<PdfObject>();
         var text = new StringBuilder();
         var head = latin.GetString(pdf, 0, Math.Min(64, pdf.Length));
-        if (!head.StartsWith("%PDF-1.4\n", StringComparison.Ordinal)) throw new FormatException("ヘッダが %PDF-1.4 でない");
+        // 暗号化した PDF（0.4.0・AES-256）は 1.7 の拡張として書く
+        if (!head.StartsWith("%PDF-1.4\n", StringComparison.Ordinal) && !head.StartsWith("%PDF-1.7\n", StringComparison.Ordinal))
+            throw new FormatException("ヘッダが %PDF-1.4 / 1.7 でない");
         var i = head.IndexOf('\n', 9) + 1;
         var objRe = new Regex(@"\G(\d+) 0 obj\n");
         while (true)
