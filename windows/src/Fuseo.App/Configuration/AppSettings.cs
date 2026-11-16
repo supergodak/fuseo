@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Fuseo.Core.Model;
 
 namespace Fuseo.App.Configuration;
 
@@ -12,6 +13,16 @@ public enum LanguageSetting { Auto, Japanese, English }
 public sealed record AppSettings
 {
     public LanguageSetting Language { get; init; } = LanguageSetting.Auto;
+
+    /// <summary>透かしの配置と濃さ（0.4.0）。前に書き出したときのものを引き継ぐ。**文言は覚えない**（提出先の名前が入るため）。</summary>
+    public WatermarkLayoutKind WatermarkLayout { get; init; } = WatermarkLayoutKind.Tiled;
+    public double WatermarkOpacity { get; init; } = Watermark.DefaultOpacity;
+
+    /// <summary>ファイルの大きさの上限（バイト・0.4.0）。null = 上限なし。</summary>
+    public long? ExportSizeLimit { get; init; }
+
+    /// <summary>選べる上限（1 MB = 1,000,000 バイト・Mac 版と同じ）。</summary>
+    public static IReadOnlyList<long> SizeLimitChoices { get; } = [1_000_000, 2_000_000, 3_000_000, 5_000_000, 10_000_000];
 
     public static AppSettings Default { get; } = new();
 }
@@ -57,6 +68,10 @@ public sealed class SettingsStore(string? path = null)
     {
         [JsonPropertyName("schemaVersion")] public int SchemaVersion { get; set; }
         [JsonPropertyName("language")] public string? Language { get; set; }
+        // 0.4.0 で追加（無ければ既定値。古い版が読んでも無視されるだけなので schemaVersion は上げない）
+        [JsonPropertyName("watermarkLayout")] public string? WatermarkLayout { get; set; }
+        [JsonPropertyName("watermarkOpacity")] public double? WatermarkOpacity { get; set; }
+        [JsonPropertyName("exportSizeLimit")] public long? ExportSizeLimit { get; set; }
     }
 
     public AppSettings Load()
@@ -66,7 +81,13 @@ public sealed class SettingsStore(string? path = null)
         {
             var dto = JsonSerializer.Deserialize<Dto>(File.ReadAllText(FilePath));
             if (dto is { SchemaVersion: SchemaVersion } && ParseLanguage(dto.Language) is { } lang)
-                return new AppSettings { Language = lang };
+                return new AppSettings
+                {
+                    Language = lang,
+                    WatermarkLayout = dto.WatermarkLayout == "diagonal" ? WatermarkLayoutKind.Diagonal : WatermarkLayoutKind.Tiled,
+                    WatermarkOpacity = new Watermark("x", Opacity: dto.WatermarkOpacity ?? Watermark.DefaultOpacity).ClampedOpacity,
+                    ExportSizeLimit = dto.ExportSizeLimit is { } l && AppSettings.SizeLimitChoices.Contains(l) ? l : null,
+                };
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
@@ -81,7 +102,13 @@ public sealed class SettingsStore(string? path = null)
     {
         var dir = Path.GetDirectoryName(FilePath)!;
         Directory.CreateDirectory(dir);
-        var json = JsonSerializer.Serialize(new Dto { SchemaVersion = SchemaVersion, Language = FormatLanguage(settings.Language) },
+        var json = JsonSerializer.Serialize(new Dto
+                                            {
+                                                SchemaVersion = SchemaVersion, Language = FormatLanguage(settings.Language),
+                                                WatermarkLayout = settings.WatermarkLayout == WatermarkLayoutKind.Diagonal ? "diagonal" : "tiled",
+                                                WatermarkOpacity = settings.WatermarkOpacity,
+                                                ExportSizeLimit = settings.ExportSizeLimit,
+                                            },
                                             new JsonSerializerOptions { WriteIndented = true });
         var tmp = FilePath + ".tmp";
         File.WriteAllText(tmp, json);

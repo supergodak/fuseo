@@ -56,7 +56,7 @@ public sealed class SettingsViewModel : ObservableObject
             if (value is null || !SetProperty(ref _selectedLanguage, value) || _store is null) return;
             try
             {
-                _store.Save(new AppSettings { Language = value.Value });
+                _store.Save(_store.Load() with { Language = value.Value });   // ほかの設定（透かし・大きさの上限）は残す
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {

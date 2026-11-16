@@ -148,6 +148,80 @@ public class ExportTests(ITestOutputHelper output) : E2ETest(output)
     });
 }
 
+/// <summary>0.4.0: 書き出しシートの「提出用の設定」（透かし・PDF のパスワード）を画面から使う。</summary>
+public class SubmissionSettingsTests(ITestOutputHelper output) : E2ETest(output)
+{
+    private static void TypeInto(System.Windows.Automation.AutomationElement field, string text)
+    {
+        Mouse.Click(field.Center());
+        Wait.Until(() => field.Current.HasKeyboardFocus, "入力欄にフォーカス");
+        Keyboard.Type(text);
+    }
+
+    [Fact]
+    public void WatermarkAndPassword_WriteEncryptedPdf_WithWatermarkPixels() => Run(s =>
+    {
+        var png = Synth.WritePng(s.InPath("card.png"), Synth.Card());
+        var app = s.Launch();
+        app.Import(1, png);
+        var mask = new Box(0.5, 0.5, 0.3, 0.2);
+        app.DrawRect(mask);
+        var w = app.OpenExport();
+
+        // 透かし: オン → 文言 → 見本が出る
+        var wm = w.Get("export.watermark");
+        wm.Click();
+        Wait.Until(() => wm.IsOn(), "透かしがオンになる");
+        w.Get("export.watermarkText").SetValue("E2E-WMARK");
+        Wait.Until(() => w.Find("export.watermarkPreview").IsShown(), "透かしの見本が出る");
+
+        // パスワード: 違う 2 つでは保存できない → そろえると保存できる
+        var pw = w.Get("export.password");
+        pw.Click();
+        Wait.Until(() => pw.IsOn(), "パスワードがオンになる");
+        Assert.False(w.Get("export.confirmButton").IsEnabled(), "パスワードが空なのに保存できる");
+        TypeInto(w.Get("export.passwordField"), "e2e-pass");
+        var confirm = w.Get("export.passwordConfirm");
+        TypeInto(confirm, "e2e-pasX");
+        Wait.Until(() => w.Find("export.passwordMessage").IsShown(), "不一致の表示");
+        Assert.False(w.Get("export.confirmButton").IsEnabled(), "不一致なのに保存できる");
+        Keyboard.Press(VKey.Back);
+        Keyboard.Type("s");
+        Wait.Until(() => w.Get("export.confirmButton").IsEnabled(), "そろえると保存できる");
+
+        var outPdf = s.OutPath("submit.pdf");
+        app.SaveExport(w, outPdf);
+        var bytes = File.ReadAllBytes(outPdf);
+        var latin = System.Text.Encoding.Latin1.GetString(bytes);
+        Assert.Contains("/Encrypt", latin);
+        Assert.DoesNotContain("E2E-WMARK", latin);
+        Assert.False(Synth.Contains(bytes, Synth.Marker), "入力の目印が残っている");
+
+        // パスワードなしでは読めず、正しいパスワードで読める（製品と同じ取り込み部品）
+        var asked = 0;
+        var pages = new Fuseo.Input.PageSource().LoadAsync([outPdf], r => { asked++; return Task.FromResult<string?>("e2e-pass"); },
+                                                           CancellationToken.None).GetAwaiter().GetResult();
+        Assert.Equal(1, asked);
+        var page = Assert.Single(pages).Bitmap;
+        OutputCheck.AssertPainted(page, mask, "四角");
+        // 透かし: 塗っていない所で、元のカードと（JPEG の誤差を超えて）違う画素がたくさんある＝透かしの文字
+        var original = Synth.Card();
+        Assert.Equal((original.Width, original.Height), (page.Width, page.Height));
+        int mx0 = (int)(mask.X * page.Width), my0 = (int)(mask.Y * page.Height);
+        int mx1 = (int)((mask.X + mask.W) * page.Width), my1 = (int)((mask.Y + mask.H) * page.Height);
+        var changed = 0;
+        for (var y = 0; y < page.Height; y++)
+        for (var x = 0; x < page.Width; x++)
+        {
+            if (x >= mx0 - 4 && x < mx1 + 4 && y >= my0 - 4 && y < my1 + 4) continue;
+            var a = original.GetPixel(x, y);
+            var b = page.GetPixel(x, y);
+            if (Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) > 60) changed++;
+        }
+        Assert.True(changed > 2000, $"透かしの画素が少ない: {changed}");
+    });
+}
+
 /// <summary>パスワード付き PDF（Fuseo.Input.Tests の合成フィクスチャ・パスワードはテスト専用の固定値）。</summary>
 public class PasswordTests(ITestOutputHelper output) : E2ETest(output)
 {

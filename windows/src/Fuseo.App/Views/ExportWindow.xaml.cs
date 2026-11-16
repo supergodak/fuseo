@@ -19,6 +19,14 @@ public partial class ExportWindow : Window
         };
     }
 
+    /// <summary>PasswordBox はバインドできないので、入力のたびに ViewModel へ渡す（パスワードはどこにも保存しない）。</summary>
+    private void OnPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ExportViewModel vm) return;
+        vm.Password = PasswordField.Password;
+        vm.PasswordConfirm = PasswordConfirmField.Password;
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         // 保存中に閉じると書き出しの完了を利用者が確認できないので、終わるまで閉じさせない。

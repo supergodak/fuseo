@@ -286,4 +286,25 @@ Use Undo to go back to before the crop.</value></data>
 Use Undo to go back to before the rotation.</value></data>
   <data name="ExportTextSummary" xml:space="preserve"><value>Text: {0}</value></data>
   <data name="ExportTextOverflow" xml:space="preserve"><value>{0} text box(es) overflow their frame (they are exported as they are).</value></data>
+  <data name="ExportExtrasHeading" xml:space="preserve"><value>For submission</value></data>
+  <data name="ExportWatermark" xml:space="preserve"><value>Add a watermark</value></data>
+  <data name="ExportWatermarkTextLabel" xml:space="preserve"><value>Text (e.g. For submission to ABC Inc.)</value></data>
+  <data name="ExportWatermarkAddDate" xml:space="preserve"><value>Add today's date</value></data>
+  <data name="ExportWatermarkLayoutLabel" xml:space="preserve"><value>Layout</value></data>
+  <data name="ExportWatermarkTiled" xml:space="preserve"><value>Tile across the page</value></data>
+  <data name="ExportWatermarkDiagonal" xml:space="preserve"><value>One in the center</value></data>
+  <data name="ExportWatermarkOpacity" xml:space="preserve"><value>Strength</value></data>
+  <data name="ExportWatermarkNote" xml:space="preserve"><value>Preview (page 1, reduced). It is added to every page and is not kept as text. The pages below do not show it.</value></data>
+  <data name="ExportWatermarkEmpty" xml:space="preserve"><value>Enter the text to add.</value></data>
+  <data name="ExportSizeLimitLabel" xml:space="preserve"><value>File size</value></data>
+  <data name="ExportSizeLimitNone" xml:space="preserve"><value>No limit</value></data>
+  <data name="ExportSizeLimitItem" xml:space="preserve"><value>Up to {0}</value></data>
+  <data name="ExportSizeLimitNote" xml:space="preserve"><value>Quality and resolution are lowered automatically to fit (never below a readable size).</value></data>
+  <data name="ExportSizeLimitFailed" xml:space="preserve"><value>The file can't be made {0} or smaller (it is {1} at the smallest readable size). Choose a larger limit or save each document separately.</value></data>
+  <data name="ExportPassword" xml:space="preserve"><value>Protect the PDF with a password</value></data>
+  <data name="ExportPasswordLabel" xml:space="preserve"><value>Password</value></data>
+  <data name="ExportPasswordConfirmLabel" xml:space="preserve"><value>Confirm</value></data>
+  <data name="ExportPasswordMismatch" xml:space="preserve"><value>The passwords don't match.</value></data>
+  <data name="ExportPasswordInvalid" xml:space="preserve"><value>Use ASCII letters, digits and symbols only (up to 32). Other characters may make the PDF impossible for the recipient to open.</value></data>
+  <data name="ExportPasswordNote" xml:space="preserve"><value>The password is not saved. If you forget it, the file can't be opened. Tell the recipient by a different channel than the file (e.g. by phone).</value></data>
 </root>

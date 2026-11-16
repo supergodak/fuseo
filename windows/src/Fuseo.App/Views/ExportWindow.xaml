@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:Fuseo.App.Properties"
         Title="{x:Static p:Strings.ExportTitle}"
-        Width="820" Height="860" MinWidth="560" MinHeight="520"
+        Width="820" Height="940" MinWidth="560" MinHeight="600"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
     <!-- 書き出しシート（絶対条件: 保存前の確認 UI を外さない）。プレビューは BurnIn の結果画像そのもの。 -->
     <Grid Margin="20">
@@ -41,6 +41,79 @@
                        Foreground="#555" Visibility="{Binding ShowPdfNote, Converter={StaticResource BoolToVis}}"/>
             <TextBlock Text="{x:Static p:Strings.ExportSeparateFilesNote}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"
                        Foreground="#555" Visibility="{Binding ShowSeparateFilesNote, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- 提出用の設定（0.4.0）: 透かし・ファイルの大きさの上限・PDF のパスワード。中身と文言は Mac 版と同じ。 -->
+            <GroupBox Header="{x:Static p:Strings.ExportExtrasHeading}" Margin="0,12,0,0" Padding="8,6"
+                      IsEnabled="{Binding IsNotCompleted}">
+                <StackPanel>
+                    <CheckBox Content="{x:Static p:Strings.ExportWatermark}" IsChecked="{Binding WatermarkEnabled}"
+                              AutomationProperties.AutomationId="export.watermark"/>
+                    <Grid Margin="20,6,0,0" Visibility="{Binding ShowWatermarkOptions, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{x:Static p:Strings.ExportWatermarkTextLabel}" FontSize="12"/>
+                            <DockPanel Margin="0,2,0,0">
+                                <Button DockPanel.Dock="Right" Content="{x:Static p:Strings.ExportWatermarkAddDate}" Command="{Binding AddDateCommand}"
+                                        Padding="8,2" Margin="6,0,0,0" AutomationProperties.AutomationId="export.watermarkDate"/>
+                                <TextBox Text="{Binding WatermarkText, UpdateSourceTrigger=PropertyChanged}"
+                                         AutomationProperties.AutomationId="export.watermarkText"/>
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="{x:Static p:Strings.ExportWatermarkLayoutLabel}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <RadioButton Content="{x:Static p:Strings.ExportWatermarkTiled}" IsChecked="{Binding IsWatermarkTiled}" GroupName="wm"
+                                             Margin="0,0,12,0" AutomationProperties.AutomationId="export.watermarkTiled"/>
+                                <RadioButton Content="{x:Static p:Strings.ExportWatermarkDiagonal}" IsChecked="{Binding IsWatermarkDiagonal}" GroupName="wm"
+                                             AutomationProperties.AutomationId="export.watermarkDiagonal"/>
+                            </StackPanel>
+                            <DockPanel Margin="0,6,0,0">
+                                <TextBlock DockPanel.Dock="Left" Text="{x:Static p:Strings.ExportWatermarkOpacity}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Slider Minimum="{Binding WatermarkMinOpacity, Mode=OneTime}" Maximum="{Binding WatermarkMaxOpacity, Mode=OneTime}"
+                                        Value="{Binding WatermarkOpacity}" AutomationProperties.AutomationId="export.watermarkOpacity"/>
+                            </DockPanel>
+                            <TextBlock Text="{x:Static p:Strings.ExportWatermarkEmpty}" FontSize="12" Foreground="#555" Margin="0,4,0,0"
+                                       Visibility="{Binding ShowWatermarkEmpty, Converter={StaticResource BoolToVis}}"/>
+                            <TextBlock Text="{x:Static p:Strings.ExportWatermarkNote}" FontSize="12" Foreground="#555" TextWrapping="Wrap" Margin="0,4,0,0"
+                                       Visibility="{Binding HasWatermarkPreview, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Margin="12,0,0,0" BorderBrush="#AAA" BorderThickness="1" VerticalAlignment="Top"
+                                Visibility="{Binding HasWatermarkPreview, Converter={StaticResource BoolToVis}}">
+                            <Image Source="{Binding WatermarkPreview}" MaxHeight="140" MaxWidth="200" Stretch="Uniform"
+                                   RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.AutomationId="export.watermarkPreview"/>
+                        </Border>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Visibility="{Binding ShowSizeLimit, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{x:Static p:Strings.ExportSizeLimitLabel}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox ItemsSource="{Binding SizeLimitOptions}" SelectedItem="{Binding SelectedSizeLimit}" DisplayMemberPath="Label"
+                                  MinWidth="140" AutomationProperties.AutomationId="export.sizeLimit"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Static p:Strings.ExportSizeLimitNote}" FontSize="12" Foreground="#555" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Visibility="{Binding ShowSizeLimitNote, Converter={StaticResource BoolToVis}}"/>
+
+                    <CheckBox Content="{x:Static p:Strings.ExportPassword}" IsChecked="{Binding PasswordEnabled}" Margin="0,10,0,0"
+                              Visibility="{Binding ShowPasswordOptions, Converter={StaticResource BoolToVis}}"
+                              AutomationProperties.AutomationId="export.password"/>
+                    <StackPanel Margin="20,6,0,0" Visibility="{Binding ShowPasswordFields, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{x:Static p:Strings.ExportPasswordLabel}" VerticalAlignment="Center" Width="90"/>
+                            <PasswordBox x:Name="PasswordField" Width="220" MaxLength="64" PasswordChanged="OnPasswordChanged"
+                                         AutomationProperties.AutomationId="export.passwordField"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{x:Static p:Strings.ExportPasswordConfirmLabel}" VerticalAlignment="Center" Width="90"/>
+                            <PasswordBox x:Name="PasswordConfirmField" Width="220" MaxLength="64" PasswordChanged="OnPasswordChanged"
+                                         AutomationProperties.AutomationId="export.passwordConfirm"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding PasswordMessage}" Foreground="#C62828" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0"
+                                   Visibility="{Binding HasPasswordMessage, Converter={StaticResource BoolToVis}}"
+                                   AutomationProperties.AutomationId="export.passwordMessage"/>
+                        <TextBlock Text="{x:Static p:Strings.ExportPasswordNote}" FontSize="12" Foreground="#555" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Margin="0,16,0,6">

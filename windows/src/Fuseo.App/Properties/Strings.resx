@@ -286,4 +286,25 @@
 「元に戻す」で回転する前に戻せます。</value></data>
   <data name="ExportTextSummary" xml:space="preserve"><value>文字 {0} 箇所</value></data>
   <data name="ExportTextOverflow" xml:space="preserve"><value>枠からはみ出している文字が {0} 箇所あります（はみ出したまま書き出します）。</value></data>
+  <data name="ExportExtrasHeading" xml:space="preserve"><value>提出用の設定</value></data>
+  <data name="ExportWatermark" xml:space="preserve"><value>透かしを入れる</value></data>
+  <data name="ExportWatermarkTextLabel" xml:space="preserve"><value>文言（例: 〇〇株式会社 提出用）</value></data>
+  <data name="ExportWatermarkAddDate" xml:space="preserve"><value>日付を足す</value></data>
+  <data name="ExportWatermarkLayoutLabel" xml:space="preserve"><value>配置</value></data>
+  <data name="ExportWatermarkTiled" xml:space="preserve"><value>全面に敷き詰める</value></data>
+  <data name="ExportWatermarkDiagonal" xml:space="preserve"><value>中央に1つ</value></data>
+  <data name="ExportWatermarkOpacity" xml:space="preserve"><value>濃さ</value></data>
+  <data name="ExportWatermarkNote" xml:space="preserve"><value>見本（1 ページ目・小さく表示）。すべてのページに入り、文字としては残りません。下の仕上がりには表示されません。</value></data>
+  <data name="ExportWatermarkEmpty" xml:space="preserve"><value>入れる文言を入力してください。</value></data>
+  <data name="ExportSizeLimitLabel" xml:space="preserve"><value>ファイルの大きさ</value></data>
+  <data name="ExportSizeLimitNone" xml:space="preserve"><value>上限なし</value></data>
+  <data name="ExportSizeLimitItem" xml:space="preserve"><value>{0} 以内</value></data>
+  <data name="ExportSizeLimitNote" xml:space="preserve"><value>収まるよう、画質と解像度を自動で下げます（文字が読める大きさより下げません）。</value></data>
+  <data name="ExportSizeLimitFailed" xml:space="preserve"><value>ファイルの大きさを {0} 以内にできません（文字が読める下限まで下げて {1}）。上限を上げるか、書類ごとに分けて書き出してください。</value></data>
+  <data name="ExportPassword" xml:space="preserve"><value>PDFにパスワードをかける</value></data>
+  <data name="ExportPasswordLabel" xml:space="preserve"><value>パスワード</value></data>
+  <data name="ExportPasswordConfirmLabel" xml:space="preserve"><value>もう一度</value></data>
+  <data name="ExportPasswordMismatch" xml:space="preserve"><value>2 つのパスワードが違います。</value></data>
+  <data name="ExportPasswordInvalid" xml:space="preserve"><value>半角の英数字と記号（32 文字まで）で入力してください。日本語などは、相手が開けなくなることがあります。</value></data>
+  <data name="ExportPasswordNote" xml:space="preserve"><value>パスワードは保存しません。忘れると開けなくなります。相手には、ファイルとは別の方法（電話など）で伝えてください。</value></data>
 </root>

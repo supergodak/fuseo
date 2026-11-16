@@ -781,7 +781,7 @@ public sealed partial class MainViewModel : ObservableObject
     public ExportViewModel CreateExportViewModel()
     {
         EndTextEditing();
-        return new(Pages.Select(p => p.State).ToList(), _presets, _rasterizer, _exporter, _dialogs, _now, _english, TextMetrics);
+        return new(Pages.Select(p => p.State).ToList(), _presets, _rasterizer, _exporter, _dialogs, _now, _english, TextMetrics, _settings);
     }
 
     private void OpenExport()

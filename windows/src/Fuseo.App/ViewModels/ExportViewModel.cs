@@ -1,5 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Windows.Media.Imaging;
 using System.IO;
+using Fuseo.App.Configuration;
 using Fuseo.App.Mvvm;
 using Fuseo.App.Properties;
 using Fuseo.App.Services;
@@ -32,11 +35,31 @@ public sealed class ExportViewModel : ObservableObject
     private bool _isCompleted;
 
     private readonly WpfTextMetrics _textMetrics;
+    private readonly SettingsStore? _settings;
+
+    // 提出用の設定（0.4.0）: 透かし・大きさの上限・PDF のパスワード。文言とパスワードはどこにも保存しない。
+    private bool _watermarkEnabled;
+    private string _watermarkText = "";
+    private WatermarkLayoutKind _watermarkLayout;
+    private double _watermarkOpacity;
+    private BitmapSource? _watermarkPreview;
+    private long? _sizeLimit;
+    private bool _passwordEnabled;
+    private string _password = "";
+    private string _passwordConfirm = "";
 
     public ExportViewModel(IReadOnlyList<PageState> pages, IReadOnlyDictionary<DocumentType, DocumentPreset> presets,
                            IMaskRasterizer rasterizer, IExporter exporter, IDialogService dialogs, Func<DateTime> now,
-                           bool? english = null, WpfTextMetrics? textMetrics = null)
+                           bool? english = null, WpfTextMetrics? textMetrics = null, SettingsStore? settings = null)
     {
+        _settings = settings;
+        var saved = settings?.Load() ?? AppSettings.Default;
+        _watermarkLayout = saved.WatermarkLayout;
+        _watermarkOpacity = saved.WatermarkOpacity;
+        _sizeLimit = saved.ExportSizeLimit;
+        SizeLimitOptions = [new SizeLimitOption(Strings.ExportSizeLimitNone, null),
+            .. AppSettings.SizeLimitChoices.Select(l => new SizeLimitOption(string.Format(Strings.ExportSizeLimitItem, ByteLabel(l)), l))];
+        AddDateCommand = new RelayCommand(AddDate);
         _textMetrics = textMetrics ?? WpfTextMetrics.Instance;
         var useEnglish = english ?? Strings.IsEnglish;
         _pages = pages;
@@ -187,6 +210,10 @@ public sealed class ExportViewModel : ObservableObject
             OnPropertyChanged(nameof(IsPng));
             OnPropertyChanged(nameof(ShowPdfNote));
             OnPropertyChanged(nameof(ShowSeparateFilesNote));
+            OnPropertyChanged(nameof(ShowSizeLimit));
+            OnPropertyChanged(nameof(ShowSizeLimitNote));
+            OnPropertyChanged(nameof(ShowPasswordOptions));
+            PasswordChanged();
         }
     }
 
@@ -211,7 +238,193 @@ public sealed class ExportViewModel : ObservableObject
         private set { if (SetProperty(ref _isSaving, value)) RefreshCommands(); }
     }
 
-    public bool CanSave => _burned is not null && !IsPreparing && !IsSaving && !IsCompleted;
+    public bool CanSave => _burned is not null && !IsPreparing && !IsSaving && !IsCompleted
+                           && PasswordState is PdfPasswordState.Off or PdfPasswordState.Ok;
+
+    // ---- 提出用の設定（0.4.0） ----
+
+    public RelayCommand AddDateCommand { get; }
+
+    public bool WatermarkEnabled
+    {
+        get => _watermarkEnabled;
+        set { if (SetProperty(ref _watermarkEnabled, value)) WatermarkChanged(); }
+    }
+
+    public string WatermarkText
+    {
+        get => _watermarkText;
+        set { if (SetProperty(ref _watermarkText, value ?? "")) WatermarkChanged(); }
+    }
+
+    public bool IsWatermarkTiled
+    {
+        get => _watermarkLayout == WatermarkLayoutKind.Tiled;
+        set { if (value) SetLayout(WatermarkLayoutKind.Tiled); }
+    }
+
+    public bool IsWatermarkDiagonal
+    {
+        get => _watermarkLayout == WatermarkLayoutKind.Diagonal;
+        set { if (value) SetLayout(WatermarkLayoutKind.Diagonal); }
+    }
+
+    public double WatermarkOpacity
+    {
+        get => _watermarkOpacity;
+        set { if (SetProperty(ref _watermarkOpacity, Math.Clamp(value, Watermark.MinOpacity, Watermark.MaxOpacity))) WatermarkChanged(); }
+    }
+
+    public double WatermarkMinOpacity => Watermark.MinOpacity;
+    public double WatermarkMaxOpacity => Watermark.MaxOpacity;
+
+    /// <summary>書き出しに使う透かし（オンで文言があるときだけ）。</summary>
+    public Watermark? ActiveWatermark
+    {
+        get
+        {
+            if (!WatermarkEnabled) return null;
+            var wm = new Watermark(WatermarkText, _watermarkLayout, _watermarkOpacity);
+            return wm.TrimmedText.Length == 0 ? null : wm;
+        }
+    }
+
+    /// <summary>見本（1 ページ目を縮めて透かしを重ねた画像）。文言が無ければ null。</summary>
+    public BitmapSource? WatermarkPreview { get => _watermarkPreview; private set => SetProperty(ref _watermarkPreview, value); }
+    public bool HasWatermarkPreview => WatermarkPreview is not null;
+    public bool ShowWatermarkEmpty => WatermarkEnabled && ActiveWatermark is null;
+    public bool ShowWatermarkOptions => WatermarkEnabled;
+
+    private void SetLayout(WatermarkLayoutKind layout)
+    {
+        if (_watermarkLayout == layout) return;
+        _watermarkLayout = layout;
+        OnPropertyChanged(nameof(IsWatermarkTiled));
+        OnPropertyChanged(nameof(IsWatermarkDiagonal));
+        WatermarkChanged();
+    }
+
+    private void WatermarkChanged()
+    {
+        UpdateWatermarkPreview();
+        OnPropertyChanged(nameof(ActiveWatermark));
+        OnPropertyChanged(nameof(ShowWatermarkEmpty));
+        OnPropertyChanged(nameof(ShowWatermarkOptions));
+    }
+
+    private void UpdateWatermarkPreview()
+    {
+        WatermarkPreview = ActiveWatermark is { } wm && _burned is { Count: > 0 } burned ? WatermarkPainter.Preview(burned[0], wm) : null;
+        OnPropertyChanged(nameof(HasWatermarkPreview));
+    }
+
+    /// <summary>今日の日付（yyyy/MM/dd）を文言に足す（すでに入っていれば何もしない）。</summary>
+    private void AddDate()
+    {
+        var date = _now().ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
+        if (WatermarkText.Contains(date, StringComparison.Ordinal)) return;
+        var b = WatermarkText.Trim();
+        WatermarkText = b.Length == 0 ? date : b + " " + date;
+    }
+
+    public IReadOnlyList<SizeLimitOption> SizeLimitOptions { get; }
+
+    public SizeLimitOption SelectedSizeLimit
+    {
+        get => SizeLimitOptions.FirstOrDefault(o => o.Bytes == _sizeLimit) ?? SizeLimitOptions[0];
+        set
+        {
+            if (value is null || value.Bytes == _sizeLimit) return;
+            _sizeLimit = value.Bytes;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowSizeLimitNote));
+        }
+    }
+
+    /// <summary>PNG は無劣化の形式なので上限を出さない。</summary>
+    public bool ShowSizeLimit => !IsPng;
+    public bool ShowSizeLimitNote => ShowSizeLimit && _sizeLimit is not null;
+    public bool ShowPasswordOptions => IsPdf;
+    public bool ShowPasswordFields => IsPdf && PasswordEnabled;
+
+    public bool PasswordEnabled
+    {
+        get => _passwordEnabled;
+        set { if (SetProperty(ref _passwordEnabled, value)) PasswordChanged(); }
+    }
+
+    /// <summary>PasswordBox はバインドできないので、画面の側から入れる。</summary>
+    public string Password { get => _password; set { _password = value ?? ""; PasswordChanged(); } }
+    public string PasswordConfirm { get => _passwordConfirm; set { _passwordConfirm = value ?? ""; PasswordChanged(); } }
+
+    public PdfPasswordState PasswordState
+    {
+        get
+        {
+            if (!PasswordEnabled || !IsPdf) return PdfPasswordState.Off;
+            if (_password.Length == 0) return PdfPasswordState.Empty;
+            if (!ExportOptions.IsValidPdfPassword(_password)) return PdfPasswordState.Invalid;
+            return _password == _passwordConfirm ? PdfPasswordState.Ok : PdfPasswordState.Mismatch;
+        }
+    }
+
+    public string PasswordMessage => PasswordState switch
+    {
+        PdfPasswordState.Mismatch => Strings.ExportPasswordMismatch,
+        PdfPasswordState.Invalid => Strings.ExportPasswordInvalid,
+        _ => "",
+    };
+
+    public bool HasPasswordMessage => PasswordMessage.Length > 0;
+
+    private void PasswordChanged()
+    {
+        OnPropertyChanged(nameof(ShowPasswordFields));
+        OnPropertyChanged(nameof(PasswordState));
+        OnPropertyChanged(nameof(PasswordMessage));
+        OnPropertyChanged(nameof(HasPasswordMessage));
+        RefreshCommands();
+    }
+
+    /// <summary>実際の書き出しの設定（形式＋大きさの上限＋パスワード）。透かしは保存のときに焼き込み結果へ重ねる。</summary>
+    public ExportOptions BuildOptions(ExportFormat format) => new(
+        format,
+        MaxBytes: format == ExportFormat.Png ? null : _sizeLimit,
+        PdfPassword: format == ExportFormat.Pdf && PasswordState == PdfPasswordState.Ok ? _password : null);
+
+    /// <summary>保存し終えたら: 配置・濃さ・上限を次回へ（文言とパスワードは持ち越さない）。</summary>
+    private void RememberChoices()
+    {
+        _password = _passwordConfirm = "";
+        if (_settings is null) return;
+        try
+        {
+            _settings.Save(_settings.Load() with
+            {
+                WatermarkLayout = _watermarkLayout, WatermarkOpacity = _watermarkOpacity, ExportSizeLimit = _sizeLimit,
+            });
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* 次回の既定に使うだけなので黙って続ける */ }
+    }
+
+    /// <summary>「2 MB」「300 KB」（1 MB = 1,000,000 バイト・Mac 版と同じ）。</summary>
+    public static string ByteLabel(long bytes)
+    {
+        if (bytes >= 1_000_000)
+        {
+            var mb = bytes / 1_000_000.0;
+            return mb >= 10 || mb == Math.Round(mb) ? $"{Math.Round(mb):0} MB" : string.Format(CultureInfo.InvariantCulture, "{0:0.0} MB", mb);
+        }
+        return $"{Math.Max(1, Math.Round(bytes / 1000.0)):0} KB";
+    }
+
+    private string FailureMessage(Exception e) => e is SizeLimitUnreachableException s
+        ? string.Format(Strings.ExportSizeLimitFailed, ByteLabel(s.LimitBytes), ByteLabel(s.SmallestBytes))
+        : string.Format(Strings.ExportFailed, e.Message);
+
+    /// <summary>透かしを重ねたページ（オフならそのまま）。</summary>
+    private static IReadOnlyList<BurnedPage> WithWatermark(IReadOnlyList<BurnedPage> pages, Watermark? wm) =>
+        wm is null ? pages : pages.Select(p => WatermarkPainter.Apply(p, wm)).ToList();
 
     /// <summary>
     /// 全ページを焼き込む（UI を塞がないよう別スレッド）。確定マスクの組み立ては呼び出しスレッドで行い、
@@ -231,6 +444,7 @@ public sealed class ExportViewModel : ObservableObject
             _burned = burned;
             Previews.Clear();
             for (var i = 0; i < burned.Count; i++) Previews.Add(new PreviewItem(i + 1, burned[i]));
+            UpdateWatermarkPreview();
         }
         catch (Exception e)
         {
@@ -268,8 +482,10 @@ public sealed class ExportViewModel : ObservableObject
         IsSaving = true;
         try
         {
-            var options = new ExportOptions(format);
-            await Task.Run(() => ExportWriter.Write(_exporter, burned, options, targets));
+            var options = BuildOptions(format);
+            var wm = ActiveWatermark;
+            await Task.Run(() => ExportWriter.Write(_exporter, WithWatermark(burned, wm), options, targets));
+            RememberChoices();
             SavedSummary = targets.Count == 1
                 ? string.Format(Strings.StatusExportedOne, Path.GetFileName(targets[0]))
                 : string.Format(Strings.StatusExportedMany, targets.Count, Path.GetFileName(targets[0]));
@@ -279,7 +495,7 @@ public sealed class ExportViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            _dialogs.ShowError(Strings.ExportErrorTitle, string.Format(Strings.ExportFailed, e.Message));
+            _dialogs.ShowError(Strings.ExportErrorTitle, FailureMessage(e));
         }
         finally
         {
@@ -298,12 +514,13 @@ public sealed class ExportViewModel : ObservableObject
         if (folder is null) return;
         var format = Format;
         var docs = Documents;
+        var options = BuildOptions(format);
+        var wm = ActiveWatermark;
         IsSaving = true;
         try
         {
             var (saved, failures) = await Task.Run(() =>
             {
-                var options = new ExportOptions(format);
                 var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var ok = new List<string>();
                 var bad = new List<(string Name, string Reason)>();
@@ -311,14 +528,14 @@ public sealed class ExportViewModel : ObservableObject
                 {
                     try
                     {
-                        var pages = d.PageIndexes.Select(i => burned[i]).ToList();
+                        var pages = WithWatermark(d.PageIndexes.Select(i => burned[i]).ToList(), wm);
                         var targets = ExportNaming.SeparateTargets(folder, d.Name, format, pages.Count, ExportNaming.PathTaken, taken);
                         ExportWriter.Write(_exporter, pages, options, targets, overwrite: false);
                         ok.Add(Path.GetFileName(targets[0]));
                     }
                     catch (Exception e) when (e is not OutOfMemoryException)
                     {
-                        bad.Add((d.Name, e.Message));
+                        bad.Add((d.Name, e is SizeLimitUnreachableException ? FailureMessage(e) : e.Message));
                     }
                 }
                 return (ok, bad);
@@ -328,6 +545,7 @@ public sealed class ExportViewModel : ObservableObject
                     string.Join("\n", failures.Select(f => string.Format(Strings.ExportSeparateFailedItem, f.Name, f.Reason)))));
             if (saved.Count > 0)
             {
+                RememberChoices();
                 SavedFolder = folder;
                 var folderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
                 SavedFileName = string.IsNullOrEmpty(folderName) ? folder : folderName;
@@ -359,3 +577,12 @@ public sealed class ExportViewModel : ObservableObject
 
 /// <summary>書き出しの書類 1 つ（元ファイルの名前と、書き出すページの番号＝画面の順・0 始まり）。</summary>
 public sealed record ExportDocument(string Name, IReadOnlyList<int> PageIndexes);
+
+/// <summary>ファイルの大きさの上限の選択肢（null = 上限なし）。</summary>
+public sealed record SizeLimitOption(string Label, long? Bytes)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>PDF のパスワードの入力の状態（保存ボタンを押せるのは Off と Ok のときだけ）。</summary>
+public enum PdfPasswordState { Off, Empty, Invalid, Mismatch, Ok }

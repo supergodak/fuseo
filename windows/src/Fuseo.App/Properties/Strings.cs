@@ -303,4 +303,25 @@ public static class Strings
     public static string RotateTextsConfirmMessage => Get(nameof(RotateTextsConfirmMessage));
     public static string ExportTextSummary => Get(nameof(ExportTextSummary));
     public static string ExportTextOverflow => Get(nameof(ExportTextOverflow));
+    public static string ExportExtrasHeading => Get(nameof(ExportExtrasHeading));
+    public static string ExportWatermark => Get(nameof(ExportWatermark));
+    public static string ExportWatermarkTextLabel => Get(nameof(ExportWatermarkTextLabel));
+    public static string ExportWatermarkAddDate => Get(nameof(ExportWatermarkAddDate));
+    public static string ExportWatermarkLayoutLabel => Get(nameof(ExportWatermarkLayoutLabel));
+    public static string ExportWatermarkTiled => Get(nameof(ExportWatermarkTiled));
+    public static string ExportWatermarkDiagonal => Get(nameof(ExportWatermarkDiagonal));
+    public static string ExportWatermarkOpacity => Get(nameof(ExportWatermarkOpacity));
+    public static string ExportWatermarkNote => Get(nameof(ExportWatermarkNote));
+    public static string ExportWatermarkEmpty => Get(nameof(ExportWatermarkEmpty));
+    public static string ExportSizeLimitLabel => Get(nameof(ExportSizeLimitLabel));
+    public static string ExportSizeLimitNone => Get(nameof(ExportSizeLimitNone));
+    public static string ExportSizeLimitItem => Get(nameof(ExportSizeLimitItem));
+    public static string ExportSizeLimitNote => Get(nameof(ExportSizeLimitNote));
+    public static string ExportSizeLimitFailed => Get(nameof(ExportSizeLimitFailed));
+    public static string ExportPassword => Get(nameof(ExportPassword));
+    public static string ExportPasswordLabel => Get(nameof(ExportPasswordLabel));
+    public static string ExportPasswordConfirmLabel => Get(nameof(ExportPasswordConfirmLabel));
+    public static string ExportPasswordMismatch => Get(nameof(ExportPasswordMismatch));
+    public static string ExportPasswordInvalid => Get(nameof(ExportPasswordInvalid));
+    public static string ExportPasswordNote => Get(nameof(ExportPasswordNote));
 }
