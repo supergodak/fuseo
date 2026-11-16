@@ -5,7 +5,7 @@
 
 Fuseo は**「提出事故を減らす道具」**です。名称は「伏せる」に由来し、姉妹アプリ [Tameo（ためお／「溜める」）](https://github.com/supergodak/tameo)と同じ命名系譜です。
 
-🌐 Website: https://fuseo.ati-mirai.co.jp  ·  🍎 [Mac 版 DMG](https://github.com/supergodak/fuseo/releases/latest)  ·  📱 [iPhone 版（App Store・無料）](https://apps.apple.com/jp/app/id6788677260)  ·  📜 [プライバシーポリシー](PRIVACY.md)  ·  ⚖️ [MIT License](LICENSE)
+🌐 Website: https://fuseo.ati-mirai.co.jp  ·  🍎 [Mac 版 DMG](https://github.com/supergodak/fuseo/releases/latest)  ·  📱 [iPhone 版（App Store・無料）](https://apps.apple.com/jp/app/id6788677260)  ·  📜 [プライバシーポリシー](PRIVACY.md)  ·  📄 [利用条件](https://fuseo.ati-mirai.co.jp/terms/)  ·  ⚖️ [MIT License](LICENSE)
 
 > **公開中。** Mac 版は Developer ID 署名＋Apple 公証済みの DMG を [Releases](https://github.com/supergodak/fuseo/releases/latest) から、iPhone 版（無料・日本語／英語 UI）は [App Store](https://apps.apple.com/jp/app/id6788677260) から配布しています。使い方の詳細は [docs/user-manual.md](docs/user-manual.md) を参照してください。
 >

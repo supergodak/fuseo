@@ -33,6 +33,7 @@ FOOTER = '''<footer class="wrap">
     <a href="../manual/">使い方</a>
     <a href="https://github.com/supergodak/fuseo">GitHub</a>
     <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシー</a>
+    <a href="../terms/">利用条件</a>
     <a href="https://tameo.ati-mirai.co.jp">姉妹アプリ Tameo</a>
   </div>
   <div>© 2026 ATI Inc. (ATI株式会社) · MIT License</div>
@@ -403,6 +404,33 @@ def build_manuals():
     print('manual pages:', 1 + len(MANUALS))
 
 build_manuals()
+
+TROOT = os.path.join(ROOT, '..', 'terms')
+def build_terms():
+    """利用条件（docs/legal/TERMS.md → site/terms/index.html）。"""
+    try:
+        import markdown  # noqa: F401
+    except ImportError:
+        print('terms: markdown が無いので飛ばした'); return
+    src = open(os.path.join(ROOT, '..', '..', 'docs', 'legal', 'TERMS.md')).read()
+    body = md_to_html(src)
+    url = 'https://fuseo.ati-mirai.co.jp/terms/'
+    head = mhead('Fuseo 利用条件', 'Fuseo（本人確認書類の黒塗りアプリ）の利用条件。料金、使ってよい範囲、黒塗りの結果、保証しないことと責任の範囲など。', url)
+    head = head.replace('<a href="../manual/" aria-current="page">', '<a href="../manual/">')
+    os.makedirs(TROOT, exist_ok=True)
+    open(os.path.join(TROOT, 'index.html'), 'w').write(head + f"""<main class="wrap manual">
+<p class="crumb"><a href="../">Fuseo</a> › 利用条件</p>
+<div class="eyebrow"><span class="bar"></span><span class="label">TERMS</span></div>
+<h1 class="mincho">利用条件</h1>
+{body}
+<p class="crumb">プライバシーの方針は <a href="https://github.com/supergodak/fuseo/blob/main/PRIVACY.md">プライバシーポリシー</a> をご覧ください。</p>
+</main>
+{FOOTER}
+</body></html>
+""")
+    print('terms: 1 page')
+
+build_terms()
 
 
 # ---- 書類を集める方へ（site/collect/）----

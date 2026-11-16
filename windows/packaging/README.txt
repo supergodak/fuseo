@@ -74,6 +74,7 @@ Windows 10（1809 以降）/ Windows 11。x64 版と ARM64 版があります。
 
 ■ ライセンス・お問い合わせ
 - Fuseo: MIT License（LICENSE.txt）。同梱している部品のライセンスは THIRD-PARTY-NOTICES.txt。
+- 利用条件: https://fuseo.ati-mirai.co.jp/terms/
   Fuseo.exe に含まれる Microsoft の部品（Windows SDK for .NET・文字認識と顔検出の呼び出しに使用）は MIT の対象外で、
   Microsoft の Windows SDK のライセンス条項に従います。Fuseo.exe を使う・配る場合はその条項にも従ってください。
 - Web: https://fuseo.ati-mirai.co.jp
@@ -132,6 +133,7 @@ SHA-256 on the download page (case does not matter). Use -arm64.zip for the ARM6
 Requirements: Windows 10 (1809 or later) / Windows 11, x64 or ARM64. Nothing else to install.
 
 License: MIT (LICENSE.txt). Bundled components: THIRD-PARTY-NOTICES.txt.
+Terms of use (Japanese): https://fuseo.ati-mirai.co.jp/terms/
 The Microsoft components inside Fuseo.exe (Windows SDK for .NET, used to call text recognition and face detection)
 are not covered by the MIT License; they are subject to Microsoft's Windows SDK license terms, which also apply
 when you use or redistribute Fuseo.exe.
