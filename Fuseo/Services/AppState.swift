@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import Observation
 import MaskingCore
 import os
@@ -461,6 +462,15 @@ final class AppState {
     // 書き出しシート
     var showingExportSheet = false
     var exportOptions: ExportOptions
+    /// 透かし（0.4.0）。オン・文言は書類ごと（新しい書類で空に戻る）。配置と濃さは設定から引き継ぐ。
+    var watermarkEnabled = false
+    var watermarkText = ""
+    var watermarkLayout: Watermark.Layout = .tiled
+    var watermarkOpacity: Double = Watermark.defaultOpacity
+    /// PDF のパスワード（0.4.0）。**どこにも保存しない**。書き出しが済んだら空に戻す。
+    var pdfPasswordEnabled = false
+    var pdfPassword = ""
+    var pdfPasswordConfirm = ""
 
     // アラート
     var errorMessage: String?
@@ -487,6 +497,8 @@ final class AppState {
         self.library = library
         self.allPresets = (try? PresetStore.loadAll()) ?? []
         self.exportOptions = settings.initialExportOptions
+        self.watermarkLayout = settings.watermarkLayout
+        self.watermarkOpacity = settings.watermarkOpacity
     }
 
     var currentPage: PageState? {
@@ -620,7 +632,7 @@ final class AppState {
             attachEditObservers()
             dirtyImagePageIDs = Set(built.map(\.id))
             currentPageIndex = 0
-            exportOptions = settings.initialExportOptions
+            resetExportDraft()
             reviewLayout = built.count >= 5 ? .grid : .single   // 束は一覧から（v1.2）
             stage = .review
             scheduleAutosave()
@@ -1029,9 +1041,94 @@ final class AppState {
         return ExportNaming.defaultFileName(firstSourceName: first, format: exportOptions.format)
     }
 
+    /// 今日の日付（透かしの文言に足す用。例: 2026/11/16）。
+    static func watermarkDate(_ date: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy/MM/dd"
+        return f.string(from: date)
+    }
+
+    /// 透かしの文言に今日の日付を足す（すでに入っていれば何もしない）。
+    func appendDateToWatermark() {
+        let date = Self.watermarkDate()
+        guard !watermarkText.contains(date) else { return }
+        let base = watermarkText.trimmingCharacters(in: .whitespaces)
+        watermarkText = base.isEmpty ? date : base + " " + date
+    }
+
+    /// 書き出しに使う透かし（オンで文言があるときだけ）。
+    var activeWatermark: Watermark? {
+        guard watermarkEnabled else { return nil }
+        let wm = Watermark(text: watermarkText, layout: watermarkLayout, opacity: watermarkOpacity)
+        return wm.trimmedText.isEmpty ? nil : wm
+    }
+
+    /// パスワードの入力の状態（書き出しボタンを押せるか）。
+    enum PasswordState: Equatable { case off, empty, mismatch, ok }
+    var pdfPasswordState: PasswordState {
+        guard pdfPasswordEnabled, exportOptions.format == .pdf else { return .off }
+        if pdfPassword.isEmpty { return .empty }
+        return pdfPassword == pdfPasswordConfirm ? .ok : .mismatch
+    }
+
+    /// 書き出しボタンを押せるか（パスワードをかけるのに、空・不一致のときは押せない）。
+    var canConfirmExport: Bool {
+        pdfPasswordState == .off || pdfPasswordState == .ok
+    }
+
+    /// 実際の書き出しの設定（シートの選択＋透かし＋パスワード）。
+    var effectiveExportOptions: ExportOptions {
+        var o = exportOptions
+        o.watermark = activeWatermark
+        o.pdfPassword = pdfPasswordState == .ok ? pdfPassword : nil
+        if o.format == .png { o.maxBytes = nil }           // PNG は無劣化の形式なので上限は使わない
+        return o
+    }
+
+    /// 書き出しが済んだあと: 配置・濃さ・大きさの上限を次回に引き継ぎ、パスワードは消す。
+    func rememberExportChoices() {
+        settings.watermarkLayout = watermarkLayout
+        settings.watermarkOpacity = watermarkOpacity
+        settings.exportSizeLimit = exportOptions.maxBytes
+        clearPDFPassword()
+    }
+
+    func clearPDFPassword() {
+        pdfPasswordEnabled = false
+        pdfPassword = ""
+        pdfPasswordConfirm = ""
+    }
+
+    /// 書き出しの設定を新しい書類の状態に戻す（透かしの文言とパスワードは引き継がない）。
+    func resetExportDraft() {
+        exportOptions = settings.initialExportOptions
+        watermarkEnabled = false
+        watermarkText = ""
+        watermarkLayout = settings.watermarkLayout
+        watermarkOpacity = settings.watermarkOpacity
+        clearPDFPassword()
+    }
+
+    /// 透かしの見本（今のページの画像を小さくして、透かしだけを重ねたもの。黒塗りは描かない）。
+    func watermarkPreview(maxSide: Int = 360) -> CGImage? {
+        guard let wm = activeWatermark, let page = currentPage else { return nil }
+        let src = page.analyzed.page.cgImage
+        let scale = min(1, CGFloat(maxSide) / CGFloat(max(src.width, src.height)))
+        let w = max(1, Int(CGFloat(src.width) * scale)), h = max(1, Int(CGFloat(src.height) * scale))
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.interpolationQuality = .medium
+        ctx.draw(src, in: CGRect(x: 0, y: 0, width: w, height: h))
+        WatermarkRenderer.draw(wm, in: ctx, canvas: CGSize(width: w, height: h))
+        return ctx.makeImage()
+    }
+
     /// 実書き出し（burnIn → export）。UI から NSSavePanel の URL を受けて呼ぶ。
     func export(to url: URL) throws {
-        try exportService.export(pages: pages.map(\.analyzed), options: exportOptions, to: url)
+        try exportService.export(pages: pages.map(\.analyzed), options: effectiveExportOptions, to: url)
     }
 
     /// 一括書き出し（v1.2）: 1書類=1ファイルで指定フォルダへ。`<元名>-masked.<ext>`（重複は -2, -3…）。
@@ -1043,7 +1140,7 @@ final class AppState {
             let name = ExportNaming.defaultFileName(
                 firstSourceName: page.sourceURL.lastPathComponent, format: exportOptions.format)
             let url = ExportNaming.uniqueURL(in: directory, fileName: name)
-            try exportService.export(pages: [page.analyzed], options: exportOptions, to: url)
+            try exportService.export(pages: [page.analyzed], options: effectiveExportOptions, to: url)
             written.append(url)
         }
         return written
@@ -1069,6 +1166,7 @@ final class AppState {
         reviewLayout = .single
         previewMode = false
         showingExportSheet = false
+        resetExportDraft()          // 透かしの文言・パスワードを次の書類に持ち越さない
         pendingTypeChange = nil
         showingCropSheet = false
         cropSheetPage = nil
@@ -1190,7 +1288,7 @@ final class AppState {
             currentPageIndex = 0
             tool = .select
             previewMode = false
-            exportOptions = settings.initialExportOptions
+            resetExportDraft()
             reviewLayout = restored.count >= 5 ? .grid : .single
             librarySaveError = nil
             stage = .review

@@ -87,4 +87,46 @@ final class ReviewSmokeUITests: XCTestCase {
         let zeroWarning = app.descendants(matching: .any)["export.zeroMaskWarning"].firstMatch
         XCTAssertFalse(zeroWarning.exists, "マスクを付けたのにゼロマスク警告が出ている")
     }
+
+    /// 0.4.0: 書き出しシートの「提出用の設定」。透かしの見本が出る／パスワードが違うと保存を押せない。
+    func test_exportSheet_watermarkPreview_andPasswordMismatchDisablesSave() {
+        app = launchWithFixture()
+        let exportButton = app.descendants(matching: .any)["review.exportButton"].firstMatch
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 25), "Review へ進んでいない")
+        XCTAssertTrue(waitHittable(exportButton))
+        exportButton.click()
+        let confirm = app.descendants(matching: .any)["export.confirmButton"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 8), "書き出しシートが表示されない")
+
+        // 透かし: オン → 文言 → 見本が出る
+        let wm = app.checkBoxes["export.watermark"].firstMatch
+        XCTAssertTrue(waitHittable(wm), "透かしの切り替えが出ない")
+        wm.click()
+        let text = app.textFields["export.watermarkText"].firstMatch
+        XCTAssertTrue(waitHittable(text), "透かしの文言の欄が出ない")
+        text.click()
+        text.typeText("テスト提出用")
+        let preview = app.descendants(matching: .any)["export.watermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 8), "透かしの見本が出ない")
+
+        // パスワード: オン → 違う 2 つ → 保存を押せない → そろえると押せる
+        let pw = app.checkBoxes["export.password"].firstMatch
+        XCTAssertTrue(waitHittable(pw), "パスワードの切り替えが出ない")
+        pw.click()
+        XCTAssertFalse(confirm.isEnabled, "パスワードが空なのに保存を押せる")
+        let field = app.secureTextFields["export.passwordField"].firstMatch
+        let again = app.secureTextFields["export.passwordConfirm"].firstMatch
+        XCTAssertTrue(waitHittable(field))
+        field.click(); field.typeText("abcd")
+        again.click(); again.typeText("abce")
+        let mismatch = app.descendants(matching: .any)["export.passwordMismatch"].firstMatch
+        XCTAssertTrue(mismatch.waitForExistence(timeout: 5), "不一致の表示が出ない")
+        XCTAssertFalse(confirm.isEnabled, "不一致なのに保存を押せる")
+        again.click()
+        again.typeKey(XCUIKeyboardKey.delete, modifierFlags: [])
+        again.typeText("d")
+        let deadline = Date().addingTimeInterval(5)
+        while !confirm.isEnabled && Date() < deadline { usleep(200_000) }
+        XCTAssertTrue(confirm.isEnabled, "そろえたのに保存を押せない")
+    }
 }

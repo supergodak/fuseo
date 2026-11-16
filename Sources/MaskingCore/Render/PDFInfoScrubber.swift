@@ -12,6 +12,8 @@ import Foundation
 enum PDFInfoScrubber {
 
     static let replacement = Array("<< /Producer (Fuseo) >>".utf8)
+    /// 暗号化した PDF 用（0.4.0）。文字列を持たない空の辞書。
+    static let emptyReplacement = Array("<< >>".utf8)
 
     /// ファイルを書き換える。書き換えたら true。
     @discardableResult
@@ -23,7 +25,7 @@ enum PDFInfoScrubber {
     }
 
     /// バイト列の Info 辞書を置き換える。置き換えたら true。
-    static func scrub(_ bytes: inout [UInt8]) -> Bool {
+    static func scrub(_ bytes: inout [UInt8], replacement: [UInt8] = PDFInfoScrubber.replacement) -> Bool {
         guard let (num, gen) = infoReference(in: bytes),
               let dictStart = objectBody(num: num, gen: gen, in: bytes),
               let dictEnd = dictionaryEnd(from: dictStart, in: bytes) else { return false }

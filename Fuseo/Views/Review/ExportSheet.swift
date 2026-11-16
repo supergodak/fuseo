@@ -16,6 +16,7 @@ struct ExportSheet: View {
         let summary = appState.exportSummary
         let zeroMask = appState.hasZeroMaskPage
 
+        ScrollView {
         VStack(alignment: .leading, spacing: 16) {
             Text("書き出し").font(.title2).bold()
 
@@ -40,13 +41,15 @@ struct ExportSheet: View {
                 Toggle("検索可能PDF（テキスト層を埋め込む）", isOn: $appState.exportOptions.searchableText)
                     .accessibilityIdentifier("export.searchable")
             }
-            if appState.exportOptions.format == .jpeg {
+            if appState.exportOptions.format == .jpeg && appState.exportOptions.maxBytes == nil {
                 VStack(alignment: .leading) {
                     Text("JPEG品質: \(Int(appState.exportOptions.jpegQuality * 100))%")
                     Slider(value: $appState.exportOptions.jpegQuality, in: 0.1...1.0)
                         .accessibilityIdentifier("export.quality")
                 }
             }
+
+            ExportExtrasSection()
 
             if appState.pages.count > 1 {
                 Picker("出力", selection: $separateFiles) {
@@ -123,11 +126,14 @@ struct ExportSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button(zeroMask ? "マスクなしで書き出す" : "保存…") { save() }
                     .keyboardShortcut(.defaultAction)
+                    .disabled(!appState.canConfirmExport)
                     .accessibilityIdentifier("export.confirmButton")
             }
         }
         .padding(20)
-        .frame(width: 420)
+        }
+        .frame(width: 460)
+        .frame(maxHeight: 720)
     }
 
     private func save() {
@@ -142,12 +148,19 @@ struct ExportSheet: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try appState.export(to: url)
+            appState.rememberExportChoices()
             appState.markExported(name: url.lastPathComponent, url: url)
             dismiss()
         } catch {
-            appState.errorMessage = "書き出しに失敗しました: \(error)"
+            appState.errorMessage = Self.message(for: error)
             appState.showingError = true
         }
+    }
+
+    /// 書き出しの失敗の文言（大きさの上限は、そのまま理由を伝える）。
+    static func message(for error: Error) -> String {
+        if case MaskingError.sizeLimitUnreachable = error { return "\(error)" }
+        return "書き出しに失敗しました: \(error)"
     }
 
     /// 一括書き出し（v1.2）: 保存先フォルダを選び、1書類=1ファイルで書き出す。
@@ -161,11 +174,12 @@ struct ExportSheet: View {
         guard panel.runModal() == .OK, let dir = panel.url else { return }
         do {
             let written = try appState.exportSeparately(to: dir)
+            appState.rememberExportChoices()
             let first = written.first ?? dir
             appState.markExported(name: first.lastPathComponent, url: first)
             dismiss()
         } catch {
-            appState.errorMessage = "書き出しに失敗しました: \(error)"
+            appState.errorMessage = Self.message(for: error)
             appState.showingError = true
         }
     }

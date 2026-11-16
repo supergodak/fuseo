@@ -109,13 +109,41 @@ public struct ExportOptions: Sendable {
     public var searchableText: Bool      // pdf のみ有効
     public var jpegQuality: Double
     public var colorMode: ColorMode
+    /// 透かし（0.4.0）。nil か文言が空なら入れない。カラーモードの**後**に焼き込む（白黒でも消えない）。
+    public var watermark: Watermark?
+    /// ファイルの大きさの上限（バイト・0.4.0）。PDF と JPEG で有効（JPEG/PNG を複数ページで書くときは 1 ファイルごと）。
+    /// 収まるまで JPEG の画質と解像度を段階的に下げる。下限まで下げても収まらなければ `sizeLimitUnreachable`。
+    public var maxBytes: Int?
+    /// PDF を開くときのパスワード（0.4.0・PDF のみ）。nil か空ならかけない。保存はしない（呼び出し側の責務）。
+    public var pdfPassword: String?
 
     public init(format: Format, searchableText: Bool = false, jpegQuality: Double = 0.9,
-                colorMode: ColorMode = .color) {
+                colorMode: ColorMode = .color, watermark: Watermark? = nil,
+                maxBytes: Int? = nil, pdfPassword: String? = nil) {
         self.format = format
         self.searchableText = searchableText
         self.jpegQuality = jpegQuality
         self.colorMode = colorMode
+        self.watermark = watermark
+        self.maxBytes = maxBytes
+        self.pdfPassword = pdfPassword
+    }
+
+    /// 実際にかけるパスワード（PDF で、空でないときだけ）。
+    public var effectivePDFPassword: String? {
+        guard format == .pdf, let p = pdfPassword, !p.isEmpty else { return nil }
+        return p
+    }
+}
+
+/// バイト数の表示（「2 MB」など。1 MB = 1,000,000 バイト＝申込みフォームの上限の書き方に合わせる）。
+public enum ByteSize {
+    public static func label(_ bytes: Int) -> String {
+        if bytes >= 1_000_000 {
+            let mb = Double(bytes) / 1_000_000
+            return mb >= 10 || mb == mb.rounded() ? "\(Int(mb.rounded())) MB" : String(format: "%.1f MB", mb)
+        }
+        return "\(max(1, Int((Double(bytes) / 1000).rounded()))) KB"
     }
 }
 
@@ -124,9 +152,13 @@ public enum MaskingError: Error, CustomStringConvertible {
     case renderFailed
     case presetInvalid(String)
     case exportFailed(String)
+    /// ファイルの大きさの上限に収められない（0.4.0）。`smallestBytes` は下限まで下げたときの大きさ。
+    case sizeLimitUnreachable(limitBytes: Int, smallestBytes: Int)
 
     public var description: String {
         switch self {
+        case .sizeLimitUnreachable(let limit, let smallest):
+            return "ファイルの大きさを \(ByteSize.label(limit)) 以内にできません（文字が読める下限まで下げて \(ByteSize.label(smallest))）。上限を上げるか、ページを分けて書き出してください"
         case .loadFailed(let path): return "画像を読み込めません: \(path)"
         case .renderFailed: return "画像の生成に失敗しました"
         case .presetInvalid(let reason): return "プリセット定義が不正です: \(reason)"
