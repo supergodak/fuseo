@@ -34,6 +34,30 @@ enum ReviewLayout: String {
     case single, grid
 }
 
+/// 取り消しの登録先（アプリが動いている間ずっと生きている目印）。
+///
+/// `UndoManager.registerUndo(withTarget:handler:)` は target を**保持しない**。PageState / AppState を target にすると、
+/// 書類を閉じる・別の書類を開く・新しく取り込むなどで PageState が解放された後に「取り消す」を押したとき、
+/// 解放済みのオブジェクトに触れて落ちる（iOS 1.2.2〜1.2.6 のクラッシュ 4 件・2026-11-22 調査）。
+/// そこで target は常にこの目印にし、本物の対象は handler の中で weak に参照する（消えていれば何もしない）。
+final class UndoAnchor {
+    static let shared = UndoAnchor()
+    private init() {}
+}
+
+extension UndoManager {
+    /// 対象を weak に持つ取り消しの登録。対象が解放済みなら handler は呼ばれない。
+    @MainActor
+    func registerWeakUndo<T: AnyObject>(_ owner: T, _ handler: @escaping @MainActor (T) -> Void) {
+        registerUndo(withTarget: UndoAnchor.shared) { [weak owner] _ in
+            MainActor.assumeIsolated {
+                guard let owner else { return }
+                handler(owner)
+            }
+        }
+    }
+}
+
 /// 1ページ分の編集状態（wp5 §5）。isOn・手動マスクはここで編集する。
 @MainActor
 @Observable
@@ -146,10 +170,8 @@ final class PageState: Identifiable {
         let before = analyzed.manual
         change(&analyzed.manual)
         noteEdited()
-        undo?.registerUndo(withTarget: self) { target in
-            MainActor.assumeIsolated {
-                target.mutateManual(undo: undo) { $0 = before }
-            }
+        undo?.registerWeakUndo(self) { target in
+            target.mutateManual(undo: undo) { $0 = before }
         }
     }
 
@@ -210,10 +232,8 @@ final class PageState: Identifiable {
         analyzed.candidates[idx].box = box
         candidatesEdited = true
         noteEdited()
-        undo?.registerUndo(withTarget: self) { target in
-            MainActor.assumeIsolated {
-                target.setCandidateBox(id, old, undo: undo)
-            }
+        undo?.registerWeakUndo(self) { target in
+            target.setCandidateBox(id, old, undo: undo)
         }
     }
 
@@ -261,10 +281,8 @@ final class PageState: Identifiable {
         guard analyzed.texts != before else { return }
         dropStaleTextSelection()
         noteEdited()
-        undo?.registerUndo(withTarget: self) { target in
-            MainActor.assumeIsolated {
-                target.mutateTexts(undo: undo, actionName: actionName) { $0 = before }
-            }
+        undo?.registerWeakUndo(self) { target in
+            target.mutateTexts(undo: undo, actionName: actionName) { $0 = before }
         }
         if let actionName { undo?.setActionName(actionName) }
     }
@@ -444,6 +462,14 @@ final class PageState: Identifiable {
 @MainActor
 @Observable
 final class AppState {
+    /// 確認画面の UndoManager（ReviewView が渡す）。書類が替わるときに取り消しの履歴を消すために持つ。
+    @ObservationIgnored weak var undoManager: UndoManager?
+
+    /// 書類が替わった（取り込み・開く・閉じる）ときに、前の書類の取り消しを残さない。
+    private func clearUndoHistory() {
+        undoManager?.removeAllActions()
+    }
+
     var stage: Stage = .empty
     var pages: [PageState] = []
     var currentPageIndex = 0
@@ -549,9 +575,7 @@ final class AppState {
             currentPageIndex = max(0, currentPageIndex - 1)
         }
         pageOrderChanged()
-        undo?.registerUndo(withTarget: self) { state in
-            MainActor.assumeIsolated { state.insertPage(page, at: index, undo: undo) }
-        }
+        undo?.registerWeakUndo(self) { state in state.insertPage(page, at: index, undo: undo) }
         undo?.setActionName(String(localized: "ページを削除"))
     }
 
@@ -562,9 +586,7 @@ final class AppState {
         page.onEdit = { [weak self] in self?.noteEdited() }
         currentPageIndex = at
         pageOrderChanged()
-        undo?.registerUndo(withTarget: self) { state in
-            MainActor.assumeIsolated { state.removePage(at: at, undo: undo) }
-        }
+        undo?.registerWeakUndo(self) { state in state.removePage(at: at, undo: undo) }
         undo?.setActionName(String(localized: "ページを削除"))
     }
 
@@ -579,9 +601,7 @@ final class AppState {
         pages.swapAt(index, target)
         currentPageIndex = target
         pageOrderChanged()
-        undo?.registerUndo(withTarget: self) { state in
-            MainActor.assumeIsolated { state.movePage(at: target, by: -offset, undo: undo) }
-        }
+        undo?.registerWeakUndo(self) { state in state.movePage(at: target, by: -offset, undo: undo) }
         undo?.setActionName(String(localized: "ページを移動"))
     }
 
@@ -628,6 +648,7 @@ final class AppState {
         } else {
             // 取り込みは常に「新しい作業」。前の作業はライブラリに残ったままになる（WP-13）。
             clearWorkIdentity()
+            clearUndoHistory()
             pages = built
             attachEditObservers()
             dirtyImagePageIDs = Set(built.map(\.id))
@@ -1161,6 +1182,7 @@ final class AppState {
     func reset() {
         // 本人確認書類の像を temp に残さない（PDFページ画像の一時ディレクトリを消す）。
         purgePageImageDirectories()
+        clearUndoHistory()
         pages = []
         currentPageIndex = 0
         tool = .select
@@ -1279,6 +1301,7 @@ final class AppState {
             let restored = try WorkDocumentBridge.restore(document: doc, directory: dir,
                                                           presets: allPresets)
             purgePageImageDirectories()   // 前の取り込みの一時領域は不要
+            clearUndoHistory()
             pages = restored
             attachEditObservers()
             currentWorkID = doc.id

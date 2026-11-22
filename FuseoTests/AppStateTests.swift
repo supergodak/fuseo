@@ -177,6 +177,46 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.stage, .empty)
     }
 
+    // MARK: - 取り消しの登録先（iOS 1.2.2〜1.2.6 のクラッシュ・2026-11-22）
+
+    /// 書類を閉じて PageState が解放された後に「取り消す」を押しても落ちない（登録先を weak に持つ）。
+    /// 以前は registerUndo(withTarget: page) が page を保持しないため、解放済みのオブジェクトに触れて落ちていた。
+    func test_undoAfterDocumentClosed_doesNotTouchReleasedPage() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(analysis: fake, settings: makeSettings())
+        let undo = UndoManager()
+        await state.processFiles([URL(fileURLWithPath: "/tmp/a.jpg")])
+        weak var released: PageState?
+        do {
+            let page = state.pages[0]
+            released = page
+            page.addRect(NormRect(x: 0.1, y: 0.1, w: 0.2, h: 0.2), undo: undo)
+        }
+        state.startNewDocument()          // undoManager を渡していない＝履歴は残る（最悪の場合の確認）
+        XCTAssertNil(released, "閉じた書類のページは解放される")
+        XCTAssertTrue(undo.canUndo)
+        undo.undo()                       // 落ちずに何もしない
+        XCTAssertTrue(state.pages.isEmpty)
+    }
+
+    /// 書類が替わったら、前の書類の取り消しは残さない（ReviewView が渡した UndoManager を空にする）。
+    func test_newDocument_clearsUndoHistory() async {
+        let fake = FakeAnalysis { _ in TestFixtures.analyzedPage() }
+        let state = makeState(analysis: fake, settings: makeSettings())
+        let undo = UndoManager()
+        state.undoManager = undo
+        await state.processFiles([URL(fileURLWithPath: "/tmp/a.jpg")])
+        state.pages[0].addRect(NormRect(x: 0.1, y: 0.1, w: 0.2, h: 0.2), undo: undo)
+        XCTAssertTrue(undo.canUndo)
+        state.startNewDocument()
+        XCTAssertFalse(undo.canUndo, "閉じた書類の取り消しは残さない")
+
+        await state.processFiles([URL(fileURLWithPath: "/tmp/b.jpg")])
+        state.pages[0].addRect(NormRect(x: 0.1, y: 0.1, w: 0.2, h: 0.2), undo: undo)
+        await state.processFiles([URL(fileURLWithPath: "/tmp/c.jpg")])   // 取り込みも新しい書類
+        XCTAssertFalse(undo.canUndo)
+    }
+
     // MARK: - 一括処理（v1.2）
 
     func test_processFiles_fiveOrMore_startsInGridLayout() async {

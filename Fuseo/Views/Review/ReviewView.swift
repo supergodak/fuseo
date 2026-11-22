@@ -4,6 +4,7 @@ import AppKit
 /// 確認画面（wp5 §2）。保存前確認UIそのもの。ここを経ずに書き出す経路は作らない（絶対条件）。
 struct ReviewView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         @Bindable var appState = appState
@@ -57,6 +58,8 @@ struct ReviewView: View {
             Text("回転すると座標が変わるため、このページの手動マスク・文字と候補の編集内容は失われます。")
         }
         .overlay(alignment: .bottom) { exportDoneToast }
+        // 書類が替わったときに取り消しの履歴を消せるよう、この画面の UndoManager を渡す
+        .onAppear { appState.undoManager = undoManager }
     }
 
     private var pendingTypeChangeBinding: Binding<Bool> {

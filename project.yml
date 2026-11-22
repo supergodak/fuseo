@@ -15,7 +15,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.4.0"
+    MARKETING_VERSION: "0.4.1"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: "8NY87P5TYV"       # ATI K.K.（Developer ID 署名身元）
@@ -123,8 +123,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: jp.co.ati-mirai.fuseo.ios
         PRODUCT_NAME: Fuseo
         PRODUCT_MODULE_NAME: FuseoiOS   # Swift モジュール名を固定（@testable import FuseoiOS 用）
-        MARKETING_VERSION: "1.3.0"      # v1.3.0=提出用の設定（透かし・ファイルの大きさの上限・PDF のパスワード）。v1.2.6=カメラで撮ったカードが欠ける不具合（補正済み画像への再検出）を修正。v1.2.5=書き出し PDF の紙の大きさ（300dpi 換算）・文書情報を Producer だけに。v1.2.4=PDF のフォーム記入値・注釈・CropBox を正しく画像化。v1.2.3=App Store のスクリーンショット差し替え用（コード変更なし）。v1.2.2=アプリ内イベント用の fuseo:// スキーム。v1.2.1=PDF入力・受け取り口・保存と再開(WP-10/11a/13)。iOSはMac(0.2.x)と独立に採番する
-        CURRENT_PROJECT_VERSION: "10"    # 1.3.0 はビルド 10。1.2.6 はビルド 9。1.2.5 はビルド 8。1.2.4 はビルド 7。1.2.3 はビルド 6（5 は共有シートが開かない不具合入りでアップロード済み・未提出。1.2.2 は 3/4 の2回アップロードで 4 を提出）
+        MARKETING_VERSION: "1.3.1"      # v1.3.1=書類を替えた後に「取り消す」を押すと落ちる不具合を修正。v1.3.0=提出用の設定（透かし・ファイルの大きさの上限・PDF のパスワード）。v1.2.6=カメラで撮ったカードが欠ける不具合（補正済み画像への再検出）を修正。v1.2.5=書き出し PDF の紙の大きさ（300dpi 換算）・文書情報を Producer だけに。v1.2.4=PDF のフォーム記入値・注釈・CropBox を正しく画像化。v1.2.3=App Store のスクリーンショット差し替え用（コード変更なし）。v1.2.2=アプリ内イベント用の fuseo:// スキーム。v1.2.1=PDF入力・受け取り口・保存と再開(WP-10/11a/13)。iOSはMac(0.2.x)と独立に採番する
+        CURRENT_PROJECT_VERSION: "11"    # 1.3.1 はビルド 11。1.3.0 はビルド 10。1.2.6 はビルド 9。1.2.5 はビルド 8。1.2.4 はビルド 7。1.2.3 はビルド 6（5 は共有シートが開かない不具合入りでアップロード済み・未提出。1.2.2 は 3/4 の2回アップロードで 4 を提出）
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSCameraUsageDescription: "書類を撮影してその場でマスキングするために使用します"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
